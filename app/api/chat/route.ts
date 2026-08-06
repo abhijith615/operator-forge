@@ -1,0 +1,132 @@
+import { NextResponse, type NextRequest } from "next/server";
+import OpenAI from "openai";
+
+import { ASSISTANT_SYSTEM_PROMPT } from "@/lib/agents/assistant";
+import {
+  AGENT_MAX_TOKENS,
+  ASSISTANT_MAX_TOKENS,
+  OPENAI_MODEL,
+  isOpenAIConfigured,
+  openaiApiKey,
+} from "@/lib/agents/config";
+import { buildWorldBriefing } from "@/lib/agents/context";
+import { AGENTS, isAgentId } from "@/lib/agents/personas";
+import { getOperator } from "@/lib/auth/session";
+import type { WorldState } from "@/types/world";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
+interface ChatRequestBody {
+  /** `assistant` or one of the three colleague ids. */
+  target: string;
+  messages: { role: "operator" | "agent"; content: string }[];
+  world: WorldState | null;
+}
+
+const MAX_HISTORY = 16;
+const MAX_MESSAGE_CHARS = 2000;
+
+export async function POST(request: NextRequest) {
+  // The floor state is the operator's own session data; never serve it to
+  // anyone who is not signed in.
+  const operator = await getOperator();
+  if (!operator) {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  if (!isOpenAIConfigured) {
+    return NextResponse.json(
+      {
+        error:
+          "Chat is not configured. Add OPENAI_API_KEY to .env.local and restart the server.",
+        code: "not_configured",
+      },
+      { status: 503 },
+    );
+  }
+
+  let body: ChatRequestBody;
+  try {
+    body = (await request.json()) as ChatRequestBody;
+  } catch {
+    return NextResponse.json({ error: "Malformed request." }, { status: 400 });
+  }
+
+  const { target, messages, world } = body;
+
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return NextResponse.json({ error: "No message to answer." }, { status: 400 });
+  }
+
+  const isAssistant = target === "assistant";
+  if (!isAssistant && !isAgentId(target)) {
+    return NextResponse.json({ error: "Unknown recipient." }, { status: 400 });
+  }
+
+  const systemPrompt = isAssistant
+    ? ASSISTANT_SYSTEM_PROMPT
+    : AGENTS[target as keyof typeof AGENTS].systemPrompt;
+
+  const briefing = world
+    ? buildWorldBriefing(world)
+    : "The shift has not started. There is no floor data yet.";
+
+  const history = messages.slice(-MAX_HISTORY).map((message) => ({
+    role: message.role === "operator" ? ("user" as const) : ("assistant" as const),
+    content: message.content.slice(0, MAX_MESSAGE_CHARS),
+  }));
+
+  const client = new OpenAI({ apiKey: openaiApiKey });
+
+  try {
+    const stream = await client.chat.completions.create({
+      model: OPENAI_MODEL,
+      stream: true,
+      temperature: isAssistant ? 0.3 : 0.85,
+      max_tokens: isAssistant ? ASSISTANT_MAX_TOKENS : AGENT_MAX_TOKENS,
+      messages: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "system",
+          content: `Current floor state. Do not invent anything beyond it.\n\n${briefing}`,
+        },
+        ...history,
+      ],
+    });
+
+    const encoder = new TextEncoder();
+    const readable = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        try {
+          for await (const chunk of stream) {
+            const delta = chunk.choices[0]?.delta?.content;
+            if (delta) controller.enqueue(encoder.encode(delta));
+          }
+        } catch (error) {
+          controller.enqueue(
+            encoder.encode(
+              `\n\n_(connection dropped: ${
+                error instanceof Error ? error.message : "unknown error"
+              })_`,
+            ),
+          );
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(readable, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-store",
+        "X-Accel-Buffering": "no",
+      },
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "The model did not respond.";
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
+}

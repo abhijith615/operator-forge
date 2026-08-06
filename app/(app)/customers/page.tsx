@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 
-import { LockedPanel } from "@/components/shell/locked-panel";
+import { PanelGate } from "@/components/mission/panel-gate";
+import { CustomersPanel } from "@/components/mission/panels/customers-panel";
 
 export const metadata: Metadata = { title: "Customers" };
 
 export default function CustomersPage() {
   return (
-    <LockedPanel
+    <PanelGate
       href="/customers"
       contents={[
         "Live complaints with the order behind each one",
@@ -14,6 +15,8 @@ export default function CustomersPage() {
         "Repeat customers you are about to lose",
         "What a two-minute delay actually reads like to the person waiting",
       ]}
-    />
+    >
+      <CustomersPanel />
+    </PanelGate>
   );
 }

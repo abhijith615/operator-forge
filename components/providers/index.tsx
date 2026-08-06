@@ -42,9 +42,10 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         >
           <TooltipProvider delayDuration={220} skipDelayDuration={400}>
             {children}
+            {/* Bottom-right is the mission event stack; app toasts go up top. */}
             <Toaster
-              position="bottom-right"
-              offset={20}
+              position="top-center"
+              offset={72}
               toastOptions={{
                 classNames: {
                   toast:

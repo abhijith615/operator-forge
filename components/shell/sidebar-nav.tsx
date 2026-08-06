@@ -1,13 +1,17 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Lock } from "lucide-react";
 
+import { useIsUnlocked } from "@/components/shell/availability";
+import { AGENT_ORDER } from "@/lib/agents/personas";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { navSections } from "@/lib/constants/navigation";
 import { easing } from "@/lib/motion";
+import { countUnread, useChatStore } from "@/stores/chat-store";
 import { cn } from "@/lib/utils";
 import type { NavItem } from "@/types/navigation";
 
@@ -24,15 +28,17 @@ function NavRow({
   item,
   collapsed,
   active,
+  locked,
+  badge,
   onNavigate,
 }: {
   item: NavItem;
   collapsed: boolean;
   active: boolean;
+  locked: boolean;
+  badge: number;
   onNavigate?: () => void;
 }) {
-  const locked = item.availability !== "open";
-
   const row = (
     <Link
       href={item.href}
@@ -72,14 +78,24 @@ function NavRow({
             className="flex min-w-0 flex-1 items-center gap-2 whitespace-nowrap"
           >
             <span className="truncate">{item.label}</span>
-            {locked ? (
+            {badge > 0 ? (
+              <span
+                data-readout
+                className="ml-auto grid h-4 min-w-4 shrink-0 place-items-center rounded-full bg-ember-500 px-1 text-[10px] font-semibold text-white tabular-nums"
+              >
+                {badge}
+              </span>
+            ) : locked ? (
               <Lock className="ml-auto size-3 shrink-0 text-faint" aria-hidden />
             ) : null}
           </motion.span>
         ) : null}
       </AnimatePresence>
 
-      {collapsed && locked ? (
+      {collapsed && badge > 0 ? (
+        <span className="absolute top-1 right-1 size-1.5 rounded-full bg-ember-500 ring-2 ring-obsidian" />
+      ) : null}
+      {collapsed && badge === 0 && locked ? (
         <span className="absolute top-1.5 right-1.5 size-1 rounded-full bg-faint" />
       ) : null}
     </Link>
@@ -100,6 +116,17 @@ function NavRow({
 
 export function SidebarNav({ collapsed, onNavigate }: SidebarNavProps) {
   const pathname = usePathname();
+  const isUnlocked = useIsUnlocked();
+  const threads = useChatStore((state) => state.threads);
+  const lastReadAt = useChatStore((state) => state.lastReadAt);
+  const messageBadge = React.useMemo(
+    () =>
+      AGENT_ORDER.reduce(
+        (total, agentId) => total + countUnread(threads[agentId], lastReadAt[agentId]),
+        0,
+      ),
+    [threads, lastReadAt],
+  );
 
   return (
     <nav className="flex flex-col gap-5 px-3" aria-label="Mission navigation">
@@ -128,6 +155,8 @@ export function SidebarNav({ collapsed, onNavigate }: SidebarNavProps) {
                   item={item}
                   collapsed={collapsed}
                   active={isActive(pathname, item.href)}
+                  locked={!isUnlocked(item.availability)}
+                  badge={item.href === "/messages" ? messageBadge : 0}
                   onNavigate={onNavigate}
                 />
               </li>

@@ -1,6 +1,10 @@
+"use client";
+
 import { Lock, Radio } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { useMissionHydrated } from "@/hooks/use-mission";
+import { useMissionStore } from "@/stores/mission-store";
 import type { NavAvailability } from "@/types/navigation";
 
 export const AVAILABILITY_COPY: Record<
@@ -23,16 +27,36 @@ export const AVAILABILITY_COPY: Record<
   },
 };
 
+/** Whether a panel is usable given where the operator is in their shift. */
+export function useIsUnlocked(): (availability: NavAvailability) => boolean {
+  const hydrated = useMissionHydrated();
+  const status = useMissionStore((state) => state.status);
+
+  return (availability) => {
+    if (availability === "open") return true;
+    if (!hydrated) return false;
+    if (availability === "in-mission") return status === "live" || status === "complete";
+    return status === "complete";
+  };
+}
+
+/**
+ * Only rendered on a panel that is standing by, so it never claims "Live".
+ * `pending` marks the case where the gate has opened but the panel itself is
+ * not built yet.
+ */
 export function AvailabilityBadge({
   availability,
+  pending = false,
 }: {
   availability: NavAvailability;
+  pending?: boolean;
 }) {
-  if (availability === "open") {
+  if (pending) {
     return (
-      <Badge tone="ion">
+      <Badge tone="ember">
         <Radio />
-        Open
+        Not built yet
       </Badge>
     );
   }

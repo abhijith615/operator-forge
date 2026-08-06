@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 
-import { LockedPanel } from "@/components/shell/locked-panel";
+import { PanelGate } from "@/components/mission/panel-gate";
+import { InventoryPanel } from "@/components/mission/panels/inventory-panel";
 
 export const metadata: Metadata = { title: "Inventory" };
 
 export default function InventoryPage() {
   return (
-    <LockedPanel
+    <PanelGate
       href="/inventory"
       contents={[
         "Stock on hand per SKU, and what the system believes you have",
@@ -14,6 +15,8 @@ export default function InventoryPage() {
         "Putaway backlog and which bays are blocking the pick path",
         "Every operations term here is clickable, with a plain explanation",
       ]}
-    />
+    >
+      <InventoryPanel />
+    </PanelGate>
   );
 }

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { IdentityForm } from "@/features/settings/components/identity-form";
 import { MotionStatus } from "@/features/settings/components/motion-status";
+import { SoundToggle } from "@/features/settings/components/sound-toggle";
 import { signOut } from "@/lib/auth/actions";
 import { requireOperator } from "@/lib/auth/session";
 import { flatNavItems } from "@/lib/constants/navigation";
@@ -97,7 +98,10 @@ export default async function SettingsPage() {
           title="Appearance"
           description="Operator Forge is a dark instrument by design — a hub floor at 6am is not a bright room."
         >
-          <MotionStatus />
+          <div className="space-y-3">
+            <MotionStatus />
+            <SoundToggle />
+          </div>
         </Section>
 
         <Section

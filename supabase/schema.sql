@@ -35,6 +35,49 @@ create policy "operators_update_own"
   using (auth.uid() = id)
   with check (auth.uid() = id);
 
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Phase 2 — mission runs
+-- One row per shift. The browser holds live state; this is the durable record
+-- Phase 3 reads to build the Operator Genome.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create table if not exists public.mission_runs (
+  id            text primary key,
+  operator_id   uuid        not null references public.operators (id) on delete cascade,
+  mission_id    text        not null default 'first-shift',
+  status        text        not null check (status in ('briefing','live','complete','abandoned')),
+  started_at    timestamptz not null,
+  completed_at  timestamptz,
+  world         jsonb       not null default '{}'::jsonb,
+  timeline      jsonb       not null default '[]'::jsonb,
+  conversations jsonb       not null default '{}'::jsonb,
+  updated_at    timestamptz not null default now()
+);
+
+comment on table public.mission_runs is
+  'A single shift: final world state, the full timeline, and every conversation.';
+
+create index if not exists mission_runs_operator_idx
+  on public.mission_runs (operator_id, started_at desc);
+
+alter table public.mission_runs enable row level security;
+
+drop policy if exists "runs_select_own" on public.mission_runs;
+create policy "runs_select_own"
+  on public.mission_runs for select
+  using (auth.uid() = operator_id);
+
+drop policy if exists "runs_insert_own" on public.mission_runs;
+create policy "runs_insert_own"
+  on public.mission_runs for insert
+  with check (auth.uid() = operator_id);
+
+drop policy if exists "runs_update_own" on public.mission_runs;
+create policy "runs_update_own"
+  on public.mission_runs for update
+  using (auth.uid() = operator_id)
+  with check (auth.uid() = operator_id);
+
 -- ── Keep updated_at honest ────────────────────────────────────────────────
 create or replace function public.touch_updated_at()
 returns trigger
@@ -49,4 +92,9 @@ $$;
 drop trigger if exists operators_touch_updated_at on public.operators;
 create trigger operators_touch_updated_at
   before update on public.operators
+  for each row execute function public.touch_updated_at();
+
+drop trigger if exists mission_runs_touch_updated_at on public.mission_runs;
+create trigger mission_runs_touch_updated_at
+  before update on public.mission_runs
   for each row execute function public.touch_updated_at();

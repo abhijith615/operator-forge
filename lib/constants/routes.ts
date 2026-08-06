@@ -8,6 +8,7 @@ export const HOME_ROUTE = "/mission";
 
 /** Everything behind the shell. */
 export const APP_ROUTES = [
+  "/start",
   "/mission",
   "/assistant",
   "/messages",

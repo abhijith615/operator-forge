@@ -1,16 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { Play } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { FIRST_SHIFT } from "@/lib/constants/mission";
 import { easing } from "@/lib/motion";
 
 /**
- * The launch control. Armed by the mission engine — until that ships the button
- * stays disabled rather than pretending to start a shift that does not exist.
+ * The launch control. One press starts a clock that will not stop, so the copy
+ * says exactly that before the operator commits.
  */
 export function LaunchCard() {
   return (
@@ -32,29 +32,15 @@ export function LaunchCard() {
           opens the hub. There is no way back to this screen afterwards.
         </p>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="mt-6 block">
-              <Button
-                type="button"
-                variant="primary"
-                size="lg"
-                disabled
-                className="w-full"
-              >
-                <Play />
-                Start {FIRST_SHIFT.name}
-              </Button>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>Not armed yet</TooltipContent>
-        </Tooltip>
+        <Button asChild variant="primary" size="lg" className="mt-6 w-full">
+          <Link href="/start">
+            <Play />
+            Start {FIRST_SHIFT.name}
+          </Link>
+        </Button>
 
-        <p className="mt-4 flex items-center gap-2 text-[12px] text-lo">
-          <span className="rounded-full border border-line-strong bg-white/[0.04] px-2 py-0.5 font-mono text-[9.5px] tracking-[0.14em] text-faint uppercase">
-            Build note
-          </span>
-          The mission engine, world state and AI colleagues arrive in Phase 2.
+        <p className="mt-4 text-center font-mono text-[10.5px] tracking-[0.14em] text-faint uppercase">
+          {FIRST_SHIFT.durationMinutes} minutes · one attempt · no pause
         </p>
       </div>
     </motion.div>

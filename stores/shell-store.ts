@@ -17,6 +17,10 @@ interface ShellState {
   commandOpen: boolean;
   setCommandOpen: (open: boolean) => void;
   toggleCommand: () => void;
+
+  /** Notification tones during a shift. Persisted per device. */
+  soundEnabled: boolean;
+  setSoundEnabled: (enabled: boolean) => void;
 }
 
 export const useShellStore = create<ShellState>()(
@@ -33,10 +37,16 @@ export const useShellStore = create<ShellState>()(
       commandOpen: false,
       setCommandOpen: (commandOpen) => set({ commandOpen }),
       toggleCommand: () => set((state) => ({ commandOpen: !state.commandOpen })),
+
+      soundEnabled: true,
+      setSoundEnabled: (soundEnabled) => set({ soundEnabled }),
     }),
     {
       name: "of.shell",
-      partialize: (state) => ({ sidebarCollapsed: state.sidebarCollapsed }),
+      partialize: (state) => ({
+        sidebarCollapsed: state.sidebarCollapsed,
+        soundEnabled: state.soundEnabled,
+      }),
     },
   ),
 );
