@@ -5,17 +5,17 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Film, Play, Volume2, VolumeX } from "lucide-react";
 
+import { YouTubePlayer } from "@/components/mission/youtube-player";
 import { Button } from "@/components/ui/button";
 import { Aurora, GridField } from "@/components/visuals/aurora";
 import { FIRST_SHIFT, HANDOVER_MESSAGE } from "@/lib/constants/mission";
+import { resolveHandoverVideo } from "@/lib/mission/video";
 import { easing } from "@/lib/motion";
 import { useMissionStore } from "@/stores/mission-store";
 import { useChatStore } from "@/stores/chat-store";
 import { cn } from "@/lib/utils";
 
 type Stage = "handover" | "video" | "countdown";
-
-const VIDEO_SRC = process.env.NEXT_PUBLIC_HANDOVER_VIDEO_URL || "/handover.mp4";
 
 export function LaunchSequence({ operatorId }: { operatorId: string }) {
   const [stage, setStage] = React.useState<Stage>("handover");
@@ -164,6 +164,15 @@ function VideoStage({ onDone }: { onDone: () => void }) {
   const [available, setAvailable] = React.useState<boolean | null>(null);
   const [playing, setPlaying] = React.useState(false);
   const [muted, setMuted] = React.useState(true);
+  // Set when the IFrame API cannot load — we drop to a plain embed, which plays
+  // fine but cannot tell us when it ends.
+  const [embedOnly, setEmbedOnly] = React.useState(false);
+
+  const source = React.useMemo(
+    () => resolveHandoverVideo(process.env.NEXT_PUBLIC_HANDOVER_VIDEO_URL),
+    [],
+  );
+  const isYouTube = source.kind === "youtube";
 
   function start() {
     const video = videoRef.current;
@@ -196,23 +205,41 @@ function VideoStage({ onDone }: { onDone: () => void }) {
       </div>
 
       <div className="panel sheen relative aspect-video overflow-hidden p-0">
-        <video
-          ref={videoRef}
-          src={VIDEO_SRC}
-          playsInline
-          muted={muted}
-          preload="metadata"
-          onCanPlay={() => setAvailable((current) => current ?? true)}
-          onError={() => setAvailable(false)}
-          onEnded={onDone}
-          className={cn(
-            "size-full object-cover transition-opacity duration-500",
-            playing ? "opacity-100" : "opacity-40",
-          )}
-        />
+        {isYouTube ? (
+          embedOnly ? (
+            <iframe
+              src={`https://www.youtube-nocookie.com/embed/${source.id}?rel=0&modestbranding=1&playsinline=1`}
+              title="Dark Store Operations Introduction Video"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="size-full"
+            />
+          ) : (
+            <YouTubePlayer
+              videoId={source.id}
+              onEnded={onDone}
+              onUnavailable={() => setEmbedOnly(true)}
+            />
+          )
+        ) : (
+          <video
+            ref={videoRef}
+            src={source.kind === "file" ? source.src : ""}
+            playsInline
+            muted={muted}
+            preload="metadata"
+            onCanPlay={() => setAvailable((current) => current ?? true)}
+            onError={() => setAvailable(false)}
+            onEnded={onDone}
+            className={cn(
+              "size-full object-cover transition-opacity duration-500",
+              playing ? "opacity-100" : "opacity-40",
+            )}
+          />
+        )}
 
         {/* Nothing dropped into the slot yet — say so rather than stall. */}
-        {available === false ? (
+        {!isYouTube && available === false ? (
           <div className="absolute inset-0 grid place-items-center bg-obsidian/90 px-6 text-center">
             <div>
               <div className="mx-auto grid size-12 place-items-center rounded-2xl border border-line-strong bg-surface">
@@ -228,7 +255,7 @@ function VideoStage({ onDone }: { onDone: () => void }) {
           </div>
         ) : null}
 
-        {available !== false && !playing ? (
+        {!isYouTube && available !== false && !playing ? (
           <button
             type="button"
             onClick={start}
@@ -241,7 +268,7 @@ function VideoStage({ onDone }: { onDone: () => void }) {
           </button>
         ) : null}
 
-        {playing ? (
+        {!isYouTube && playing ? (
           <button
             type="button"
             onClick={() => setMuted((value) => !value)}
@@ -254,13 +281,20 @@ function VideoStage({ onDone }: { onDone: () => void }) {
       </div>
 
       <div className="mt-6 flex flex-col items-center gap-3">
-        <Button variant={available === false ? "primary" : "secondary"} size="lg" onClick={onDone}>
-          {available === false ? "Start the shift" : "Skip and start the shift"}
+        <Button
+          variant={!isYouTube && available === false ? "primary" : "secondary"}
+          size="lg"
+          onClick={onDone}
+        >
+          {!isYouTube && available === false
+            ? "Start the shift"
+            : "Skip and start the shift"}
           <ArrowRight className="transition-transform duration-300 ease-out-expo group-hover/btn:translate-x-1" />
         </Button>
         <p className="max-w-sm text-center text-[12px] leading-relaxed text-faint">
-          The shift starts the moment the video ends. Thirty minutes, one
-          attempt, no pause.
+          {embedOnly
+            ? "Start the shift when you are ready. Thirty minutes, one attempt, no pause."
+            : "The shift starts the moment the video ends. Thirty minutes, one attempt, no pause."}
         </p>
       </div>
     </motion.div>

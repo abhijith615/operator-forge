@@ -29,11 +29,15 @@ than reporting a rank of one.
 `/start` plays the handover: the WhatsApp message lands line by line, footage of
 the floor follows, then a five-second count-in and the store opens.
 
-> **The briefing video is not in the repo.** Video files are gitignored —
-> GitHub rejects blobs over 100MB. Drop yours at `public/handover.mp4` for local
-> use, or point `NEXT_PUBLIC_HANDOVER_VIDEO_URL` at a hosted copy for a
-> deployment. Without either, the screen says so plainly and the shift still
-> starts.
+The briefing video is a **hosted YouTube clip by default**, so a fresh clone and
+a deployment both work with nothing configured. It plays through the YouTube
+IFrame API, which is what lets the count-in start the moment the video ends; if
+that API is blocked the page drops to a plain embed and the operator starts the
+shift themselves.
+
+`NEXT_PUBLIC_HANDOVER_VIDEO_URL` overrides it and accepts a YouTube link, any
+direct video URL, or a local path like `/handover.mp4`. Local video files are
+gitignored, so a deployment needs a hosted URL.
 
 From there a **30-minute clock** runs. It derives from the run's start
 timestamp, so a refresh, a background tab or a closed laptop all resolve to the
