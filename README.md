@@ -2,7 +2,7 @@
 
 **The Flight Simulator for Future Operators.**
 
-Sixty minutes running a ten-minute delivery hub. Orders arrive whether or not
+Sixty minutes running a ten-minute delivery store. Orders arrive whether or not
 you are ready. Three colleagues answer in real time. There is no multiple
 choice — only what you decide to do next.
 
@@ -27,7 +27,7 @@ than reporting a rank of one.
 ## The shift
 
 `/start` plays the handover: the WhatsApp message lands line by line, footage of
-the floor follows, then a five-second count-in and the hub opens.
+the floor follows, then a five-second count-in and the store opens.
 
 > **The briefing video is not in the repo.** Video files are gitignored —
 > GitHub rejects blobs over 100MB. Drop yours at `public/handover.mp4` for local
@@ -41,7 +41,7 @@ same truth — the shift kept going without you.
 
 ### The queue is the mission
 
-The shift is **not event-driven**. A hub supervisor is never waiting for
+The shift is **not event-driven**. A store manager is never waiting for
 something to happen; they are choosing which of six things to drop. So the
 scheduler's job is to keep the operator pleasantly underwater:
 
@@ -54,7 +54,7 @@ scheduler's job is to keep the operator pleasantly underwater:
 
 Work comes from **four parallel streams** — Operations, People, Customers and
 Management — drawn from a catalogue of ~46 templates that read live floor state.
-Most of it is ordinary hub work (attendance, cycle counts, goods receipt, safety
+Most of it is ordinary store work (attendance, cycle counts, goods receipt, safety
 walks, handover notes), not emergencies. Two tasks never name the same worker,
 rider or order at once.
 

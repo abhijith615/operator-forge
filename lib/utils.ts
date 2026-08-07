@@ -18,7 +18,7 @@ export function formatDuration(totalSeconds: number): string {
     : `${pad(minutes)}:${pad(seconds)}`;
 }
 
-/** Local wall-clock in 24h form — the hub runs on a 24h clock. */
+/** Local wall-clock in 24h form — the store runs on a 24h clock. */
 export function formatClock(date: Date): string {
   return date.toLocaleTimeString("en-GB", {
     hour: "2-digit",

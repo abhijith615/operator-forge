@@ -8,7 +8,7 @@ import { FIRST_SHIFT } from "@/lib/constants/mission";
 const SPECS = [
   { icon: UserRound, label: "Role", value: FIRST_SHIFT.role },
   { icon: Factory, label: "Industry", value: FIRST_SHIFT.industry },
-  { icon: MapPin, label: "Hub", value: FIRST_SHIFT.location },
+  { icon: MapPin, label: "Store", value: FIRST_SHIFT.location },
   { icon: Clock3, label: "Duration", value: `${FIRST_SHIFT.durationMinutes} minutes` },
   { icon: ShieldAlert, label: "Difficulty", value: FIRST_SHIFT.difficulty },
 ] as const;

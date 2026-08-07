@@ -351,7 +351,7 @@ export const useMissionStore = create<MissionState>()(
               kind: "system",
               tone: "info",
               title: "Shift over",
-              detail: "The next supervisor has the floor.",
+              detail: "The next manager has the floor.",
               source: "hub",
             },
             ...state.timeline,

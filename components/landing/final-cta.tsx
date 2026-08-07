@@ -22,7 +22,7 @@ export function FinalCta() {
 
           <Reveal delay={0.06}>
             <h2 className="mx-auto mt-6 max-w-3xl text-[clamp(2.1rem,5.2vw,3.75rem)] leading-[1.02] font-semibold tracking-[-0.04em] text-gradient text-balance">
-              The hub opens at nine. Somebody has to run it.
+              The store opens at nine. Somebody has to run it.
             </h2>
           </Reveal>
 

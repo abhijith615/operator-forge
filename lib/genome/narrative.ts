@@ -347,7 +347,7 @@ export function buildStory(signals: RunSignals): StoryBeat[] {
     at: signals.duration,
     tone: "neutral",
     title: "10:00 — what you handed over",
-    body: `${openAtClose} orders still open, a rating of ${signals.world.rating.toFixed(2)}, and whatever you wrote down. The next supervisor inherits all of it, and what they inherit is part of the job.`,
+    body: `${openAtClose} orders still open, a rating of ${signals.world.rating.toFixed(2)}, and whatever you wrote down. The next manager inherits all of it, and what they inherit is part of the job.`,
   });
 
   return beats.sort((a, b) => a.at - b.at);

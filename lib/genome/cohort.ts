@@ -13,7 +13,7 @@ export interface CohortStanding {
  * Where this rating sits among every completed run on the same mission.
  *
  * Returns `null` when there is no cohort to rank against — Simulator Mode, or a
- * hub where nobody else has run the shift yet. A rank of "1 of 1" would be
+ * store where nobody else has run the shift yet. A rank of "1 of 1" would be
  * flattering and meaningless, so we say there is no cohort instead.
  */
 export async function getCohortStanding(

@@ -244,7 +244,7 @@ export const MANAGEMENT_TASKS: TaskTemplate[] = [
     cooldown: 600,
     ttl: 110,
     build: ({ world }) => ({
-      title: "Handover notes for the next supervisor",
+      title: "Handover notes for the next manager",
       detail: `Whatever you do not write down, they find out the hard way. ${openOrdersIn(world).length} orders are still open.`,
       source: "Shift handover",
       options: [

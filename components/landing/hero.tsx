@@ -70,7 +70,7 @@ export function Hero() {
           transition={{ duration: 1, ease: easing.outExpo, delay: 0.55 }}
           className="mx-auto mt-7 max-w-[38rem] text-[16.5px] leading-relaxed text-mid text-balance sm:text-[17.5px]"
         >
-          Thirty minutes running a ten-minute delivery hub. The work arrives
+          Thirty minutes running a ten-minute delivery store. The work arrives
           faster than anyone can clear it — absences, complaints, suppliers, head
           office. There is no multiple choice. Only what you get to first.
         </motion.p>

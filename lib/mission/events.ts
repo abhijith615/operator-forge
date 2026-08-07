@@ -106,7 +106,7 @@ export const MISSION_EVENTS: MissionEvent[] = [
     id: "manager-visit",
     at: minutes(17),
     title: "Regional manager is coming by",
-    body: "Kavitha will be at the hub in five minutes. She reads the board before she says hello.",
+    body: "Kavitha will be at the store in five minutes. She reads the board before she says hello.",
     tone: "info",
     source: "hub",
     apply: () => "Whatever the floor looks like at 09:22 is the impression she takes.",

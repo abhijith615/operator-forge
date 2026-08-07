@@ -322,7 +322,7 @@ export const CUSTOMER_TASKS: TaskTemplate[] = [
         options: [
           {
             id: "call-customer",
-            label: "Call her from the hub line",
+            label: "Call her from the store line",
             outcome: "Often works when the rider's number does not.",
             quality: 0.9,
             capabilities: ["customer-thinking", "decision-making"],
@@ -385,7 +385,7 @@ export const CUSTOMER_TASKS: TaskTemplate[] = [
         },
       ],
     }),
-    onExpire: { note: "The corporate desk went to another hub." },
+    onExpire: { note: "The corporate desk went to another store." },
   },
 
   {

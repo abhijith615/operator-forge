@@ -9,7 +9,7 @@ import type {
   Worker,
 } from "@/types/world";
 
-/** The hub opens at 09:00. Everything on screen is offset from here. */
+/** The store opens at 09:00. Everything on screen is offset from here. */
 export const HUB_OPENS_AT_MINUTES = 9 * 60;
 
 export const CLEAR_WEATHER: Weather = {
@@ -113,7 +113,7 @@ function makeRiders(): Rider[] {
 }
 
 /**
- * The hub as the previous shift left it: a small backlog already on the clock,
+ * The store as the previous shift left it: a small backlog already on the clock,
  * a rating you did not earn, and stock records that are quietly wrong.
  */
 export function createInitialWorld(seed: number): WorldState {

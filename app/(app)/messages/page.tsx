@@ -11,7 +11,7 @@ export default function MessagesPage() {
     <PanelGate
       href="/messages"
       contents={[
-        "Hub Manager — stretched thin, direct, will not make your decisions for you",
+        "Store Manager — stretched thin, direct, will not make your decisions for you",
         "Inventory Lead — knows the stock better than the system does, and says so",
         "Customer — the person on the other end of a late order",
         "Typing indicators, read receipts and full conversation history per thread",

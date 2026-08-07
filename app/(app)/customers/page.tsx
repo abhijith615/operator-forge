@@ -11,7 +11,7 @@ export default function CustomersPage() {
       href="/customers"
       contents={[
         "Live complaints with the order behind each one",
-        "The hub rating, and every event that moved it today",
+        "The store rating, and every event that moved it today",
         "Repeat customers you are about to lose",
         "What a two-minute delay actually reads like to the person waiting",
       ]}

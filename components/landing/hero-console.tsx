@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * The instrument strip under the headline. A looping, deterministic preview of
- * what the hub console feels like — not live data, and never presented as such.
+ * what the store console feels like — not live data, and never presented as such.
  */
 
 const TILES = [
@@ -71,7 +71,7 @@ export function HeroConsole() {
               <span className="relative inline-flex size-1.5 rounded-full bg-ion-500" />
             </span>
             <span className="font-mono text-[10.5px] tracking-[0.14em] text-lo uppercase">
-              Hub 114 · Shift live
+              Store 114 · Shift live
             </span>
           </div>
           <span

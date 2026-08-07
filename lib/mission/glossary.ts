@@ -5,7 +5,7 @@ export interface GlossaryTerm {
   short: string;
   /** The plain explanation, in the modal. */
   explanation: string;
-  /** Concrete, from this hub. */
+  /** Concrete, from this store. */
   example: string;
   /** Why anyone outside this shift cares. */
   realWorld: string;
@@ -25,7 +25,7 @@ export const GLOSSARY: Record<string, GlossaryTerm> = {
     example:
       "You have delivered 24 orders this shift and 3 arrived after their promised time. OTIF is 21 of 24, or 87%.",
     realWorld:
-      "OTIF is the headline number quick-commerce and retail supply chains are run on, because it is the only metric that refuses to let a business trade completeness for speed. A hub that hits 99% on time by shipping half-empty baskets still has bad OTIF.",
+      "OTIF is the headline number quick-commerce and retail supply chains are run on, because it is the only metric that refuses to let a business trade completeness for speed. A store that hits 99% on time by shipping half-empty baskets still has bad OTIF.",
   },
   shrinkage: {
     id: "shrinkage",
@@ -43,7 +43,7 @@ export const GLOSSARY: Record<string, GlossaryTerm> = {
     term: "Picker",
     short: "The person who walks the aisles and assembles an order.",
     explanation:
-      "A picker takes an order, walks the store collecting each item, and hands it off to be packed. In a ten-minute hub their walking route is the single biggest driver of how fast an order moves — which is why shelf layout matters more than software.",
+      "A picker takes an order, walks the store collecting each item, and hands it off to be packed. In a ten-minute delivery store their walking route is the single biggest driver of how fast an order moves — which is why shelf layout matters more than software.",
     example:
       "You have five pickers rostered. Two did not show. The three left have to absorb the whole morning's queue between them.",
     realWorld:
@@ -117,12 +117,12 @@ export const GLOSSARY: Record<string, GlossaryTerm> = {
   replenishment: {
     id: "replenishment",
     term: "Replenishment",
-    short: "Restocking the hub from the larger warehouse upstream.",
+    short: "Restocking the store from the larger warehouse upstream.",
     explanation:
-      "Requesting stock from the mother warehouse to refill the hub. It is not instant — the van has to be loaded, driven and put away, which is usually the difference between fixing a stockout this hour and fixing it this afternoon.",
+      "Requesting stock from the mother warehouse to refill the store. It is not instant — the van has to be loaded, driven and put away, which is usually the difference between fixing a stockout this hour and fixing it this afternoon.",
     example: "You request milk at 09:39; realistically it is on the shelf after 09:55.",
     realWorld:
-      "Replenishment lead time is the constraint that decides how much buffer stock a hub must hold, and therefore how much cash is tied up in it.",
+      "Replenishment lead time is the constraint that decides how much buffer stock a store must hold, and therefore how much cash is tied up in it.",
   },
   throttle: {
     id: "throttle",

@@ -184,14 +184,14 @@ function VideoStage({ onDone }: { onDone: () => void }) {
     >
       <div className="mb-5 text-center">
         <p className="font-mono text-[10.5px] tracking-[0.22em] text-ember-500 uppercase">
-          {FIRST_SHIFT.codename} · The floor
+          {FIRST_SHIFT.codename} · Briefing
         </p>
         <h1 className="mt-3 text-[clamp(1.6rem,3.6vw,2.4rem)] leading-tight font-semibold tracking-[-0.035em] text-gradient">
-          This is the hub you are about to run.
+          Dark Store Operations Introduction Video
         </h1>
         <p className="mx-auto mt-3 max-w-lg text-[14px] leading-relaxed text-mid">
-          {FIRST_SHIFT.location}, on an ordinary morning. Watch it or skip it —
-          the clock starts either way.
+          How {FIRST_SHIFT.location} runs on an ordinary morning. Watch it or
+          skip it — the clock starts either way.
         </p>
       </div>
 
@@ -298,7 +298,7 @@ function CountdownStage({ operatorId }: { operatorId: string }) {
       className="relative col-start-1 row-start-1 flex flex-col items-center"
     >
       <p className="font-mono text-[11px] tracking-[0.28em] text-ember-500 uppercase">
-        Hub opening
+        Store opening
       </p>
 
       <div className="relative mt-10 grid size-56 place-items-center">

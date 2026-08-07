@@ -2,7 +2,7 @@ import { FIRST_SHIFT } from "@/lib/constants/mission";
 
 export const MISSION_DURATION_SECONDS = FIRST_SHIFT.durationMinutes * 60;
 
-/** The hub's own clock starts here. Displayed time is this plus elapsed. */
+/** The store's own clock starts here. Displayed time is this plus elapsed. */
 export const HUB_START_HOUR = 9;
 export const HUB_START_MINUTE = 0;
 

@@ -91,7 +91,7 @@ export function MissionStatus() {
         </TooltipTrigger>
         <TooltipContent>
           {live
-            ? `Hub time ${hubClock(elapsed)} · ${formatDuration(remaining)} left`
+            ? `Store time ${hubClock(elapsed)} · ${formatDuration(remaining)} left`
             : done
               ? "The shift has ended"
               : `Mission clock — starts when ${FIRST_SHIFT.name} begins`}

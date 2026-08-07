@@ -275,7 +275,7 @@ export function stepWorld(input: WorldState): StepResult {
         entry(now, {
           tone: "warning",
           title: `${order.code} has breached its promise`,
-          detail: `Still ${order.status} in the hub. ${order.customerName} is waiting.`,
+          detail: `Still ${order.status} in the store. ${order.customerName} is waiting.`,
           source: "orders",
         }),
       );

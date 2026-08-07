@@ -66,7 +66,7 @@ export function OrdersPanel() {
       title="Orders"
       description={
         <>
-          Every promise the hub has made and has not yet kept. Sorted by how
+          Every promise the store has made and has not yet kept. Sorted by how
           close each one is to a <Term id="breach">breach</Term>.
         </>
       }

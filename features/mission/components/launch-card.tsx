@@ -29,7 +29,7 @@ export function LaunchCard() {
 
         <p className="mt-4 text-[15px] leading-relaxed text-mid">
           Starting the shift plays the handover, counts you in from five, and
-          opens the hub. There is no way back to this screen afterwards.
+          opens the store. There is no way back to this screen afterwards.
         </p>
 
         <Button asChild variant="primary" size="lg" className="mt-6 w-full">

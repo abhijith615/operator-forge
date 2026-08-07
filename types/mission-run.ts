@@ -56,5 +56,5 @@ export type OperatorActionType =
   | "block-sku"
   | "request-replenishment"
   | "resolve-complaint"
-  | "set-hub-status"
+  | "set-store-status"
   | "clear-impairment";

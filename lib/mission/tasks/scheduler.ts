@@ -8,7 +8,7 @@ import { TASK_TEMPLATES, TEMPLATES_BY_ID } from "./index";
 import type { TaskTemplate } from "./types";
 
 /**
- * The queue is the mission. A hub supervisor is never waiting for something to
+ * The queue is the mission. A store manager is never waiting for something to
  * happen — they are choosing which of six things to drop. So the scheduler's
  * job is not "fire an event", it is "keep the operator pleasantly underwater".
  */

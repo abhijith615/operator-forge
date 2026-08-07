@@ -41,7 +41,7 @@ export function OnboardingForm({
       </h2>
       <p className="mt-3 text-[14.5px] leading-relaxed text-mid">
         Signed in as <span className="text-hi">{email}</span>. Your WhatsApp is
-        how the hub reaches you — the mission opens with a message on it.
+        how the store reaches you — the mission opens with a message on it.
       </p>
 
       <form action={formAction} className="mt-8 space-y-5">
@@ -100,7 +100,7 @@ export function OnboardingForm({
           loading={pending}
           className="w-full rounded-xl"
         >
-          Enter the hub
+          Enter the store
           <ArrowRight className="transition-transform duration-300 ease-out-expo group-hover/btn:translate-x-1" />
         </Button>
 

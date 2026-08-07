@@ -77,7 +77,7 @@ export function StandingsView() {
         <PageHeader
           eyebrow="Standings"
           title="Leaderboard"
-          description="Your rating, your movement, and where you sit against operators who ran the same hub."
+          description="Your rating, your movement, and where you sit against operators who ran the same store."
         />
         <Reveal className="panel sheen mt-10 px-6 py-16 text-center">
           <div className="mx-auto grid size-12 place-items-center rounded-2xl border border-line-strong bg-obsidian">
@@ -88,7 +88,7 @@ export function StandingsView() {
           </h3>
           <p className="mx-auto mt-3 max-w-md text-[14px] leading-relaxed text-mid">
             A rating comes from a completed run. Nothing here is populated until
-            you have handed a hub over at least once.
+            you have handed a store over at least once.
           </p>
           <Button asChild variant="primary" size="md" className="mt-8">
             <Link href="/mission">
@@ -156,9 +156,9 @@ export function StandingsView() {
             label="Rank"
             hint={
               cohort
-                ? `Of ${cohort.total} operators who ran this hub.`
+                ? `Of ${cohort.total} operators who ran this store.`
                 : cohortChecked
-                  ? "Ranking needs other operators on this hub. There are none yet."
+                  ? "Ranking needs other operators on this store. There are none yet."
                   : "Checking the cohort…"
             }
           >
@@ -198,7 +198,7 @@ export function StandingsView() {
           Your shifts
         </h3>
         <p className="mt-2 text-[14px] text-mid">
-          Every hub you have handed over, oldest first.
+          Every store you have handed over, oldest first.
         </p>
       </Reveal>
 
@@ -230,7 +230,7 @@ export function StandingsView() {
                       month: "short",
                       year: "numeric",
                     })}{" "}
-                    · {run.tasksHandled} handled, {run.tasksExpired} expired · hub{" "}
+                    · {run.tasksHandled} handled, {run.tasksExpired} expired · store{" "}
                     {run.hubRating.toFixed(2)}
                   </p>
                 </div>

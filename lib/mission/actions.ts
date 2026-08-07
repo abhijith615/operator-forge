@@ -18,7 +18,7 @@ export type OperatorAction =
   | { type: "block-sku"; sku: string }
   | { type: "request-replenishment"; sku: string }
   | { type: "resolve-complaint"; complaintId: string; resolution: "apologised" | "refunded" | "escalated" }
-  | { type: "set-hub-status"; status: "throttled" | "closed" | null }
+  | { type: "set-store-status"; status: "throttled" | "closed" | null }
   | { type: "clear-impairment"; impairmentId: string };
 
 export interface ActionResult {
@@ -212,7 +212,7 @@ export function applyOperatorAction(
             world,
             "neutral",
             `Refunded ${complaint.customerName}`,
-            "Rating recovers. The hub eats ₹250.",
+            "Rating recovers. The store eats ₹250.",
             "customers",
           ),
         };
@@ -230,7 +230,7 @@ export function applyOperatorAction(
       };
     }
 
-    case "set-hub-status": {
+    case "set-store-status": {
       world.statusOverride = action.status;
       if (action.status === null) {
         return {
@@ -238,7 +238,7 @@ export function applyOperatorAction(
           entry: line(
             world,
             "positive",
-            "Hub back to normal intake",
+            "Store back to normal intake",
             "Taking full demand again.",
             "hub",
           ),
@@ -249,7 +249,7 @@ export function applyOperatorAction(
         entry: line(
           world,
           action.status === "closed" ? "critical" : "warning",
-          action.status === "closed" ? "Hub closed to new orders" : "Hub throttled",
+          action.status === "closed" ? "Store closed to new orders" : "Store throttled",
           action.status === "closed"
             ? "Nothing new comes in. The backlog is all you have left to clear."
             : "Intake cut by more than half so the floor can catch up.",

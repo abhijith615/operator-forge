@@ -49,7 +49,7 @@ export function HubControls() {
               <TooltipTrigger asChild>
                 <button
                   type="button"
-                  onClick={() => dispatch({ type: "set-hub-status", status: option.value })}
+                  onClick={() => dispatch({ type: "set-store-status", status: option.value })}
                   className={cn(
                     "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px]",
                     "transition-colors duration-200",

@@ -23,7 +23,7 @@ export default function NotFound() {
           There is no bay here.
         </h1>
         <p className="mt-5 text-[15px] leading-relaxed text-mid text-balance">
-          The panel you asked for is not part of this hub. Nothing has broken —
+          The panel you asked for is not part of this store. Nothing has broken —
           you have simply walked past the last aisle.
         </p>
         <Button asChild variant="secondary" size="lg" className="mt-9">

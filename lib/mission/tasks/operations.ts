@@ -4,7 +4,7 @@ import { activePickers, lowStock, maybePick, openOrdersIn, pickFree } from "./ty
 /**
  * Operations: the floor itself. A mix of things going wrong and the routine
  * work that keeps them from going wrong — deliberately weighted so the operator
- * spends most of their time on ordinary hub activity, not emergencies.
+ * spends most of their time on ordinary store activity, not emergencies.
  */
 export const OPERATIONS_TASKS: TaskTemplate[] = [
   {

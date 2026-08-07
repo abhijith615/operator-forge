@@ -102,7 +102,7 @@ export function WorldStrip() {
       />
 
       <MetricTile
-        label="Hub status"
+        label="Store status"
         value={world.hubStatus === "open" ? "Open" : world.hubStatus[0]!.toUpperCase() + world.hubStatus.slice(1)}
         icon={Zap}
         tone={HUB_TONE[world.hubStatus]}
@@ -134,7 +134,7 @@ export function WorldStrip() {
       />
 
       <MetricTile
-        label="Weather · hub time"
+        label="Weather · store time"
         value={hubClock(world.elapsed)}
         icon={WeatherIcon}
         tone={world.weather.condition === "rain" ? "warn" : "neutral"}

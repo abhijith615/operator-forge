@@ -13,7 +13,7 @@ export const fullNameSchema = z
   .max(60, "Keep it under 60 characters.");
 
 /**
- * WhatsApp is how the hub reaches you. Stored as entered, minus formatting —
+ * WhatsApp is how the store reaches you. Stored as entered, minus formatting —
  * validated loosely because operators join from many countries.
  */
 export const whatsappSchema = z

@@ -52,8 +52,8 @@ export function Readiness({ operator }: { operator: Operator }) {
       </ul>
 
       <p className="mt-6 border-t border-line pt-4 text-[12.5px] leading-relaxed text-lo">
-        Set aside a full hour on a device you can concentrate on. The shift runs
-        once and does not pause.
+        Set aside a clear half hour on a device you can concentrate on. The shift
+        runs once and does not pause.
       </p>
     </Reveal>
   );

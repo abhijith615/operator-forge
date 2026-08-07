@@ -21,7 +21,7 @@ const ROWS = [
 const HIGHLIGHTS = [
   { label: "Operator Rating", value: 1740, suffix: "", hint: "Composite of ten capabilities" },
   { label: "Missions run", value: 3, suffix: "", hint: "One shift each, no retakes" },
-  { label: "Percentile", value: 82, suffix: "th", hint: "Against operators on Hub 114" },
+  { label: "Percentile", value: 82, suffix: "th", hint: "Against operators on Store 114" },
 ] as const;
 
 function DeltaPill({ delta }: { delta: number }) {
@@ -63,7 +63,7 @@ export function Standings() {
           <Reveal className="panel sheen overflow-hidden">
             <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
               <span className="font-mono text-[10.5px] tracking-[0.16em] text-lo uppercase">
-                Season 01 · Hub 114
+                Season 01 · Store 114
               </span>
               <Badge tone="neutral">Sample</Badge>
             </div>

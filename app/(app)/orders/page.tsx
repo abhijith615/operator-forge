@@ -13,7 +13,7 @@ export default function OrdersPage() {
         "The live queue, with promised times and what is about to breach",
         "OTIF as it moves, not as a monthly average",
         "Which orders are waiting on a picker, a rider, or a decision from you",
-        "Cancellations and refunds, and what they cost the hub",
+        "Cancellations and refunds, and what they cost the store",
       ]}
     >
       <OrdersPanel />

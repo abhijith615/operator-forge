@@ -1,4 +1,4 @@
-/** The hub, as it exists at any instant of the shift. */
+/** The store, as it exists at any instant of the shift. */
 
 export type HubStatus = "open" | "strained" | "critical" | "throttled" | "closed";
 

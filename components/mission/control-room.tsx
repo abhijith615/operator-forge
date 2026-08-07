@@ -27,7 +27,7 @@ const LANES: { value: Lane; label: string }[] = [
 /**
  * The control room. Three columns, all live, nothing behind a navigation click:
  * communications on the left, the floor in the middle, the queue on the right.
- * Below `xl` the same three panels become lanes, because a supervisor on a
+ * Below `xl` the same three panels become lanes, because a manager on a
  * laptop still has to see all three.
  */
 export function ControlRoom({

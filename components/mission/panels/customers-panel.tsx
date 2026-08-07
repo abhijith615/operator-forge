@@ -41,7 +41,7 @@ export function CustomersPanel() {
         <>
           Every complaint here is attached to an order that missed its promise.
           An apology costs nothing and works sometimes; a refund works more often
-          and costs the hub. Neither undoes the <Term id="breach">breach</Term>.
+          and costs the store. Neither undoes the <Term id="breach">breach</Term>.
         </>
       }
     >

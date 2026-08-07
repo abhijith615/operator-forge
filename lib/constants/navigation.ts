@@ -24,7 +24,7 @@ export const navSections: NavSection[] = [
         icon: Crosshair,
         availability: "open",
         shortcut: "M",
-        description: "Your briefing, the hub you inherit, and the clock.",
+        description: "Your briefing, the store you inherit, and the clock.",
       },
       {
         label: "AI Assistant",
@@ -40,7 +40,7 @@ export const navSections: NavSection[] = [
         icon: MessagesSquare,
         availability: "in-mission",
         shortcut: "C",
-        description: "Hub Manager, Inventory Lead and the customer on the line.",
+        description: "Store Manager, Inventory Lead and the customer on the line.",
       },
     ],
   },
@@ -100,7 +100,7 @@ export const navSections: NavSection[] = [
         icon: Trophy,
         availability: "post-mission",
         shortcut: "L",
-        description: "Where you stand against operators who ran the same hub.",
+        description: "Where you stand against operators who ran the same store.",
       },
       {
         label: "Settings",

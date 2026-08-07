@@ -1,7 +1,7 @@
 import type { CapabilityId } from "@/lib/constants/site";
 import type { WorldEffect } from "@/lib/mission/effects";
 
-/** The four things a hub supervisor is holding at once. */
+/** The four things a store manager is holding at once. */
 export type TaskStream = "operations" | "people" | "customers" | "management";
 
 export type TaskPriority = "critical" | "high" | "normal";

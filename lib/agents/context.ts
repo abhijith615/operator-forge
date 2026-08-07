@@ -40,7 +40,7 @@ export function buildWorldBriefing(world: WorldState): string {
   const lines = [
     `## Live floor — ${hubClock(world.elapsed)}, minute ${Math.floor(world.elapsed / 60)} of ${FIRST_SHIFT.durationMinutes}`,
     `Time left on the shift: ${Math.max(0, FIRST_SHIFT.durationMinutes - Math.floor(world.elapsed / 60))} minutes.`,
-    `Hub status: ${world.hubStatus}${world.statusOverride ? " (operator hold)" : ""}`,
+    `Store status: ${world.hubStatus}${world.statusOverride ? " (operator hold)" : ""}`,
     `Customer rating: ${world.rating.toFixed(2)}`,
     `Weather: ${world.weather.note}`,
     "",

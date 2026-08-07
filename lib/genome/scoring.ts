@@ -109,7 +109,7 @@ function scoreSystemsThinking(signals: RunSignals): RawReading {
     (event) => event.kind === "control" && event.target === "cycle-count",
   ).length;
   const throttled = signals.events.some(
-    (event) => event.kind === "control" && event.target === "set-hub-status",
+    (event) => event.kind === "control" && event.target === "set-store-status",
   );
   const throttleTask = signals.answered.some(
     (decision) => decision.optionId === "throttle" || decision.optionId === "prepare",
@@ -310,7 +310,7 @@ function scoreCustomerThinking(signals: RunSignals): RawReading {
   const moments = bookendMoments(signals, "customer-thinking");
   moments.push({
     at: signals.duration,
-    text: `The hub rating finished at ${signals.world.rating.toFixed(2)}, from 4.60 when you took over.`,
+    text: `The store rating finished at ${signals.world.rating.toFixed(2)}, from 4.60 when you took over.`,
   });
 
   return {
@@ -420,7 +420,7 @@ export function scoreCapabilities(
 }
 
 /**
- * Operator Rating. A composite of the ten readings, nudged by what the hub
+ * Operator Rating. A composite of the ten readings, nudged by what the store
  * actually looked like at handover — judgement matters more than outcome, but
  * outcome is not nothing.
  */

@@ -60,7 +60,7 @@ export default async function SettingsPage() {
       <div className="mt-8">
         <Section
           title="Identity"
-          description="How the hub addresses you, and how it reaches you before a shift."
+          description="How the store addresses you, and how it reaches you before a shift."
         >
           <IdentityForm
             defaultName={operator.fullName}
@@ -96,7 +96,7 @@ export default async function SettingsPage() {
 
         <Section
           title="Appearance"
-          description="Operator Forge is a dark instrument by design — a hub floor at 6am is not a bright room."
+          description="Operator Forge is a dark instrument by design — a store floor at 6am is not a bright room."
         >
           <div className="space-y-3">
             <MotionStatus />

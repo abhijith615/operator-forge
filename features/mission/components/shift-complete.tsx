@@ -67,10 +67,10 @@ export function ShiftComplete() {
           </span>
         </div>
         <h2 className="mt-3 text-[26px] leading-tight font-semibold tracking-[-0.03em] text-hi sm:text-[32px]">
-          10:00. The next supervisor has the floor.
+          10:00. The next manager has the floor.
         </h2>
         <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-mid">
-          This is what the hub looked like when you handed it over. It is not a
+          This is what the store looked like when you handed it over. It is not a
           score — it is the raw shape of the morning you ran.
         </p>
       </motion.div>

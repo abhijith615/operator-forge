@@ -28,7 +28,7 @@ const BEATS: Beat[] = [
   {
     stamp: "T−00:30",
     title: "The handover",
-    body: "A message, a short video from the hub manager, and a five-second countdown. No tutorial, no tooltips tour. The doors open.",
+    body: "A message, a short video from the store manager, and a five-second countdown. No tutorial, no tooltips tour. The doors open.",
     icon: PlayCircle,
     accent: "ember",
   },

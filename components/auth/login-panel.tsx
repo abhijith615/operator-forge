@@ -62,7 +62,7 @@ export function LoginPanel({ configured, initialError }: LoginPanelProps) {
         Report for your shift.
       </h2>
       <p className="mt-3 text-[14.5px] leading-relaxed text-mid">
-        One account, one mission record. We use it to reach you if the hub needs
+        One account, one mission record. We use it to reach you if the store needs
         you before you are online.
       </p>
 

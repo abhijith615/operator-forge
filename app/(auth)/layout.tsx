@@ -8,7 +8,7 @@ const MARKERS = [
   { k: "Mission", v: FIRST_SHIFT.name },
   { k: "Role", v: FIRST_SHIFT.role },
   { k: "Duration", v: `${FIRST_SHIFT.durationMinutes} minutes` },
-  { k: "Hub", v: FIRST_SHIFT.location },
+  { k: "Store", v: FIRST_SHIFT.location },
 ] as const;
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -31,7 +31,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             {FIRST_SHIFT.codename} · Standing by
           </p>
           <h1 className="mt-6 text-[clamp(2rem,3.4vw,2.9rem)] leading-[1.05] font-semibold tracking-[-0.04em] text-gradient text-balance">
-            The hub opens at nine. Somebody has to run it.
+            The store opens at nine. Somebody has to run it.
           </h1>
           <p className="mt-5 text-[15px] leading-relaxed text-mid">
             {FIRST_SHIFT.tagline}

@@ -14,7 +14,7 @@ const QUOTES = [
   {
     quote:
       "Twenty minutes in I stopped thinking about being scored. I was just trying to get the rain orders out.",
-    role: "Assistant Hub Supervisor",
+    role: "Assistant Store Manager",
     cohort: "Cohort 01",
   },
   {
@@ -38,7 +38,7 @@ const QUOTES = [
   {
     quote:
       "The debrief did not tell me my grade. It told me what I do under pressure.",
-    role: "Assistant Hub Supervisor",
+    role: "Assistant Store Manager",
     cohort: "Cohort 01",
   },
 ] as const;
