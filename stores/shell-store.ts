@@ -21,6 +21,20 @@ interface ShellState {
   /** Notification tones during a shift. Persisted per device. */
   soundEnabled: boolean;
   setSoundEnabled: (enabled: boolean) => void;
+
+  /**
+   * Which control-room column is showing below `xl`. Lives here rather than in
+   * the component so the walkthrough can bring a lane into view before it tries
+   * to point at something inside it.
+   */
+  missionLane: "comms" | "floor" | "queue";
+  setMissionLane: (lane: "comms" | "floor" | "queue") => void;
+
+  /** The orientation tour runs once, then never again unless replayed. */
+  walkthroughSeen: boolean;
+  setWalkthroughSeen: (seen: boolean) => void;
+  walkthroughReplay: boolean;
+  setWalkthroughReplay: (replay: boolean) => void;
 }
 
 export const useShellStore = create<ShellState>()(
@@ -40,12 +54,21 @@ export const useShellStore = create<ShellState>()(
 
       soundEnabled: true,
       setSoundEnabled: (soundEnabled) => set({ soundEnabled }),
+
+      missionLane: "queue",
+      setMissionLane: (missionLane) => set({ missionLane }),
+
+      walkthroughSeen: false,
+      setWalkthroughSeen: (walkthroughSeen) => set({ walkthroughSeen }),
+      walkthroughReplay: false,
+      setWalkthroughReplay: (walkthroughReplay) => set({ walkthroughReplay }),
     }),
     {
       name: "of.shell",
       partialize: (state) => ({
         sidebarCollapsed: state.sidebarCollapsed,
         soundEnabled: state.soundEnabled,
+        walkthroughSeen: state.walkthroughSeen,
       }),
     },
   ),

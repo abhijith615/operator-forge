@@ -13,6 +13,7 @@ import { WorldStrip } from "@/components/mission/world-strip";
 import { hubClock } from "@/lib/mission/config";
 import { easing } from "@/lib/motion";
 import { useMissionStore } from "@/stores/mission-store";
+import { useShellStore } from "@/stores/shell-store";
 import { FIRST_SHIFT } from "@/lib/constants/mission";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +42,10 @@ export function ControlRoom({
   const pendingCount = useMissionStore(
     (state) => state.tasks.filter((task) => task.status === "pending").length,
   );
-  const [lane, setLane] = React.useState<Lane>("queue");
+  // Held in the shell store so the walkthrough can open a lane before pointing
+  // at something inside it.
+  const lane = useShellStore((state) => state.missionLane);
+  const setLane = useShellStore((state) => state.setMissionLane);
 
   if (!world) return null;
 
@@ -81,10 +85,12 @@ export function ControlRoom({
 
       <div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-[20rem_minmax(0,1fr)_23rem]">
         {/* ── Left: communications ────────────────────────────────────── */}
-        <CommsRail
-          configured={chatConfigured}
+        <div
+          data-tour="comms"
           className={cn("min-h-0", lane === "comms" ? "flex" : "hidden xl:flex")}
-        />
+        >
+          <CommsRail configured={chatConfigured} className="min-h-0 flex-1" />
+        </div>
 
         {/* ── Centre: the floor ───────────────────────────────────────── */}
         <div
@@ -115,12 +121,14 @@ export function ControlRoom({
             </div>
 
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              <HubControls />
+              <span data-tour="intake">
+                <HubControls />
+              </span>
               <AchievementStrip />
             </div>
           </motion.div>
 
-          <div className="shrink-0">
+          <div className="shrink-0" data-tour="floor">
             <WorldStrip />
           </div>
 
@@ -134,7 +142,7 @@ export function ControlRoom({
             lane === "queue" ? "flex" : "hidden xl:flex",
           )}
         >
-          <TaskQueue className="min-h-0 flex-1" />
+          <TaskQueue className="min-h-0 flex-1" data-tour="queue" />
           <Timeline className="h-[13rem] shrink-0" />
         </div>
       </div>

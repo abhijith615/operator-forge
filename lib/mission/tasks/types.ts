@@ -37,6 +37,13 @@ export interface TaskTemplate {
   cooldown: number;
   /** Seconds on the clock once it lands. */
   ttl: number;
+  /**
+   * Templates fire once per shift by default, so an operator never sees the
+   * same task twice. Set this only where the situation genuinely recurs and
+   * reads differently each time — a different customer chasing a different
+   * order, a different SKU running short.
+   */
+  repeatable?: boolean;
   /** Only offered when the floor actually warrants it. */
   when?: (world: WorldState) => boolean;
   /** Return `null` to decline the draw — the scheduler will pick another. */

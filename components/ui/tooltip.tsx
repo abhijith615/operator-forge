@@ -19,8 +19,8 @@ export function TooltipContent({
       <TooltipPrimitive.Content
         sideOffset={sideOffset}
         className={cn(
-          "z-100 overflow-hidden rounded-lg px-2.5 py-1.5",
-          "glass text-[12.5px] font-medium text-hi shadow-2xl shadow-black/60",
+          "z-100 max-w-72 overflow-hidden rounded-lg px-2.5 py-1.5",
+          "overlay-surface text-[12.5px] leading-snug font-medium text-hi",
           "origin-(--radix-tooltip-content-transform-origin)",
           "data-[state=delayed-open]:animate-in data-[state=closed]:animate-out",
           "data-[state=delayed-open]:fade-in-0 data-[state=closed]:fade-out-0",

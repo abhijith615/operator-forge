@@ -36,7 +36,7 @@ export function FinalCta() {
           <Reveal delay={0.18}>
             <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button asChild variant="primary" size="lg" className="w-full sm:w-auto">
-                <Link href="/login">
+                <Link href="/brief">
                   Start Mission
                   <ArrowRight className="transition-transform duration-300 ease-out-expo group-hover/btn:translate-x-1" />
                 </Link>

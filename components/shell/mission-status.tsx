@@ -35,7 +35,7 @@ export function MissionStatus() {
   const urgent = live && remaining <= 300;
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2" data-tour="clock">
       <Tooltip>
         <TooltipTrigger asChild>
           <div

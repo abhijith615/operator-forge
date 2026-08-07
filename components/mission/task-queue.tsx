@@ -37,7 +37,10 @@ function sortTasks(tasks: MissionTask[], elapsed: number): MissionTask[] {
   });
 }
 
-export function TaskQueue({ className }: { className?: string }) {
+export function TaskQueue({
+  className,
+  ...props
+}: React.ComponentProps<"section">) {
   const tasks = useMissionStore((state) => state.tasks);
   const resolveTask = useMissionStore((state) => state.resolveTask);
   const elapsed = useLiveElapsed();
@@ -67,6 +70,7 @@ export function TaskQueue({ className }: { className?: string }) {
     <section
       className={cn("panel sheen flex min-h-0 flex-col overflow-hidden", className)}
       aria-label="Task queue"
+      {...props}
     >
       <header className="shrink-0 border-b border-line px-4 pt-3 pb-2.5">
         <div className="flex items-center gap-2">

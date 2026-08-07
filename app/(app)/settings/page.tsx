@@ -8,6 +8,7 @@ import { Kbd } from "@/components/ui/kbd";
 import { IdentityForm } from "@/features/settings/components/identity-form";
 import { MotionStatus } from "@/features/settings/components/motion-status";
 import { SoundToggle } from "@/features/settings/components/sound-toggle";
+import { WalkthroughReplay } from "@/features/settings/components/walkthrough-replay";
 import { signOut } from "@/lib/auth/actions";
 import { requireOperator } from "@/lib/auth/session";
 import { flatNavItems } from "@/lib/constants/navigation";
@@ -101,6 +102,7 @@ export default async function SettingsPage() {
           <div className="space-y-3">
             <MotionStatus />
             <SoundToggle />
+            <WalkthroughReplay />
           </div>
         </Section>
 

@@ -78,7 +78,25 @@ function instantiate(
   };
 }
 
-/** Weighted draw, skipping anything on cooldown or not applicable right now. */
+function weightedPick(
+  candidates: TaskTemplate[],
+  rand: () => number,
+): TaskTemplate | null {
+  if (candidates.length === 0) return null;
+  const total = candidates.reduce((sum, template) => sum + template.weight, 0);
+  let roll = rand() * total;
+  for (const template of candidates) {
+    roll -= template.weight;
+    if (roll <= 0) return template;
+  }
+  return candidates[candidates.length - 1] ?? null;
+}
+
+/**
+ * Weighted draw. Unseen templates first, so a shift works through the whole
+ * catalogue before anything comes round again — repeats are the single clearest
+ * way to break the illusion that this is a real morning.
+ */
 function drawTemplate(
   world: WorldState,
   elapsed: number,
@@ -86,23 +104,30 @@ function drawTemplate(
   lastUsed: Record<string, number>,
   pendingTemplateIds: Set<string>,
 ): TaskTemplate | null {
-  const eligible = TASK_TEMPLATES.filter((template) => {
+  const applicable = TASK_TEMPLATES.filter((template) => {
     if (pendingTemplateIds.has(template.id)) return false;
-    const used = lastUsed[template.id];
-    if (used !== undefined && elapsed - used < template.cooldown) return false;
     if (template.when && !template.when(world)) return false;
     return true;
   });
 
-  if (eligible.length === 0) return null;
+  const unseen = applicable.filter((template) => lastUsed[template.id] === undefined);
+  if (unseen.length > 0) return weightedPick(unseen, rand);
 
-  const total = eligible.reduce((sum, template) => sum + template.weight, 0);
-  let roll = rand() * total;
-  for (const template of eligible) {
-    roll -= template.weight;
-    if (roll <= 0) return template;
-  }
-  return eligible[eligible.length - 1] ?? null;
+  // Catalogue exhausted. Only templates that read differently on a second
+  // showing come back, and only once their cooldown has passed.
+  const recurring = applicable.filter((template) => {
+    if (!template.repeatable) return false;
+    const used = lastUsed[template.id];
+    return used === undefined || elapsed - used >= template.cooldown;
+  });
+  if (recurring.length > 0) return weightedPick(recurring, rand);
+
+  // Last resort: whatever has been off the board longest. Better a repeat than
+  // an empty queue, which is the one thing this mission must never show.
+  const stalest = [...applicable].sort(
+    (a, b) => (lastUsed[a.id] ?? -Infinity) - (lastUsed[b.id] ?? -Infinity),
+  );
+  return stalest[0] ?? null;
 }
 
 export function advanceTasks(input: AdvanceTasksInput): AdvanceTasksResult {

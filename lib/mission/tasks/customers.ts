@@ -15,6 +15,8 @@ export const CUSTOMER_TASKS: TaskTemplate[] = [
     weight: 11,
     cooldown: 80,
     ttl: 70,
+    // A different customer chasing a different order every time.
+    repeatable: true,
     build: (ctx) => {
       const { world } = ctx;
       const order = pickFree(ctx, openOrdersIn(world));
@@ -438,6 +440,7 @@ export const CUSTOMER_TASKS: TaskTemplate[] = [
     weight: 10,
     cooldown: 90,
     ttl: 95,
+    repeatable: true,
     build: ({ world, rand }) => {
       const count = 3 + Math.floor(rand() * 4);
       return {
@@ -473,5 +476,354 @@ export const CUSTOMER_TASKS: TaskTemplate[] = [
       note: "Nobody answered the chat queue.",
       effects: [{ kind: "rating", delta: -0.02 }],
     },
+  },
+
+  {
+    id: "cust-allergen",
+    stream: "customers",
+    priority: "critical",
+    weight: 6,
+    cooldown: 400,
+    ttl: 45,
+    build: ({ rand }) => {
+      const name = maybePick(rand, CUSTOMER_NAMES) ?? "A customer";
+      return {
+        title: `${name} says the label does not match the contents`,
+        detail: "A nut-free product with nuts listed on the inner packaging. She has a severe allergy and has not eaten it.",
+        source: name,
+        options: [
+          {
+            id: "pull-and-escalate",
+            label: "Pull the whole batch and escalate immediately",
+            outcome: "Stops every other order containing it. The only call that survives a review.",
+            quality: 1,
+            capabilities: ["ownership", "customer-thinking", "decision-making"],
+            effects: [{ kind: "rating", delta: 0.01 }],
+          },
+          {
+            id: "refund-her",
+            label: "Refund her and apologise",
+            outcome: "Handles the person in front of you. Leaves the batch on the shelf.",
+            quality: 0.2,
+            capabilities: ["customer-thinking"],
+            effects: [{ kind: "refund", amount: 400 }],
+          },
+          {
+            id: "check-first",
+            label: "Check one unit yourself before doing anything",
+            outcome: "Ninety seconds. Reasonable — provided the answer changes what you do next.",
+            quality: 0.6,
+            capabilities: ["curiosity", "decision-making"],
+          },
+        ],
+      };
+    },
+    onExpire: {
+      note: "Nobody acted. The batch stayed sellable.",
+      effects: [{ kind: "rating", delta: -0.06 }],
+    },
+  },
+
+  {
+    id: "cust-missing-item",
+    stream: "customers",
+    priority: "high",
+    weight: 9,
+    cooldown: 150,
+    ttl: 75,
+    build: (ctx) => {
+      const { world } = ctx;
+      const order = pickFree(ctx, openOrdersIn(world));
+      if (!order) return null;
+      return {
+        title: `${order.customerName} is short two items from ${order.code}`,
+        detail: "Charged for six, received four. She has photographed the bag.",
+        source: order.customerName,
+        subjectId: order.id,
+        options: [
+          {
+            id: "refund-and-send",
+            label: "Refund the two and send them on the next run",
+            outcome: "Costs a rider leg. She gets what she paid for.",
+            quality: 0.9,
+            capabilities: ["customer-thinking", "ownership"],
+            effects: [{ kind: "refund", amount: 220 }],
+          },
+          {
+            id: "refund-only",
+            label: "Refund the two lines",
+            outcome: "Fast and fair. She still has to shop again today.",
+            quality: 0.65,
+            capabilities: ["decision-making"],
+            effects: [{ kind: "refund", amount: 220 }],
+          },
+          {
+            id: "dispute",
+            label: "Ask her to confirm what was in the bag first",
+            outcome: "Sometimes necessary. Reads as calling her a liar.",
+            quality: 0.2,
+            capabilities: ["customer-thinking", "communication"],
+          },
+        ],
+      };
+    },
+    onExpire: {
+      note: "She was charged for items she never received, and nobody replied.",
+      effects: [{ kind: "rating", delta: -0.03 }],
+    },
+  },
+
+  {
+    id: "cust-rider-conduct",
+    stream: "customers",
+    priority: "high",
+    weight: 7,
+    cooldown: 300,
+    ttl: 85,
+    build: (ctx) => {
+      const rider = pickFree(ctx, ctx.world.riders);
+      if (!rider) return null;
+      return {
+        title: `A customer has complained about ${rider.name}'s manner`,
+        detail: "She says he was short with her at the door. He says she kept him waiting eight minutes.",
+        source: "Customer complaint",
+        subjectId: rider.id,
+        options: [
+          {
+            id: "both-sides",
+            label: "Hear him out, then call her back",
+            outcome: "Slow, and the only version where both people are treated like adults.",
+            quality: 0.95,
+            capabilities: ["communication", "ownership", "customer-thinking"],
+          },
+          {
+            id: "apologise-only",
+            label: "Apologise to her and leave it there",
+            outcome: "Closes the complaint. He hears about it second-hand.",
+            quality: 0.4,
+            capabilities: ["customer-thinking"],
+          },
+          {
+            id: "discipline",
+            label: "Warn him — the customer is always right",
+            outcome: "Fast. He was kept waiting eight minutes and now has a warning.",
+            quality: 0.15,
+            capabilities: ["communication", "ownership"],
+          },
+        ],
+      };
+    },
+    onExpire: { note: "The complaint closed itself with nobody spoken to." },
+  },
+
+  {
+    id: "cust-subscriber",
+    stream: "customers",
+    priority: "high",
+    weight: 7,
+    cooldown: 300,
+    ttl: 90,
+    build: ({ rand }) => {
+      const name = maybePick(rand, CUSTOMER_NAMES) ?? "A customer";
+      return {
+        title: `${name} is cancelling her membership`,
+        detail: "Two years, four orders a week. The cancellation reason field says: 'never on time any more'.",
+        source: "Retention",
+        options: [
+          {
+            id: "call-and-listen",
+            label: "Call her and ask what changed",
+            outcome: "Three minutes. Often she stays, and you learn when it started slipping.",
+            quality: 0.95,
+            capabilities: ["customer-thinking", "curiosity", "communication"],
+            effects: [{ kind: "rating", delta: 0.018 }],
+          },
+          {
+            id: "discount",
+            label: "Offer three months at half price",
+            outcome: "Buys three months of the same experience.",
+            quality: 0.4,
+            capabilities: ["customer-thinking"],
+            effects: [{ kind: "refund", amount: 450 }],
+          },
+          {
+            id: "let-go",
+            label: "Let her cancel",
+            outcome: "Honest, if you have nothing to offer that would actually be different.",
+            quality: 0.45,
+            capabilities: ["decision-making"],
+          },
+        ],
+      };
+    },
+    onExpire: { note: "The membership lapsed without anyone contacting her." },
+  },
+
+  {
+    id: "cust-public-review",
+    stream: "customers",
+    priority: "high",
+    weight: 8,
+    cooldown: 280,
+    ttl: 80,
+    build: () => ({
+      title: "A one-star review has gone up naming this store",
+      detail: "Forty minutes for a ten-minute order, with a photo of the app. It is the top review right now.",
+      source: "Public reviews",
+      options: [
+        {
+          id: "reply-specific",
+          label: "Reply publicly with what went wrong and what you changed",
+          outcome: "Everyone reading it sees an operator who knows their own floor.",
+          quality: 0.95,
+          capabilities: ["communication", "ownership", "customer-thinking"],
+        },
+        {
+          id: "reply-template",
+          label: "Post the standard apology",
+          outcome: "Looks exactly like the four other standard apologies underneath it.",
+          quality: 0.35,
+          capabilities: ["communication"],
+        },
+        {
+          id: "escalate-marketing",
+          label: "Send it to marketing to handle",
+          outcome: "Off your plate. Answered by someone who was not there.",
+          quality: 0.45,
+          capabilities: ["prioritization"],
+        },
+      ],
+    }),
+    onExpire: { note: "The review sat at the top of the page, unanswered." },
+  },
+
+  {
+    id: "cust-door-delivery",
+    stream: "customers",
+    priority: "normal",
+    weight: 8,
+    cooldown: 240,
+    ttl: 90,
+    build: ({ rand }) => {
+      const name = maybePick(rand, CUSTOMER_NAMES) ?? "A customer";
+      return {
+        title: `${name} has asked for delivery to her door, not the gate`,
+        detail: "She is eighty-one and the gate is a hundred metres from the flat. It adds four minutes to the drop.",
+        source: name,
+        options: [
+          {
+            id: "flag-permanently",
+            label: "Flag the account so every rider knows",
+            outcome: "Four minutes a drop, forever, and she never has to ask again.",
+            quality: 0.95,
+            capabilities: ["customer-thinking", "systems-thinking"],
+          },
+          {
+            id: "today-only",
+            label: "Tell today's rider to do it",
+            outcome: "Solves today. She asks again on Thursday.",
+            quality: 0.55,
+            capabilities: ["customer-thinking"],
+          },
+          {
+            id: "decline",
+            label: "Explain that riders drop at the gate",
+            outcome: "Policy, correctly stated, to someone who cannot carry it.",
+            quality: 0.1,
+            capabilities: ["customer-thinking", "communication"],
+          },
+        ],
+      };
+    },
+    onExpire: { note: "Her request went unanswered and the drop stayed at the gate." },
+  },
+
+  {
+    id: "cust-redirect",
+    stream: "customers",
+    priority: "high",
+    weight: 8,
+    cooldown: 200,
+    ttl: 55,
+    build: (ctx) => {
+      const order = pickFree(ctx, openOrdersIn(ctx.world));
+      if (!order) return null;
+      return {
+        title: `${order.customerName} entered the wrong address on ${order.code}`,
+        detail: "She has realised while it is being picked. The correct address is two kilometres further out.",
+        source: order.customerName,
+        subjectId: order.id,
+        options: [
+          {
+            id: "redirect",
+            label: "Update it before dispatch",
+            outcome: "Thirty seconds now versus a failed delivery in fifteen minutes.",
+            quality: 0.95,
+            capabilities: ["customer-thinking", "decision-making"],
+          },
+          {
+            id: "cancel-reorder",
+            label: "Cancel and ask her to reorder",
+            outcome: "Clean for you. She waits another twenty-five minutes.",
+            quality: 0.3,
+            capabilities: ["customer-thinking"],
+            effects: [{ kind: "cancel-order", orderId: order.id }],
+          },
+          {
+            id: "rider-decides",
+            label: "Send it and let the rider sort it out",
+            outcome: "Two kilometres of someone else's problem.",
+            quality: 0.15,
+            capabilities: ["ownership"],
+          },
+        ],
+      };
+    },
+    onExpire: {
+      note: "It went to the wrong address.",
+      effects: [{ kind: "rating", delta: -0.03 }],
+    },
+  },
+
+  {
+    id: "cust-bulk-refund-claim",
+    stream: "customers",
+    priority: "normal",
+    weight: 7,
+    cooldown: 320,
+    ttl: 100,
+    build: ({ rand }) => {
+      const name = maybePick(rand, CUSTOMER_NAMES) ?? "A customer";
+      return {
+        title: `${name} has claimed a refund on her fourth order this month`,
+        detail: "Each one plausible on its own. Together they are most of what she has spent.",
+        source: "Fraud flag",
+        options: [
+          {
+            id: "review-pattern",
+            label: "Look at the four orders before deciding",
+            outcome: "Two minutes. Either you find a pattern or you find a genuinely unlucky customer.",
+            quality: 0.95,
+            capabilities: ["curiosity", "systems-thinking"],
+          },
+          {
+            id: "refund",
+            label: "Refund it like the others",
+            outcome: "Keeps her happy. Keeps the pattern going.",
+            quality: 0.35,
+            capabilities: ["customer-thinking"],
+            effects: [{ kind: "refund", amount: 500 }],
+          },
+          {
+            id: "refuse",
+            label: "Refuse and flag the account",
+            outcome: "Decisive. Also how you lose a real customer who had a bad month.",
+            quality: 0.3,
+            capabilities: ["decision-making"],
+          },
+        ],
+      };
+    },
+    onExpire: { note: "The claim auto-approved with nobody looking at the pattern." },
   },
 ];

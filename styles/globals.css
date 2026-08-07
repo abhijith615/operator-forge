@@ -242,6 +242,19 @@
    UTILITIES
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/*
+ * Floating surfaces — tooltips, menus, popovers. Deliberately opaque: `glass`
+ * is 5% white over a blur, which is fine over a panel and unreadable over body
+ * text, because whatever is underneath shows straight through it.
+ */
+@utility overlay-surface {
+  background: var(--color-raised);
+  border: 1px solid var(--color-line-bright);
+  box-shadow:
+    0 1px 0 0 oklch(1 0 0 / 6%) inset,
+    0 18px 48px -16px oklch(0 0 0 / 90%);
+}
+
 @utility glass {
   background: linear-gradient(
     180deg,

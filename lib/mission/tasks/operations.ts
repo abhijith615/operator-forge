@@ -14,6 +14,8 @@ export const OPERATIONS_TASKS: TaskTemplate[] = [
     weight: 10,
     cooldown: 100,
     ttl: 75,
+    // A different picker cannot find a different SKU — reads new each time.
+    repeatable: true,
     build: (ctx) => {
       const { world, rand } = ctx;
       const picker = pickFree(ctx, activePickers(world));
@@ -144,6 +146,7 @@ export const OPERATIONS_TASKS: TaskTemplate[] = [
     weight: 11,
     cooldown: 120,
     ttl: 120,
+    repeatable: true,
     build: ({ world, rand }) => {
       const item = maybePick(
         rand,
@@ -190,6 +193,7 @@ export const OPERATIONS_TASKS: TaskTemplate[] = [
     weight: 9,
     cooldown: 90,
     ttl: 70,
+    repeatable: true,
     when: (world) => lowStock(world).length > 0,
     build: ({ world, rand }) => {
       const item = maybePick(rand, lowStock(world));
@@ -239,6 +243,7 @@ export const OPERATIONS_TASKS: TaskTemplate[] = [
     weight: 8,
     cooldown: 100,
     ttl: 60,
+    repeatable: true,
     when: (world) =>
       world.orders.filter((order) => order.status === "packed").length >= 3 &&
       world.riders.filter((rider) => rider.status === "idle").length === 0,
@@ -553,5 +558,328 @@ export const OPERATIONS_TASKS: TaskTemplate[] = [
       note: "The cartons stayed on the floor. Phantom stock in the system.",
       cascades: ["ops-item-not-found"],
     },
+  },
+
+  {
+    id: "ops-mispick",
+    stream: "operations",
+    priority: "high",
+    weight: 9,
+    cooldown: 200,
+    ttl: 70,
+    build: (ctx) => {
+      const order = pickFree(ctx, openOrdersIn(ctx.world));
+      if (!order) return null;
+      return {
+        title: `Wrong item caught at dispatch on ${order.code}`,
+        detail: "The bag has someone else's shampoo in it. It has not left the store yet.",
+        source: "Dispatch check",
+        subjectId: order.id,
+        options: [
+          {
+            id: "fix-now",
+            label: "Hold it and correct the bag",
+            outcome: "Two minutes, and the customer never finds out it happened.",
+            quality: 0.85,
+            capabilities: ["ownership", "customer-thinking"],
+          },
+          {
+            id: "fix-and-trace",
+            label: "Correct it, then find out which station packed it",
+            outcome: "Fixes the bag and the cause. Costs you four minutes.",
+            quality: 0.95,
+            capabilities: ["systems-thinking", "curiosity"],
+          },
+          {
+            id: "send-anyway",
+            label: "Send it — she can request a return",
+            outcome: "Saves two minutes now and costs a rider trip later.",
+            quality: 0.1,
+            capabilities: ["customer-thinking"],
+            effects: [{ kind: "rating", delta: -0.025 }],
+          },
+        ],
+      };
+    },
+    onExpire: {
+      note: "It went out with the wrong item in it.",
+      effects: [{ kind: "rating", delta: -0.025 }],
+    },
+  },
+
+  {
+    id: "ops-temperature-log",
+    stream: "operations",
+    priority: "normal",
+    weight: 9,
+    cooldown: 260,
+    ttl: 130,
+    build: () => ({
+      title: "Chiller temperature log is due",
+      detail: "Four units, read and signed every two hours. Environmental health checks these first.",
+      source: "Cold chain log",
+      options: [
+        {
+          id: "read-all",
+          label: "Read all four and sign",
+          outcome: "Three minutes. One of them is drifting, which you now know.",
+          quality: 0.9,
+          capabilities: ["ownership", "curiosity"],
+        },
+        {
+          id: "copy-last",
+          label: "Copy the last reading forward",
+          outcome: "The log looks complete. The drifting unit keeps drifting.",
+          quality: 0,
+          capabilities: ["ownership"],
+        },
+        {
+          id: "delegate",
+          label: "Ask the packer to do the round",
+          outcome: "Gets done by someone who is already near the chillers.",
+          quality: 0.8,
+          capabilities: ["prioritization", "decision-making"],
+        },
+      ],
+    }),
+    onExpire: { note: "The temperature log has a two-hour gap in it." },
+  },
+
+  {
+    id: "ops-slotting",
+    stream: "operations",
+    priority: "normal",
+    weight: 8,
+    cooldown: 300,
+    ttl: 120,
+    build: ({ world, rand }) => {
+      const item = maybePick(rand, world.inventory);
+      if (!item) return null;
+      return {
+        title: `${item.name} is your fastest mover and it is in the back aisle`,
+        detail: "Every order containing it adds a forty-metre round trip to the pick.",
+        source: "Pick planning",
+        options: [
+          {
+            id: "move-now",
+            label: "Move it to the front bay now",
+            outcome: "Ten minutes of disruption, then every pick after it is shorter.",
+            quality: 0.9,
+            capabilities: ["systems-thinking", "decision-making"],
+          },
+          {
+            id: "next-quiet",
+            label: "Move it in the next quiet window",
+            outcome: "Sensible, if a quiet window arrives.",
+            quality: 0.7,
+            capabilities: ["prioritization"],
+          },
+          {
+            id: "leave",
+            label: "Leave it — the layout is not yours to change",
+            outcome: "True, and the walking cost is yours either way.",
+            quality: 0.3,
+            capabilities: ["ownership"],
+          },
+        ],
+      };
+    },
+    onExpire: { note: "The slotting problem stays, and so does the walking." },
+  },
+
+  {
+    id: "ops-returns",
+    stream: "operations",
+    priority: "normal",
+    weight: 8,
+    cooldown: 220,
+    ttl: 110,
+    build: () => ({
+      title: "A rider has brought back a refused order",
+      detail: "Chilled items, out of the store for twenty minutes. It needs a decision before it goes anywhere.",
+      source: "Returns",
+      options: [
+        {
+          id: "dispose",
+          label: "Write it off and log the reason",
+          outcome: "Costs the order value. It is the only defensible call on cold stock.",
+          quality: 0.9,
+          capabilities: ["ownership", "decision-making"],
+        },
+        {
+          id: "restock",
+          label: "Put it back on the shelf",
+          outcome: "Saves the value. Sells someone temperature-abused dairy.",
+          quality: 0,
+          capabilities: ["ownership", "customer-thinking"],
+        },
+        {
+          id: "ask",
+          label: "Ask the inventory lead what the policy is",
+          outcome: "Costs a minute and gets you the right answer with a witness.",
+          quality: 0.8,
+          capabilities: ["curiosity", "communication"],
+        },
+      ],
+    }),
+    onExpire: { note: "The returned crate sat in the aisle unresolved." },
+  },
+
+  {
+    id: "ops-fire-exit",
+    stream: "operations",
+    priority: "critical",
+    weight: 6,
+    cooldown: 400,
+    ttl: 55,
+    build: () => ({
+      title: "A pallet is blocking the rear fire exit",
+      detail: "Receiving left it there during the last delivery. The door will not open past it.",
+      source: "Safety",
+      options: [
+        {
+          id: "clear-now",
+          label: "Stop and clear it now",
+          outcome: "Costs you two people for five minutes. Not a decision anyone will question.",
+          quality: 0.95,
+          capabilities: ["ownership", "decision-making"],
+        },
+        {
+          id: "after-peak",
+          label: "Clear it after the peak",
+          outcome: "The peak lasts twenty minutes. So does the blocked exit.",
+          quality: 0.05,
+          capabilities: ["ownership", "prioritization"],
+        },
+      ],
+    }),
+    onExpire: {
+      note: "The fire exit stayed blocked for the rest of the shift.",
+      effects: [{ kind: "rating", delta: -0.01 }],
+    },
+  },
+
+  {
+    id: "ops-label-printer",
+    stream: "operations",
+    priority: "high",
+    weight: 8,
+    cooldown: 240,
+    ttl: 80,
+    build: () => ({
+      title: "Label printer at packing has jammed",
+      detail: "Nothing can be dispatched without a label. Two people are standing there.",
+      source: "Packing",
+      options: [
+        {
+          id: "clear-jam",
+          label: "Clear it yourself",
+          outcome: "Ninety seconds if the jam is simple, ten minutes if it is not.",
+          quality: 0.8,
+          capabilities: ["ownership", "decision-making"],
+        },
+        {
+          id: "spare",
+          label: "Switch to the spare printer at goods-in",
+          outcome: "Packing walks further per order, but nothing stops.",
+          quality: 0.9,
+          capabilities: ["systems-thinking", "decision-making"],
+        },
+        {
+          id: "handwrite",
+          label: "Handwrite labels until it is fixed",
+          outcome: "Slow, and handwritten labels are how orders go to the wrong address.",
+          quality: 0.3,
+          capabilities: ["stress-handling"],
+        },
+      ],
+    }),
+    onExpire: {
+      note: "Dispatch was stopped for several minutes waiting on labels.",
+      effects: [{ kind: "rating", delta: -0.02 }],
+    },
+  },
+
+  {
+    id: "ops-expiry-sweep",
+    stream: "operations",
+    priority: "normal",
+    weight: 9,
+    cooldown: 280,
+    ttl: 125,
+    build: ({ world, rand }) => {
+      const item = maybePick(
+        rand,
+        world.inventory.filter((entry) => entry.category === "Fresh" || entry.category === "Cold chain"),
+      );
+      if (!item) return null;
+      return {
+        title: `${item.name} goes out of date tonight`,
+        detail: "Roughly a dozen units. They are still perfectly sellable this morning.",
+        source: "Date check",
+        options: [
+          {
+            id: "markdown",
+            label: "Mark them down and move them to the front",
+            outcome: "Recovers most of the value and they leave the store today.",
+            quality: 0.9,
+            capabilities: ["systems-thinking", "decision-making"],
+          },
+          {
+            id: "pull",
+            label: "Pull them now",
+            outcome: "Zero risk, zero recovery. Defensible on a busy morning.",
+            quality: 0.6,
+            capabilities: ["decision-making"],
+          },
+          {
+            id: "leave",
+            label: "Leave them at full price",
+            outcome: "You will be writing all twelve off at ten tonight.",
+            quality: 0.25,
+            capabilities: ["ownership"],
+          },
+        ],
+      };
+    },
+    onExpire: { note: "The near-date stock stayed at full price and did not move." },
+  },
+
+  {
+    id: "ops-shrink-pattern",
+    stream: "operations",
+    priority: "high",
+    weight: 7,
+    cooldown: 320,
+    ttl: 100,
+    build: () => ({
+      title: "Personal care has shown negative variance three weeks running",
+      detail: "Small, consistent, and always the same two shelves. That pattern is not miscounting.",
+      source: "Loss prevention",
+      options: [
+        {
+          id: "escalate-evidence",
+          label: "Gather the counts and escalate with evidence",
+          outcome: "Slow, correct, and the only version that survives scrutiny.",
+          quality: 0.95,
+          capabilities: ["systems-thinking", "ownership", "communication"],
+        },
+        {
+          id: "accuse",
+          label: "Raise it with the team on shift",
+          outcome: "Everyone on that shift now knows they are suspected. Including whoever is innocent.",
+          quality: 0.1,
+          capabilities: ["communication", "ownership"],
+        },
+        {
+          id: "watch",
+          label: "Count those shelves daily for a week first",
+          outcome: "Turns a suspicion into a fact before anyone is named.",
+          quality: 0.9,
+          capabilities: ["curiosity", "systems-thinking"],
+        },
+      ],
+    }),
+    onExpire: { note: "The variance pattern went unexamined for another week." },
   },
 ];

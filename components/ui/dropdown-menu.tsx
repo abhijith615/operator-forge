@@ -19,7 +19,7 @@ export function DropdownMenuContent({
         sideOffset={sideOffset}
         className={cn(
           "z-100 min-w-56 overflow-hidden rounded-xl p-1.5",
-          "glass shadow-2xl shadow-black/70",
+          "overlay-surface",
           "origin-(--radix-dropdown-menu-content-transform-origin)",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",

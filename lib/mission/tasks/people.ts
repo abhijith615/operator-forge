@@ -60,6 +60,8 @@ export const PEOPLE_TASKS: TaskTemplate[] = [
     weight: 9,
     cooldown: 120,
     ttl: 80,
+    // Names a different worker each time, so a second showing reads as new.
+    repeatable: true,
     when: (world) =>
       world.workers.some((worker) => worker.status === "active" && worker.fatigue > 0.6),
     build: (ctx) => {
@@ -418,6 +420,7 @@ export const PEOPLE_TASKS: TaskTemplate[] = [
     weight: 8,
     cooldown: 150,
     ttl: 75,
+    repeatable: true,
     when: (world) => world.workers.some((worker) => worker.status === "absent"),
     build: (ctx) => {
       const worker = pickFree(
@@ -571,5 +574,335 @@ export const PEOPLE_TASKS: TaskTemplate[] = [
         { kind: "rider-status", riderId: "any-delivering", status: "offline", releaseOrder: true },
       ],
     },
+  },
+
+  {
+    id: "ppl-shift-swap",
+    stream: "people",
+    priority: "normal",
+    weight: 8,
+    cooldown: 300,
+    ttl: 130,
+    build: (ctx) => {
+      const worker = pickFree(ctx, activeWorkers(ctx.world));
+      if (!worker) return null;
+      return {
+        title: `${worker.name} wants to swap Saturday with someone`,
+        detail: "They have already found a willing swap. It just needs signing off.",
+        source: worker.name,
+        subjectId: worker.id,
+        options: [
+          {
+            id: "check-cover",
+            label: "Check the swap keeps Saturday covered, then approve",
+            outcome: "Thirty seconds of checking. Stops a swap that leaves you short.",
+            quality: 0.95,
+            capabilities: ["systems-thinking", "decision-making"],
+          },
+          {
+            id: "approve",
+            label: "Approve it — they sorted it themselves",
+            outcome: "Popular, and occasionally leaves Saturday with two pickers.",
+            quality: 0.55,
+            capabilities: ["communication"],
+          },
+          {
+            id: "decline",
+            label: "Decline — the roster is the roster",
+            outcome: "Nothing breaks. Nobody arranges their own cover again either.",
+            quality: 0.25,
+            capabilities: ["ownership"],
+          },
+        ],
+      };
+    },
+    onExpire: { note: "The swap went unanswered and both of them turned up." },
+  },
+
+  {
+    id: "ppl-no-ppe",
+    stream: "people",
+    priority: "high",
+    weight: 7,
+    cooldown: 280,
+    ttl: 75,
+    build: (ctx) => {
+      const worker = pickFree(ctx, activeWorkers(ctx.world));
+      if (!worker) return null;
+      return {
+        title: `${worker.name} is on the chiller run without safety boots`,
+        detail: "Trainers. On a wet floor, around cages. They say they left theirs at home.",
+        source: "Floor",
+        subjectId: worker.id,
+        options: [
+          {
+            id: "spare-pair",
+            label: "Find them a spare pair before they go back on",
+            outcome: "Five minutes and the problem is gone for the day.",
+            quality: 0.95,
+            capabilities: ["ownership", "decision-making"],
+          },
+          {
+            id: "move-them",
+            label: "Move them to a dry-goods aisle for the shift",
+            outcome: "Workable. It also quietly rewards forgetting them.",
+            quality: 0.7,
+            capabilities: ["decision-making", "prioritization"],
+          },
+          {
+            id: "carry-on",
+            label: "Let them carry on and mention it later",
+            outcome: "Nothing will happen. Until it does, and it is your signature on the roster.",
+            quality: 0.05,
+            capabilities: ["ownership"],
+          },
+        ],
+      };
+    },
+    onExpire: { note: "They worked the whole shift in trainers." },
+  },
+
+  {
+    id: "ppl-agency",
+    stream: "people",
+    priority: "high",
+    weight: 8,
+    cooldown: 260,
+    ttl: 85,
+    when: (world) => world.workers.some((worker) => worker.status === "absent"),
+    build: ({ world }) => ({
+      title: "Agency can send two people for the peak",
+      detail: `You are ${world.workers.filter((w) => w.status === "absent").length} down. They would arrive in twenty minutes, untrained on this floor.`,
+      source: "Agency desk",
+      options: [
+        {
+          id: "take-one",
+          label: "Take one and pair them with a picker",
+          outcome: "Half the hands, and they are actually useful by the time they start.",
+          quality: 0.9,
+          capabilities: ["systems-thinking", "decision-making"],
+        },
+        {
+          id: "take-both",
+          label: "Take both",
+          outcome: "Most hands, and two people who need showing where everything is.",
+          quality: 0.6,
+          capabilities: ["decision-making"],
+        },
+        {
+          id: "decline",
+          label: "Decline — we will manage",
+          outcome: "Saves the agency cost. The queue does not care about the agency cost.",
+          quality: 0.35,
+          capabilities: ["stress-handling", "prioritization"],
+        },
+      ],
+    }),
+    onExpire: { note: "The agency filled the slots with another store." },
+  },
+
+  {
+    id: "ppl-recognition",
+    stream: "people",
+    priority: "normal",
+    weight: 9,
+    cooldown: 300,
+    ttl: 140,
+    build: (ctx) => {
+      const worker = pickFree(ctx, activeWorkers(ctx.world));
+      if (!worker) return null;
+      return {
+        title: `${worker.name} spotted the mislabelled batch before it shipped`,
+        detail: "Nobody asked them to check. It would have been forty wrong orders.",
+        source: "Floor",
+        subjectId: worker.id,
+        options: [
+          {
+            id: "say-it-now",
+            label: "Say so, in front of the floor",
+            outcome: "Ten seconds. The rest of the shift now knows what good looks like.",
+            quality: 0.95,
+            capabilities: ["communication", "ownership"],
+          },
+          {
+            id: "log-it",
+            label: "Note it for their review",
+            outcome: "Counts in six months. Does nothing this morning.",
+            quality: 0.6,
+            capabilities: ["ownership"],
+          },
+          {
+            id: "nothing",
+            label: "Nothing — it is the job",
+            outcome: "It is the job. It is also the reason you still have forty orders.",
+            quality: 0.15,
+            capabilities: ["communication"],
+          },
+        ],
+      };
+    },
+    onExpire: { note: "Nobody said anything about it." },
+  },
+
+  {
+    id: "ppl-rider-rating",
+    stream: "people",
+    priority: "normal",
+    weight: 7,
+    cooldown: 300,
+    ttl: 120,
+    build: (ctx) => {
+      const rider = pickFree(ctx, ctx.world.riders);
+      if (!rider) return null;
+      return {
+        title: `${rider.name}'s customer rating has dropped this week`,
+        detail: "Three mentions of him not waiting at the door. He has not been spoken to about it.",
+        source: "Rider metrics",
+        subjectId: rider.id,
+        options: [
+          {
+            id: "ask-first",
+            label: "Ask him what is happening on those drops",
+            outcome: "Usually there is a reason. Sometimes it is your dispatch timing.",
+            quality: 0.95,
+            capabilities: ["curiosity", "communication"],
+          },
+          {
+            id: "tell-him",
+            label: "Tell him to wait longer at the door",
+            outcome: "Clear instruction. You still do not know why it started.",
+            quality: 0.5,
+            capabilities: ["communication"],
+          },
+          {
+            id: "reassign",
+            label: "Move him off the difficult routes",
+            outcome: "The number improves. The behaviour does not.",
+            quality: 0.35,
+            capabilities: ["decision-making"],
+          },
+        ],
+      };
+    },
+    onExpire: { note: "The rating kept sliding and nobody asked why." },
+  },
+
+  {
+    id: "ppl-pay-query",
+    stream: "people",
+    priority: "normal",
+    weight: 8,
+    cooldown: 320,
+    ttl: 120,
+    build: (ctx) => {
+      const worker = pickFree(ctx, activeWorkers(ctx.world));
+      if (!worker) return null;
+      return {
+        title: `${worker.name} says last month's overtime was not paid`,
+        detail: "They have asked twice already, through someone else. They are asking you directly now.",
+        source: worker.name,
+        subjectId: worker.id,
+        options: [
+          {
+            id: "own-it",
+            label: "Take the details and chase payroll yourself today",
+            outcome: "Two minutes now, and they stop having to chase it.",
+            quality: 0.95,
+            capabilities: ["ownership", "communication"],
+          },
+          {
+            id: "route",
+            label: "Give them the payroll contact",
+            outcome: "Correct process. It is the third time they have been given a contact.",
+            quality: 0.4,
+            capabilities: ["communication"],
+          },
+          {
+            id: "later",
+            label: "Tell them you will look after the shift",
+            outcome: "Only worth anything if you remember.",
+            quality: 0.5,
+            capabilities: ["prioritization"],
+          },
+        ],
+      };
+    },
+    onExpire: { note: "The pay query went unanswered for a third time." },
+  },
+
+  {
+    id: "ppl-newcomer-lost",
+    stream: "people",
+    priority: "normal",
+    weight: 8,
+    cooldown: 280,
+    ttl: 100,
+    build: () => ({
+      title: "The new picker has been in frozen for six minutes",
+      detail: "One order. They have not asked anyone for help and they are not going to.",
+      source: "Floor",
+      options: [
+        {
+          id: "go-help",
+          label: "Go and walk the aisle with them",
+          outcome: "Costs you five minutes. They will find it alone tomorrow.",
+          quality: 0.9,
+          capabilities: ["ownership", "communication"],
+        },
+        {
+          id: "send-buddy",
+          label: "Send an experienced picker over",
+          outcome: "Solves it without taking you off the board.",
+          quality: 0.85,
+          capabilities: ["decision-making", "prioritization"],
+        },
+        {
+          id: "reassign-order",
+          label: "Move the order to someone faster",
+          outcome: "The order ships. The new picker learns nothing except that they were moved.",
+          quality: 0.35,
+          capabilities: ["prioritization"],
+        },
+      ],
+    }),
+    onExpire: { note: "They came out of frozen eventually, with the wrong item." },
+  },
+
+  {
+    id: "ppl-shift-brief",
+    stream: "people",
+    priority: "normal",
+    weight: 8,
+    cooldown: 500,
+    ttl: 130,
+    build: ({ world }) => ({
+      title: "The floor has not been briefed since you took over",
+      detail: `${activePickers(world).length} pickers, all working from what they assume the priorities are.`,
+      source: "Shift lead",
+      options: [
+        {
+          id: "brief-now",
+          label: "Pull everyone in for ninety seconds",
+          outcome: "Stops the floor for ninety seconds. Aligns it for the rest of the shift.",
+          quality: 0.95,
+          capabilities: ["communication", "systems-thinking"],
+        },
+        {
+          id: "brief-individually",
+          label: "Tell people as you pass them",
+          outcome: "Nothing stops. Half of them get a slightly different version.",
+          quality: 0.6,
+          capabilities: ["communication"],
+        },
+        {
+          id: "skip",
+          label: "They know what they are doing",
+          outcome: "They know what they were doing before you arrived.",
+          quality: 0.25,
+          capabilities: ["communication", "ownership"],
+        },
+      ],
+    }),
+    onExpire: { note: "The floor never got briefed." },
   },
 ];

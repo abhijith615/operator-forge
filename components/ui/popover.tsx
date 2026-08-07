@@ -21,7 +21,7 @@ export function PopoverContent({
         sideOffset={sideOffset}
         className={cn(
           "z-100 w-80 overflow-hidden rounded-xl",
-          "glass shadow-2xl shadow-black/70",
+          "overlay-surface",
           "origin-(--radix-popover-content-transform-origin)",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",

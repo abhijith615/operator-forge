@@ -2,6 +2,7 @@
 
 import { AchievementToast } from "@/components/mission/achievements";
 import { EventToasts } from "@/components/mission/event-toasts";
+import { Walkthrough } from "@/components/mission/walkthrough";
 import { CommandMenu } from "@/components/shell/command-menu";
 import { MobileNav } from "@/components/shell/mobile-nav";
 import { PageTransition } from "@/components/shell/page-transition";
@@ -43,6 +44,7 @@ export function AppShell({
 
       <EventToasts />
       <AchievementToast />
+      <Walkthrough />
       <CommandMenu />
     </div>
   );
