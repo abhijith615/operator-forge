@@ -177,6 +177,20 @@ Without it the rest of the shift runs exactly as normal and both chat panels say
 plainly that they are not connected. Scripted replies would have made the whole
 premise dishonest, so there are none.
 
+**`.env.local` is gitignored**, so it never reaches GitHub or a deployment. If
+chat works locally but says "not connected" once deployed, the key needs adding
+to that host's environment variables — on Vercel, Project → Settings →
+Environment Variables.
+
+To check what a running server actually sees, while signed in:
+
+```
+GET /api/chat  →  {"configured":true,"model":"gpt-4o-mini"}
+```
+
+`configured: false` means that process has no key — restart it after editing
+`.env.local`, since env is read at boot.
+
 ### Running the shift in three minutes
 
 A 30-minute shift is hard to QA. In development only:

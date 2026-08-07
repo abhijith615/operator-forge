@@ -17,6 +17,23 @@ import type { WorldState } from "@/types/world";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+/**
+ * Health check. Answers "does this running server have a key?" in one request,
+ * which is otherwise only observable by trying to send a message and reading a
+ * failure. Returns no part of the key itself.
+ */
+export async function GET() {
+  const operator = await getOperator();
+  if (!operator) {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  return NextResponse.json({
+    configured: isOpenAIConfigured,
+    model: isOpenAIConfigured ? OPENAI_MODEL : null,
+  });
+}
+
 interface ChatRequestBody {
   /** `assistant` or one of the three colleague ids. */
   target: string;
@@ -125,8 +142,39 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "The model did not respond.";
-    return NextResponse.json({ error: message }, { status: 502 });
+    // A missing key and a rejected key are completely different problems, and
+    // telling them apart is the difference between a two-second fix and an hour.
+    const status =
+      error instanceof OpenAI.APIError ? (error.status ?? 502) : 502;
+
+    if (status === 401) {
+      return NextResponse.json(
+        {
+          error:
+            "The model rejected this API key. Check OPENAI_API_KEY in .env.local, then restart the server.",
+          code: "invalid_key",
+        },
+        { status: 502 },
+      );
+    }
+
+    if (status === 429) {
+      return NextResponse.json(
+        {
+          error:
+            "This API key is out of quota or rate limited. Check billing on the OpenAI dashboard.",
+          code: "quota",
+        },
+        { status: 502 },
+      );
+    }
+
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "The model did not respond.",
+        code: "upstream",
+      },
+      { status: 502 },
+    );
   }
 }
