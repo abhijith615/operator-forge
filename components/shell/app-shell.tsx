@@ -1,5 +1,6 @@
 "use client";
 
+import { AchievementToast } from "@/components/mission/achievements";
 import { EventToasts } from "@/components/mission/event-toasts";
 import { CommandMenu } from "@/components/shell/command-menu";
 import { MobileNav } from "@/components/shell/mobile-nav";
@@ -36,6 +37,7 @@ export function AppShell({
       </div>
 
       <EventToasts />
+      <AchievementToast />
       <CommandMenu />
     </div>
   );

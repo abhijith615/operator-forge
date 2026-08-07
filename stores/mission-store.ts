@@ -3,23 +3,33 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+import { evaluateAchievements } from "@/lib/mission/achievements";
 import { applyOperatorAction, type OperatorAction } from "@/lib/mission/actions";
+import { cloneWorld } from "@/lib/mission/clone";
+import { applyEffects } from "@/lib/mission/effects";
 import { MISSION_DURATION_SECONDS, missionTimeScale } from "@/lib/mission/config";
 import { STEP_SECONDS, stepWorld } from "@/lib/mission/engine";
 import { applyEvent, eventsDueBetween } from "@/lib/mission/events";
 import { createInitialWorld } from "@/lib/mission/initial-state";
 import { seedFrom } from "@/lib/mission/random";
+import { TEMPLATES_BY_ID } from "@/lib/mission/tasks";
+import {
+  advanceTasks,
+  seedInitialTasks,
+  streamToSource,
+} from "@/lib/mission/tasks/scheduler";
 import { FIRST_SHIFT } from "@/lib/constants/mission";
 import type {
   MissionNotification,
   RunStatus,
   TimelineEntry,
 } from "@/types/mission-run";
+import type { Achievement, MissionTask, TaskDecision } from "@/types/tasks";
 import type { WorldState } from "@/types/world";
 
 /** Never chew through more than this many steps in one tick. */
 const MAX_STEPS_PER_TICK = 240;
-const TIMELINE_CAP = 400;
+const TIMELINE_CAP = 500;
 
 interface MissionState {
   runId: string | null;
@@ -31,12 +41,19 @@ interface MissionState {
   timeline: TimelineEntry[];
   notifications: MissionNotification[];
   firedEvents: string[];
-  /** Bumped whenever the operator opens the timeline, to clear the dot. */
   timelineReadAt: number;
+
+  /* ── The queue ──────────────────────────────────────────────────────── */
+  tasks: MissionTask[];
+  decisions: TaskDecision[];
+  achievements: Achievement[];
+  nextSpawnAt: number;
+  templateLastUsed: Record<string, number>;
 
   begin: (operatorId: string) => void;
   tick: () => void;
   dispatch: (action: OperatorAction) => void;
+  resolveTask: (taskId: string, optionId: string) => void;
   dismissNotification: (id: string) => void;
   markTimelineRead: () => void;
   complete: () => void;
@@ -54,6 +71,11 @@ function initialSlice() {
     notifications: [] as MissionNotification[],
     firedEvents: [] as string[],
     timelineReadAt: 0,
+    tasks: [] as MissionTask[],
+    decisions: [] as TaskDecision[],
+    achievements: [] as Achievement[],
+    nextSpawnAt: 0,
+    templateLastUsed: {} as Record<string, number>,
   };
 }
 
@@ -64,17 +86,19 @@ export const useMissionStore = create<MissionState>()(
 
       begin: (operatorId) => {
         const runId = `run-${operatorId.slice(0, 8)}-${Date.now()}`;
-        const world = createInitialWorld(seedFrom(runId));
+        const seed = seedFrom(runId);
+        const world = createInitialWorld(seed);
+        const seeded = seedInitialTasks(world, seed);
 
         set({
+          ...initialSlice(),
           runId,
           status: "live",
           startedAt: Date.now(),
-          completedAt: null,
           world,
-          firedEvents: [],
-          notifications: [],
-          timelineReadAt: 0,
+          tasks: seeded.tasks,
+          templateLastUsed: seeded.templateLastUsed,
+          nextSpawnAt: 12,
           timeline: [
             {
               id: "t-open",
@@ -90,34 +114,34 @@ export const useMissionStore = create<MissionState>()(
       },
 
       tick: () => {
-        const { status, startedAt, world, firedEvents, timeline } = get();
-        if (status !== "live" || !startedAt || !world) return;
+        const state = get();
+        if (state.status !== "live" || !state.startedAt || !state.world) return;
 
         const target = Math.min(
           MISSION_DURATION_SECONDS,
-          Math.floor(((Date.now() - startedAt) / 1000) * missionTimeScale()),
+          Math.floor(((Date.now() - state.startedAt) / 1000) * missionTimeScale()),
         );
 
-        if (target <= world.elapsed) {
+        if (target <= state.world.elapsed) {
           if (target >= MISSION_DURATION_SECONDS) get().complete();
           return;
         }
 
-        let nextWorld = world;
+        let world = state.world;
         const newEntries: TimelineEntry[] = [];
         const newNotifications: MissionNotification[] = [];
-        const fired = [...firedEvents];
+        const fired = [...state.firedEvents];
         let steps = 0;
 
-        while (nextWorld.elapsed + STEP_SECONDS <= target && steps < MAX_STEPS_PER_TICK) {
-          const before = nextWorld.elapsed;
-          const result = stepWorld(nextWorld);
-          nextWorld = result.world;
+        while (world.elapsed + STEP_SECONDS <= target && steps < MAX_STEPS_PER_TICK) {
+          const before = world.elapsed;
+          const result = stepWorld(world);
+          world = result.world;
           newEntries.push(...result.entries);
 
-          for (const event of eventsDueBetween(before, nextWorld.elapsed)) {
+          for (const event of eventsDueBetween(before, world.elapsed)) {
             if (fired.includes(event.id)) continue;
-            const applied = applyEvent(event, nextWorld);
+            const applied = applyEvent(event, world);
             fired.push(event.id);
             newEntries.push(applied.entry);
             newNotifications.push(applied.notification);
@@ -128,26 +152,130 @@ export const useMissionStore = create<MissionState>()(
 
         if (steps === 0) return;
 
+        // The queue is advanced once per tick against the settled world.
+        const queued = advanceTasks({
+          world,
+          tasks: state.tasks,
+          elapsed: world.elapsed,
+          seed: world.seed,
+          nextSpawnAt: state.nextSpawnAt,
+          templateLastUsed: state.templateLastUsed,
+        });
+
+        newEntries.push(...queued.entries);
+        const decisions = [...state.decisions, ...queued.decisions];
+
+        const earned = evaluateAchievements({
+          decisions,
+          tasks: queued.tasks,
+          elapsed: world.elapsed,
+          earned: state.achievements,
+        });
+
         set({
-          world: nextWorld,
+          world,
           firedEvents: fired,
-          timeline: [...newEntries.reverse(), ...timeline].slice(0, TIMELINE_CAP),
+          tasks: queued.tasks,
+          decisions,
+          nextSpawnAt: queued.nextSpawnAt,
+          templateLastUsed: queued.templateLastUsed,
+          achievements: [...state.achievements, ...earned],
+          timeline: [...newEntries.reverse(), ...state.timeline].slice(0, TIMELINE_CAP),
           notifications: [...get().notifications, ...newNotifications].slice(-6),
         });
 
-        if (nextWorld.elapsed >= MISSION_DURATION_SECONDS) get().complete();
+        if (world.elapsed >= MISSION_DURATION_SECONDS) get().complete();
+      },
+
+      resolveTask: (taskId, optionId) => {
+        const state = get();
+        if (state.status !== "live" || !state.world) return;
+
+        const task = state.tasks.find((entry) => entry.id === taskId);
+        if (!task || task.status !== "pending") return;
+
+        const option = task.options.find((entry) => entry.id === optionId);
+        if (!option) return;
+
+        const elapsed = state.world.elapsed;
+        const world = cloneWorld(state.world);
+        if (option.effects) applyEffects(world, option.effects);
+
+        const queueDepth = state.tasks.filter((entry) => entry.status === "pending").length;
+
+        const tasks = state.tasks.map((entry) =>
+          entry.id === taskId
+            ? {
+                ...entry,
+                status: "resolved" as const,
+                resolvedAt: elapsed,
+                resolvedOptionId: optionId,
+              }
+            : entry,
+        );
+
+        // Choosing an option can pull its own consequences onto the board. The
+        // scheduler builds them on the next tick with fresh context, so all we
+        // do here is clear their cooldown.
+        const templateLastUsed = { ...state.templateLastUsed };
+        for (const templateId of option.cascades ?? []) {
+          if (TEMPLATES_BY_ID.has(templateId)) templateLastUsed[templateId] = -10_000;
+        }
+
+        const decision: TaskDecision = {
+          taskId,
+          templateId: task.templateId,
+          stream: task.stream,
+          priority: task.priority,
+          at: elapsed,
+          latency: elapsed - task.createdAt,
+          optionId,
+          optionLabel: option.label,
+          quality: option.quality,
+          capabilities: option.capabilities,
+          expired: false,
+          queueDepth,
+        };
+
+        const decisions = [...state.decisions, decision];
+
+        const entry: TimelineEntry = {
+          id: `d-${taskId}`,
+          at: elapsed,
+          kind: "action",
+          tone: "neutral",
+          title: option.label,
+          detail: option.outcome,
+          source: streamToSource(task.stream),
+        };
+
+        const earned = evaluateAchievements({
+          decisions,
+          tasks,
+          elapsed,
+          earned: state.achievements,
+        });
+
+        set({
+          world,
+          tasks,
+          decisions,
+          templateLastUsed,
+          achievements: [...state.achievements, ...earned],
+          timeline: [entry, ...state.timeline].slice(0, TIMELINE_CAP),
+        });
       },
 
       dispatch: (action) => {
-        const { world, timeline, status } = get();
-        if (!world || status !== "live") return;
+        const state = get();
+        if (!state.world || state.status !== "live") return;
 
-        const result = applyOperatorAction(world, action);
+        const result = applyOperatorAction(state.world, action);
         if (!result.entry) return;
 
         set({
           world: result.world,
-          timeline: [result.entry, ...timeline].slice(0, TIMELINE_CAP),
+          timeline: [result.entry, ...state.timeline].slice(0, TIMELINE_CAP),
         });
       },
 
@@ -184,7 +312,7 @@ export const useMissionStore = create<MissionState>()(
     }),
     {
       name: "of.mission",
-      version: 1,
+      version: 2,
       // Toasts are ephemeral; everything else must survive a refresh.
       partialize: (state) => ({
         runId: state.runId,
@@ -195,6 +323,11 @@ export const useMissionStore = create<MissionState>()(
         timeline: state.timeline,
         firedEvents: state.firedEvents,
         timelineReadAt: state.timelineReadAt,
+        tasks: state.tasks,
+        decisions: state.decisions,
+        achievements: state.achievements,
+        nextSpawnAt: state.nextSpawnAt,
+        templateLastUsed: state.templateLastUsed,
       }),
     },
   ),

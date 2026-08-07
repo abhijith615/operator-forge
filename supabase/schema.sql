@@ -51,6 +51,12 @@ create table if not exists public.mission_runs (
   world         jsonb       not null default '{}'::jsonb,
   timeline      jsonb       not null default '[]'::jsonb,
   conversations jsonb       not null default '{}'::jsonb,
+  -- The task queue and, more importantly, every decision made against it.
+  -- `decisions` is what Phase 3 scores: option quality, capability tags,
+  -- time-to-decide and the queue depth at the moment of the call.
+  tasks         jsonb       not null default '[]'::jsonb,
+  decisions     jsonb       not null default '[]'::jsonb,
+  achievements  jsonb       not null default '[]'::jsonb,
   updated_at    timestamptz not null default now()
 );
 

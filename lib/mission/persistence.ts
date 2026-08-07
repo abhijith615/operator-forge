@@ -4,6 +4,7 @@ import { getOperator } from "@/lib/auth/session";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { ChatMessage } from "@/types/agents";
 import type { RunStatus, TimelineEntry } from "@/types/mission-run";
+import type { Achievement, MissionTask, TaskDecision } from "@/types/tasks";
 import type { WorldState } from "@/types/world";
 
 export interface RunSnapshot {
@@ -14,6 +15,10 @@ export interface RunSnapshot {
   world: WorldState;
   timeline: TimelineEntry[];
   conversations: Record<string, ChatMessage[]>;
+  tasks: MissionTask[];
+  /** The scoring substrate: every call, how fast, and against what queue depth. */
+  decisions: TaskDecision[];
+  achievements: Achievement[];
 }
 
 /**
@@ -44,6 +49,9 @@ export async function saveRunSnapshot(snapshot: RunSnapshot): Promise<void> {
       world: snapshot.world,
       timeline: snapshot.timeline,
       conversations: snapshot.conversations,
+      tasks: snapshot.tasks,
+      decisions: snapshot.decisions,
+      achievements: snapshot.achievements,
     },
     { onConflict: "id" },
   );

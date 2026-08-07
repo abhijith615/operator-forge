@@ -1,6 +1,6 @@
 "use client";
 
-import { MissionConsole } from "@/components/mission/mission-console";
+import { ControlRoom } from "@/components/mission/control-room";
 import { Reveal } from "@/components/motion/reveal";
 import { PageShell } from "@/components/shell/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,13 +20,21 @@ import type { Operator } from "@/types/operator";
  * One route, three states. The operator never navigates between them — the
  * clock does.
  */
-export function MissionView({ operator }: { operator: Operator }) {
+export function MissionView({
+  operator,
+  chatConfigured,
+}: {
+  operator: Operator;
+  chatConfigured: boolean;
+}) {
   const hydrated = useMissionHydrated();
   const status = useMissionStore((state) => state.status);
   const firstName = operator.fullName.split(" ")[0] ?? "Operator";
 
   if (!hydrated) return <MissionSkeleton />;
-  if (status === "live") return <MissionConsole firstName={firstName} />;
+  if (status === "live") {
+    return <ControlRoom firstName={firstName} chatConfigured={chatConfigured} />;
+  }
   if (status === "complete") return <ShiftComplete />;
 
   return <Briefing operator={operator} firstName={firstName} />;

@@ -3,7 +3,7 @@ export const site = {
   wordmark: "OPERATOR FORGE",
   tagline: "The Flight Simulator for Future Operators.",
   description:
-    "Operator Forge drops you into your first day running a real business. Sixty minutes. Live world state. Three colleagues who answer back. No multiple choice.",
+    "Operator Forge drops you into your first day running a real business. Thirty minutes, more work than you can finish, and three colleagues who answer back in real time.",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
 } as const;
 

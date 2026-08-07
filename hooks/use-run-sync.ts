@@ -35,6 +35,9 @@ export function useRunSync(): void {
         world: mission.world,
         timeline: mission.timeline,
         conversations: useChatStore.getState().threads,
+        tasks: mission.tasks,
+        decisions: mission.decisions,
+        achievements: mission.achievements,
       });
     } catch {
       // The run continues regardless; the browser copy is authoritative.

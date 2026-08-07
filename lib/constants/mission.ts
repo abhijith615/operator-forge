@@ -5,13 +5,13 @@ export const FIRST_SHIFT: MissionBlueprint = {
   codename: "M-01",
   name: "The First Shift",
   tagline: "Your manager is stuck in traffic. The hub opens in four minutes.",
-  durationMinutes: 60,
+  durationMinutes: 30,
   industry: "Quick Commerce",
   role: "Assistant Hub Supervisor",
   location: "Dark Store 114 · Indiranagar",
   difficulty: "Contested",
   summary:
-    "Sixty minutes on the floor of a ten-minute delivery hub. Orders keep arriving whether or not you are ready for them. Nobody will tell you what the right answer is — because on a real morning, nobody knows it yet.",
+    "Thirty minutes on the floor of a ten-minute delivery hub. Orders keep arriving, and so does everything else — absences, complaints, suppliers, head office. You will not get through all of it. Nobody will tell you what the right answer is, because on a real morning nobody knows it yet.",
   objectives: [
     "Keep the hub open and orders moving",
     "Protect the customer rating you inherited",

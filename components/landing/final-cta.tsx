@@ -28,8 +28,8 @@ export function FinalCta() {
 
           <Reveal delay={0.12}>
             <p className="mx-auto mt-6 max-w-lg text-[16px] leading-relaxed text-mid text-balance">
-              One shift. Sixty minutes. You will not be told the right answer,
-              because on a real morning nobody knows it yet.
+              One shift. Thirty minutes. More work than anyone could finish, and
+              nobody to tell you which half matters.
             </p>
           </Reveal>
 

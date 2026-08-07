@@ -35,14 +35,14 @@ const BEATS: Beat[] = [
   {
     stamp: "00:00",
     title: "The floor comes up",
-    body: "Orders, pickers, riders, stock, weather and a customer rating you did not earn but now own. Every number moves on its own.",
+    body: "Three columns: your colleagues on the left, the live floor in the middle, the task queue on the right. Orders, pickers, riders, stock, weather and a rating you did not earn but now own — all moving on their own.",
     icon: Radar,
     accent: "ion",
   },
   {
     stamp: "09:02",
-    title: "It stops going to plan",
-    body: "Two pickers are absent. A scanner dies. Rain hits the zone. A regional manager announces a visit. You cannot fix everything — that is the point.",
+    title: "The queue never empties",
+    body: "A new task lands every twenty to forty seconds — absences, a stockout, a supplier at the dock, head office wanting a report. Three to eight are always waiting. Some expire while you are dealing with others.",
     icon: CloudRain,
     accent: "warn",
   },
@@ -54,9 +54,9 @@ const BEATS: Beat[] = [
     accent: "flux",
   },
   {
-    stamp: "60:00",
+    stamp: "30:00",
     title: "The Genome",
-    body: "No score out of a hundred. A portrait of how you operated — what you checked first, when you escalated, how you held up at minute fifty.",
+    body: "No score out of a hundred. A portrait of how you operated — what you reached for first, what you let expire, and how fast you were still deciding at minute twenty-five.",
     icon: Dna,
     accent: "ember",
   },
@@ -139,8 +139,8 @@ export function HowItRuns() {
           <div className="lg:sticky lg:top-32 lg:self-start">
             <SectionHeading
               eyebrow="How it runs"
-              title="Sixty minutes, in the order they actually happen."
-              description="The mission is not a set of questions. It is a morning that keeps moving, and a record of what you did about it."
+              title="Thirty minutes, in the order they actually happen."
+              description="The mission is not a set of questions. It is a morning that keeps moving faster than you can, and a record of what you chose to get to."
             />
             <Reveal delay={0.16} className="mt-8">
               <div className="inline-flex items-center gap-3 rounded-full border border-line bg-white/[0.03] px-4 py-2.5">

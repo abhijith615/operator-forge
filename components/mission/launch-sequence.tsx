@@ -255,8 +255,8 @@ function VideoStage({ onDone }: { onDone: () => void }) {
           <ArrowRight className="transition-transform duration-300 ease-out-expo group-hover/btn:translate-x-1" />
         </Button>
         <p className="max-w-sm text-center text-[12px] leading-relaxed text-faint">
-          The mission starts the moment this ends. Sixty minutes, one attempt, no
-          pause.
+          The mission starts the moment this ends. Thirty minutes, one attempt,
+          no pause.
         </p>
       </div>
     </motion.div>

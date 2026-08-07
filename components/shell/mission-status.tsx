@@ -6,6 +6,7 @@ import { Clock3 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useClock } from "@/hooks/use-clock";
 import {
+  useLiveElapsed,
   useMissionHydrated,
   useMissionProgress,
   useMissionRemaining,
@@ -24,7 +25,7 @@ export function MissionStatus() {
   const now = useClock();
   const hydrated = useMissionHydrated();
   const status = useMissionStore((state) => state.status);
-  const elapsed = useMissionStore((state) => state.world?.elapsed ?? 0);
+  const elapsed = useLiveElapsed();
   const remaining = useMissionRemaining();
 
   const live = hydrated && status === "live";

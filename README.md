@@ -28,39 +28,71 @@ they have not been built yet rather than showing invented data.
 `/start` plays the handover: the WhatsApp message lands line by line, a video
 slot follows, then a five-second count-in and the hub opens.
 
-From there a **60-minute clock** runs. It derives from the run's start
+From there a **30-minute clock** runs. It derives from the run's start
 timestamp, so a refresh, a background tab or a closed laptop all resolve to the
 same truth — the shift kept going without you.
 
-**World state** ticks every five seconds: orders arrive, pickers walk baskets,
-riders deliver and return, promises breach, complaints get raised, the rating
-moves. It is a deterministic simulation seeded from the run id, so a shift
-replays identically.
+### The queue is the mission
 
-**Fourteen scheduled events** land across the hour — absences, a dead scanner,
-rain, an inventory mismatch, a rider breakdown, a promo surge, a stockout, a
-regional manager visit. Each mutates the world and slides in as a notification.
+The shift is **not event-driven**. A hub supervisor is never waiting for
+something to happen; they are choosing which of six things to drop. So the
+scheduler's job is to keep the operator pleasantly underwater:
+
+- A new task lands every **20–45 seconds**, faster when the board is thin.
+- **3–8 tasks are always pending.** The queue is never empty and never quiet.
+- Roughly **68 tasks** arrive across 30 minutes. Nobody clears them all.
+- Every task **expires**, and every expiry leaves a mark — a rating hit, a
+  worker who walked, phantom stock, or a cascade that puts something worse on
+  the board.
+
+Work comes from **four parallel streams** — Operations, People, Customers and
+Management — drawn from a catalogue of ~46 templates that read live floor state.
+Most of it is ordinary hub work (attendance, cycle counts, goods receipt, safety
+walks, handover notes), not emergencies. Two tasks never name the same worker,
+rider or order at once.
+
+### Everything scores
+
+Each option carries a `quality` (0–1) and the capabilities it is evidence for.
+Every call is recorded with the option chosen, **how long it took**, and **how
+deep the queue was at that moment**:
+
+```ts
+{ templateId, stream, priority, at, latency, optionId, quality,
+  capabilities, expired, queueDepth }
+```
+
+That is the substrate Phase 3 scores. The operator never sees any of it.
+
+### The floor underneath
+
+**World state** ticks every five seconds: orders arrive, pickers walk baskets,
+riders deliver and return, promises breach, the rating moves. A deterministic
+simulation seeded from the run id, so a shift replays identically. Effects are
+**data, not closures**, so tasks survive a refresh and Phase 3 can replay what
+each decision did.
+
+**Eight world shocks** change the shape of the floor rather than supplying its
+content — absences at 1:30, rain at 5:00, a rider down at 9:00, a promo surge at
+13:00, the regional manager at 17:00 and 22:00.
 
 **The balance is deliberate.** Arrivals run at 0.55/min calm, 0.74 in rain and
 1.11 under the surge; five pickers clear ~1.67/min and three clear ~1.00/min;
 six riders clear ~0.88/min dry and ~0.60/min in rain. The calm opening clears
 itself, rain squeezes the road, and rain plus the surge goes underwater unless
-the operator has recalled staff or throttled intake. A good operator can hold
-the line; a passive one watches OTIF fall from ~90% to ~40%.
+the operator has recalled staff or throttled intake.
 
-**Operator actions** all cost something: expedite an order and everything behind
-it waits; cancel one and the rating takes the hit instead of the queue; grant a
-break and lose throughput now to keep it later; run a cycle count and spend a
-picker's minutes to learn the truth about one SKU; throttle intake and trade
-revenue for promises kept.
+### The control room
 
-**Three colleagues** answer in real time — a stretched hub manager who will not
-decide for you, an inventory lead who argues back, and a customer who does not
-care about your absences. Plus an operations copilot that reads the same board
-you can see and does arithmetic under pressure.
+Three columns, all live, nothing behind a navigation click: **communications**
+on the left (the three colleagues inline), the **live floor** in the middle,
+the **task queue and timeline** on the right. Below `xl` the same three panels
+become lanes. The deep-dive panels — Orders, Inventory, People, Customers —
+remain as full pages for anyone who wants to go and look.
 
-**Every unfamiliar term** is clickable: hover for a line, click for the
-explanation, a concrete example from this floor, and why it matters elsewhere.
+**Three colleagues** answer in real time. Plus an operations copilot that reads
+the same board you can see. **Every unfamiliar term** is clickable. **Seven
+achievements** recognise a way of working — none can be farmed by clicking fast.
 
 ---
 
@@ -96,16 +128,17 @@ Without it the rest of the shift runs exactly as normal and both chat panels say
 plainly that they are not connected. Scripted replies would have made the whole
 premise dishonest, so there are none.
 
-### Running the hour in two minutes
+### Running the shift in three minutes
 
-A 60-minute shift is hard to QA. In development only:
+A 30-minute shift is hard to QA. In development only:
 
 ```
-NEXT_PUBLIC_MISSION_TIME_SCALE=30
+NEXT_PUBLIC_MISSION_TIME_SCALE=10
 ```
 
-This runs the full arc — every event, the surge, the close-out — in about two
-minutes. It is ignored in production builds; a real shift is a real hour.
+This runs the full arc — every world shock, the whole task queue, the close-out
+— in about three minutes. It is ignored in production builds; a real shift runs
+in real time.
 
 ### Connecting Supabase
 
@@ -155,7 +188,7 @@ components/
   motion/            reveal, spotlight card, count-up, marquee
   landing/           marketing sections
   shell/             sidebar, topbar, command menu, page transitions
-  mission/           console, world strip, timeline, toasts, term
+  mission/           control room, task queue, world strip, timeline, term
     panels/          orders, inventory, people, customers
   chat/              threads, composer, markdown, message list
   visuals/           aurora, grid field, horizon
@@ -167,7 +200,8 @@ hooks/               clock, media query, mission tick, run sync, shortcuts
 lib/
   agents/            personas, world briefing, copilot prompt
   auth/              session, server actions, validation
-  mission/           engine, events, actions, glossary, config, persistence
+  mission/           engine, events, effects, achievements, glossary, config
+    tasks/           the catalogue and the scheduler that keeps the queue full
   supabase/          browser + server clients
   constants/         mission, navigation, routes, site
   motion.ts          the shared motion vocabulary

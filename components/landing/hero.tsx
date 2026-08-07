@@ -70,9 +70,9 @@ export function Hero() {
           transition={{ duration: 1, ease: easing.outExpo, delay: 0.55 }}
           className="mx-auto mt-7 max-w-[38rem] text-[16.5px] leading-relaxed text-mid text-balance sm:text-[17.5px]"
         >
-          Sixty minutes running a ten-minute delivery hub. Orders arrive whether
-          or not you are ready. Three colleagues answer in real time. There is no
-          multiple choice — only what you decide to do next.
+          Thirty minutes running a ten-minute delivery hub. The work arrives
+          faster than anyone can clear it — absences, complaints, suppliers, head
+          office. There is no multiple choice. Only what you get to first.
         </motion.p>
 
         <motion.div

@@ -72,13 +72,44 @@ export function useIsShiftLive(): boolean {
   return hydrated && status === "live";
 }
 
+/**
+ * Elapsed seconds for anything the eye tracks — task countdowns, the mission
+ * clock. The world itself only advances every `STEP_SECONDS`, which is right for
+ * the simulation and visibly wrong for a 45-second timer, so display reads
+ * straight off the wall clock instead.
+ */
+export function useLiveElapsed(): number {
+  const status = useMissionStore((state) => state.status);
+  const startedAt = useMissionStore((state) => state.startedAt);
+  const settled = useMissionStore((state) => state.world?.elapsed ?? 0);
+
+  const read = React.useCallback(() => {
+    if (status !== "live" || !startedAt) return settled;
+    return Math.min(
+      MISSION_DURATION_SECONDS,
+      Math.floor(((Date.now() - startedAt) / 1000) * missionTimeScale()),
+    );
+  }, [status, startedAt, settled]);
+
+  const [elapsed, setElapsed] = React.useState(read);
+
+  React.useEffect(() => {
+    setElapsed(read());
+    if (status !== "live") return;
+    const id = window.setInterval(() => setElapsed(read()), 500);
+    return () => window.clearInterval(id);
+  }, [read, status]);
+
+  return elapsed;
+}
+
 /** Seconds left on the shift, floored at zero. */
 export function useMissionRemaining(): number {
-  const elapsed = useMissionStore((state) => state.world?.elapsed ?? 0);
+  const elapsed = useLiveElapsed();
   return Math.max(0, MISSION_DURATION_SECONDS - elapsed);
 }
 
 export function useMissionProgress(): number {
-  const elapsed = useMissionStore((state) => state.world?.elapsed ?? 0);
+  const elapsed = useLiveElapsed();
   return Math.min(1, elapsed / MISSION_DURATION_SECONDS);
 }

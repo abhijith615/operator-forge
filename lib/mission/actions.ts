@@ -1,3 +1,4 @@
+import { cloneWorld } from "@/lib/mission/clone";
 import { clamp } from "@/lib/utils";
 import type { TimelineEntry } from "@/types/mission-run";
 import type { WorldState } from "@/types/world";
@@ -46,24 +47,11 @@ function line(
   };
 }
 
-function draft(world: WorldState): WorldState {
-  return {
-    ...world,
-    orders: world.orders.map((order) => ({ ...order })),
-    workers: world.workers.map((worker) => ({ ...worker })),
-    riders: world.riders.map((rider) => ({ ...rider })),
-    inventory: world.inventory.map((item) => ({ ...item })),
-    complaints: world.complaints.map((complaint) => ({ ...complaint })),
-    impairments: world.impairments.map((imp) => ({ ...imp })),
-    metrics: { ...world.metrics },
-  };
-}
-
 export function applyOperatorAction(
   input: WorldState,
   action: OperatorAction,
 ): ActionResult {
-  const world = draft(input);
+  const world = cloneWorld(input);
 
   switch (action.type) {
     case "expedite-order": {

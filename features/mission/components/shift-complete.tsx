@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { Flag } from "lucide-react";
 
+import { AchievementStrip } from "@/components/mission/achievements";
 import { Timeline } from "@/components/mission/timeline";
 import { PageShell } from "@/components/shell/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -16,24 +17,37 @@ import { FIRST_SHIFT } from "@/lib/constants/mission";
  */
 export function ShiftComplete() {
   const world = useMissionStore((state) => state.world);
-  const timeline = useMissionStore((state) => state.timeline);
+  const decisions = useMissionStore((state) => state.decisions);
+  const achievements = useMissionStore((state) => state.achievements);
   if (!world) return null;
 
-  const decisions = timeline.filter((entry) => entry.kind === "action").length;
-  const events = timeline.filter((entry) => entry.kind === "event").length;
+  const busiestQueue = decisions.reduce(
+    (peak, decision) => Math.max(peak, decision.queueDepth),
+    0,
+  );
+
   const openAtClose = world.orders.filter((order) =>
     ["queued", "picking", "packed", "dispatched"].includes(order.status),
   ).length;
 
+  const answered = decisions.filter((decision) => !decision.expired);
+  const missed = decisions.filter((decision) => decision.expired);
+  const medianLatency =
+    answered.length === 0
+      ? 0
+      : [...answered].sort((a, b) => a.latency - b.latency)[
+          Math.floor(answered.length / 2)
+        ]?.latency ?? 0;
+
   const facts = [
+    { label: "Tasks handled", value: String(answered.length) },
+    { label: "Tasks that expired", value: String(missed.length) },
+    { label: "Median time to decide", value: `${Math.round(medianLatency)}s` },
+    { label: "Busiest the board got", value: String(busiestQueue) },
     { label: "Orders delivered on time", value: String(world.metrics.ordersDelivered) },
     { label: "Orders breached", value: String(world.metrics.ordersBreached) },
-    { label: "Orders cancelled", value: String(world.metrics.ordersCancelled) },
     { label: "Still open at handover", value: String(openAtClose) },
     { label: "Rating at close", value: world.rating.toFixed(2) },
-    { label: "Complaints resolved", value: `${world.complaints.filter((c) => c.resolution).length} of ${world.complaints.length}` },
-    { label: "Decisions you made", value: String(decisions) },
-    { label: "Things that happened to you", value: String(events) },
   ];
 
   return (
@@ -75,6 +89,17 @@ export function ShiftComplete() {
               </div>
             ))}
           </div>
+
+          {achievements.length > 0 ? (
+            <div className="panel sheen mt-5 p-6">
+              <p className="font-mono text-[10.5px] tracking-[0.16em] text-faint uppercase">
+                Earned on the floor
+              </p>
+              <div className="mt-4">
+                <AchievementStrip />
+              </div>
+            </div>
+          ) : null}
 
           <div className="panel sheen mt-5 p-6">
             <div className="flex flex-wrap items-center gap-2.5">
