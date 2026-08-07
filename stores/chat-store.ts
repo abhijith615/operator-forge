@@ -5,6 +5,7 @@ import { persist } from "zustand/middleware";
 
 import { AGENTS, AGENT_ORDER } from "@/lib/agents/personas";
 import { useMissionStore } from "@/stores/mission-store";
+import { recordTelemetry } from "@/stores/telemetry-store";
 import type { AgentId, ChatMessage } from "@/types/agents";
 
 export type ThreadId = AgentId | "assistant";
@@ -88,6 +89,17 @@ export const useChatStore = create<ChatState>()(
           at: elapsed(),
           pending: true,
         };
+
+        // Prompt logging. How the operator directs a colleague or the copilot is
+        // read as closely as what they decide.
+        recordTelemetry("prompt", target, outgoing.at, {
+          value: trimmed.length,
+          meta: {
+            words: trimmed.split(/\s+/).length,
+            isQuestion: trimmed.includes("?"),
+            turn: (get().threads[target] ?? []).filter((m) => m.role === "operator").length + 1,
+          },
+        });
 
         set((state) => ({
           threads: {

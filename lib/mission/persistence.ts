@@ -5,6 +5,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { ChatMessage } from "@/types/agents";
 import type { RunStatus, TimelineEntry } from "@/types/mission-run";
 import type { Achievement, MissionTask, TaskDecision } from "@/types/tasks";
+import type { TelemetryEvent, WorldTrace } from "@/types/telemetry";
 import type { WorldState } from "@/types/world";
 
 export interface RunSnapshot {
@@ -19,6 +20,10 @@ export interface RunSnapshot {
   /** The scoring substrate: every call, how fast, and against what queue depth. */
   decisions: TaskDecision[];
   achievements: Achievement[];
+  telemetry: TelemetryEvent[];
+  traces: WorldTrace[];
+  /** Operator Rating, written only once the shift is over. Powers the cohort. */
+  rating: number | null;
 }
 
 /**
@@ -52,6 +57,9 @@ export async function saveRunSnapshot(snapshot: RunSnapshot): Promise<void> {
       tasks: snapshot.tasks,
       decisions: snapshot.decisions,
       achievements: snapshot.achievements,
+      telemetry: snapshot.telemetry,
+      traces: snapshot.traces,
+      rating: snapshot.rating,
     },
     { onConflict: "id" },
   );

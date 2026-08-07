@@ -2,9 +2,11 @@
 
 import * as React from "react";
 
+import { buildGenome } from "@/lib/genome/build";
 import { saveRunSnapshot } from "@/lib/mission/persistence";
 import { useChatStore } from "@/stores/chat-store";
 import { useMissionStore } from "@/stores/mission-store";
+import { useTelemetryStore } from "@/stores/telemetry-store";
 
 const SYNC_INTERVAL_MS = 60_000;
 
@@ -26,6 +28,22 @@ export function useRunSync(): void {
     if (signature === lastSaved.current) return;
     lastSaved.current = signature;
 
+    const telemetry = useTelemetryStore.getState().events;
+    const threads = useChatStore.getState().threads;
+
+    // The rating is only meaningful once the shift is over, and it is what the
+    // cohort ranks on — so it is computed here rather than stored per tick.
+    const rating =
+      mission.status === "complete"
+        ? buildGenome({
+            runId: mission.runId,
+            decisions: mission.decisions,
+            events: telemetry,
+            threads,
+            world: mission.world,
+          }).rating
+        : null;
+
     try {
       await saveRunSnapshot({
         runId: mission.runId,
@@ -34,10 +52,13 @@ export function useRunSync(): void {
         completedAt: mission.completedAt,
         world: mission.world,
         timeline: mission.timeline,
-        conversations: useChatStore.getState().threads,
+        conversations: threads,
         tasks: mission.tasks,
         decisions: mission.decisions,
         achievements: mission.achievements,
+        telemetry,
+        traces: mission.traces,
+        rating,
       });
     } catch {
       // The run continues regardless; the browser copy is authoritative.

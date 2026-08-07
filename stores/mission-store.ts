@@ -24,7 +24,9 @@ import type {
   RunStatus,
   TimelineEntry,
 } from "@/types/mission-run";
+import { recordTelemetry, useTelemetryStore } from "@/stores/telemetry-store";
 import type { Achievement, MissionTask, TaskDecision } from "@/types/tasks";
+import type { WorldTrace } from "@/types/telemetry";
 import type { WorldState } from "@/types/world";
 
 /** Never chew through more than this many steps in one tick. */
@@ -49,6 +51,8 @@ interface MissionState {
   achievements: Achievement[];
   nextSpawnAt: number;
   templateLastUsed: Record<string, number>;
+  /** Sampled floor state, for the debrief replay and trend lines. */
+  traces: WorldTrace[];
 
   begin: (operatorId: string) => void;
   tick: () => void;
@@ -76,6 +80,24 @@ function initialSlice() {
     achievements: [] as Achievement[],
     nextSpawnAt: 0,
     templateLastUsed: {} as Record<string, number>,
+    traces: [] as WorldTrace[],
+  };
+}
+
+/** One sample every half minute is enough to draw the shift afterwards. */
+const TRACE_INTERVAL = 30;
+
+function traceOf(world: WorldState, pendingTasks: number): WorldTrace {
+  return {
+    at: world.elapsed,
+    rating: Number(world.rating.toFixed(3)),
+    otif: Number(world.metrics.otif.toFixed(3)),
+    openOrders: world.orders.filter((order) =>
+      ["queued", "picking", "packed", "dispatched"].includes(order.status),
+    ).length,
+    pendingTasks,
+    activeWorkers: world.workers.filter((worker) => worker.status === "active").length,
+    breached: world.metrics.ordersBreached,
   };
 }
 
@@ -90,6 +112,9 @@ export const useMissionStore = create<MissionState>()(
         const world = createInitialWorld(seed);
         const seeded = seedInitialTasks(world, seed);
 
+        // Telemetry is scoped to the run, so it starts clean alongside it.
+        useTelemetryStore.getState().start(runId);
+
         set({
           ...initialSlice(),
           runId,
@@ -99,6 +124,7 @@ export const useMissionStore = create<MissionState>()(
           tasks: seeded.tasks,
           templateLastUsed: seeded.templateLastUsed,
           nextSpawnAt: 12,
+          traces: [traceOf(world, seeded.tasks.length)],
           timeline: [
             {
               id: "t-open",
@@ -172,11 +198,24 @@ export const useMissionStore = create<MissionState>()(
           earned: state.achievements,
         });
 
+        const lastTrace = state.traces[state.traces.length - 1];
+        const traces =
+          !lastTrace || world.elapsed - lastTrace.at >= TRACE_INTERVAL
+            ? [
+                ...state.traces,
+                traceOf(
+                  world,
+                  queued.tasks.filter((task) => task.status === "pending").length,
+                ),
+              ]
+            : state.traces;
+
         set({
           world,
           firedEvents: fired,
           tasks: queued.tasks,
           decisions,
+          traces,
           nextSpawnAt: queued.nextSpawnAt,
           templateLastUsed: queued.templateLastUsed,
           achievements: [...state.achievements, ...earned],
@@ -239,6 +278,16 @@ export const useMissionStore = create<MissionState>()(
 
         const decisions = [...state.decisions, decision];
 
+        recordTelemetry("decide", task.templateId, elapsed, {
+          value: decision.latency,
+          meta: {
+            option: optionId,
+            stream: task.stream,
+            priority: task.priority,
+            queueDepth,
+          },
+        });
+
         const entry: TimelineEntry = {
           id: `d-${taskId}`,
           at: elapsed,
@@ -272,6 +321,8 @@ export const useMissionStore = create<MissionState>()(
 
         const result = applyOperatorAction(state.world, action);
         if (!result.entry) return;
+
+        recordTelemetry("control", action.type, state.world.elapsed);
 
         set({
           world: result.world,
@@ -328,6 +379,7 @@ export const useMissionStore = create<MissionState>()(
         achievements: state.achievements,
         nextSpawnAt: state.nextSpawnAt,
         templateLastUsed: state.templateLastUsed,
+        traces: state.traces,
       }),
     },
   ),

@@ -57,6 +57,12 @@ create table if not exists public.mission_runs (
   tasks         jsonb       not null default '[]'::jsonb,
   decisions     jsonb       not null default '[]'::jsonb,
   achievements  jsonb       not null default '[]'::jsonb,
+  -- Phase 3. `telemetry` is the invisible record: navigation, dwell, prompts,
+  -- glossary lookups. `traces` is the sampled floor state that drives the
+  -- replay. `rating` is written only at handover and is what the cohort ranks.
+  telemetry     jsonb       not null default '[]'::jsonb,
+  traces        jsonb       not null default '[]'::jsonb,
+  rating        integer,
   updated_at    timestamptz not null default now()
 );
 

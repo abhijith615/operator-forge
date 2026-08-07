@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useRecordEvent } from "@/hooks/use-telemetry";
 import { getTerm } from "@/lib/mission/glossary";
 import { cn } from "@/lib/utils";
 
@@ -27,9 +28,16 @@ interface TermProps {
  */
 export function Term({ id, children, className }: TermProps) {
   const [open, setOpen] = React.useState(false);
+  const record = useRecordEvent();
   const term = getTerm(id);
 
   if (!term) return <>{children ?? id}</>;
+
+  function reveal() {
+    setOpen(true);
+    // Looking a word up rather than bluffing past it is a curiosity signal.
+    record("term", id);
+  }
 
   return (
     <>
@@ -37,7 +45,7 @@ export function Term({ id, children, className }: TermProps) {
         <TooltipTrigger asChild>
           <button
             type="button"
-            onClick={() => setOpen(true)}
+            onClick={reveal}
             className={cn(
               "cursor-help rounded-sm underline decoration-dotted decoration-from-font underline-offset-[3px]",
               "decoration-ember-500/60 transition-colors duration-150",

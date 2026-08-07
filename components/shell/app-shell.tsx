@@ -8,8 +8,10 @@ import { PageTransition } from "@/components/shell/page-transition";
 import { Sidebar } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
 import { useMissionTick } from "@/hooks/use-mission";
+import { useRecordRun } from "@/hooks/use-record-run";
 import { useRunSync } from "@/hooks/use-run-sync";
 import { useShellShortcuts } from "@/hooks/use-shell-shortcuts";
+import { useTelemetry } from "@/hooks/use-telemetry";
 import type { Operator } from "@/types/operator";
 
 export function AppShell({
@@ -23,6 +25,9 @@ export function AppShell({
   // Mounted once: the floor keeps moving whichever panel is open.
   useMissionTick();
   useRunSync();
+  // Invisible to the operator; the debrief is built from it.
+  useTelemetry();
+  useRecordRun();
 
   return (
     <div className="relative flex min-h-dvh bg-void">

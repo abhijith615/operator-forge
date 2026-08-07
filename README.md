@@ -15,11 +15,12 @@ This repository is being built in three reviewed phases.
 | Phase | Scope | State |
 | --- | --- | --- |
 | 1 | Design system, landing page, authentication, dashboard shell, navigation, animations | Complete |
-| **2** | Mission engine, world state, timer, event system, three AI chat panels | **Complete — ready for review** |
-| 3 | Telemetry, prompt logging, capability scoring, Operator Genome report | Not started |
+| 2 | Mission engine, world state, timer, event system, three AI chat panels | Complete |
+| **3** | Telemetry, prompt logging, capability scoring, Operator Genome report | **Complete — ready for review** |
 
-Nothing from Phase 3 is stubbed out. Genome and Leaderboard say plainly that
-they have not been built yet rather than showing invented data.
+All three phases are built. Nothing in the product shows invented data: where
+there is genuinely no cohort to rank against, the leaderboard says so rather
+than reporting a rank of one.
 
 ---
 
@@ -93,6 +94,54 @@ remain as full pages for anyone who wants to go and look.
 **Three colleagues** answer in real time. Plus an operations copilot that reads
 the same board you can see. **Every unfamiliar term** is clickable. **Seven
 achievements** recognise a way of working — none can be farmed by clicking fast.
+
+---
+
+## The debrief
+
+### Telemetry
+
+Invisible during the shift, recorded throughout: which panel was opened and for
+how long, every message sent and how specific it was, every glossary term looked
+up, every control used, and every tab switch. Not literally every click — a log
+of mouse events is noise; a log of *where attention went* is evidence.
+
+### Scoring
+
+Ten capability readings, each blended from three or four independent signals so
+no single behaviour can carry an axis. A few examples:
+
+- **Curiosity** — did they open a relevant panel in the ninety seconds *before*
+  deciding, look terms up, ask questions.
+- **Prioritization** — did critical work survive while routine work expired, and
+  was the median latency on critical calls lower than on normal ones.
+- **Learning agility** — quality and speed in the last third of the shift
+  against the first third.
+- **Stress handling** — quality at a queue depth of six or more, against quality
+  at a depth of three or less.
+
+Evidence-poor axes are marked **low confidence** and say so on the report rather
+than being quietly guessed at. Bands (Emerging → Distinctive) are shown; the
+underlying 0–1 score never is.
+
+### The Genome
+
+`/genome` after handover: an animated ten-axis radar, a signature archetype
+drawn from the two strongest axes, the ten readings each opening onto the actual
+decisions behind them, a story of the shift anchored to real minutes and real
+option labels, and a **replay** — scrub the thirty minutes and watch the rating
+and the queue move against the record.
+
+The Genome is recomputed from the stored decisions rather than saved, so
+improving the scoring model improves past shifts too. The record is the
+decisions; the reading of them is derived.
+
+### Standings
+
+`/leaderboard` shows Operator Rating, movement against your previous run, weekly
+streak by ISO calendar week, and your full run history. Rank is computed across
+every completed run of the mission when Supabase is connected — and reports
+nothing at all when there is no cohort, because a rank of one is flattery.
 
 ---
 
@@ -188,6 +237,8 @@ components/
   motion/            reveal, spotlight card, count-up, marquee
   landing/           marketing sections
   shell/             sidebar, topbar, command menu, page transitions
+  genome/            radar, capability panel, reflection, replay
+  leaderboard/       standings
   mission/           control room, task queue, world strip, timeline, term
     panels/          orders, inventory, people, customers
   chat/              threads, composer, markdown, message list
@@ -199,13 +250,14 @@ features/
 hooks/               clock, media query, mission tick, run sync, shortcuts
 lib/
   agents/            personas, world briefing, copilot prompt
+  genome/            signals, scoring, narrative, cohort
   auth/              session, server actions, validation
   mission/           engine, events, effects, achievements, glossary, config
     tasks/           the catalogue and the scheduler that keeps the queue full
   supabase/          browser + server clients
   constants/         mission, navigation, routes, site
   motion.ts          the shared motion vocabulary
-stores/              zustand shell, mission and chat state
+stores/              zustand shell, mission, chat, telemetry and history state
 styles/              design tokens, utilities, markdown
 types/               operator, world, mission-run, agents, navigation
 supabase/            SQL schema
@@ -271,9 +323,10 @@ you are typing.
 ## Notes for review
 
 - `npm run build`, `npm run lint` and `npm run typecheck` are all clean.
-- Genome and Leaderboard are Phase 3. Once a shift ends they say **Not built
-  yet** rather than pretending the gate opened onto something.
 - Chat requires `OPENAI_API_KEY`. There is no scripted fallback, by design.
+- The Genome shows bands, never percentages, and marks thin evidence as low
+  confidence instead of guessing.
+- Rank is absent rather than fabricated when no cohort exists.
 - After handover the floor panels stay readable but every control on them goes
   disabled, with a line saying why — a button that silently does nothing is
   worse than no button.
