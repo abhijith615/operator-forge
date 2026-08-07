@@ -25,17 +25,25 @@ export function LaunchSequence({ operatorId }: { operatorId: string }) {
       <Aurora />
       <GridField />
 
-      <AnimatePresence mode="wait">
-        {stage === "handover" ? (
-          <HandoverStage key="handover" onDone={() => setStage("video")} />
-        ) : null}
-        {stage === "video" ? (
-          <VideoStage key="video" onDone={() => setStage("countdown")} />
-        ) : null}
-        {stage === "countdown" ? (
-          <CountdownStage key="countdown" operatorId={operatorId} />
-        ) : null}
-      </AnimatePresence>
+      {/*
+        Stages are stacked in one grid cell and crossfade. Deliberately not
+        `mode="wait"`: that defers mounting the next stage until the previous
+        one's exit animation reports done, and a count-in that can stall waiting
+        on an animation frame is a count-in that can strand the operator.
+      */}
+      <div className="relative grid w-full place-items-center">
+        <AnimatePresence>
+          {stage === "handover" ? (
+            <HandoverStage key="handover" onDone={() => setStage("video")} />
+          ) : null}
+          {stage === "video" ? (
+            <VideoStage key="video" onDone={() => setStage("countdown")} />
+          ) : null}
+          {stage === "countdown" ? (
+            <CountdownStage key="countdown" operatorId={operatorId} />
+          ) : null}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
@@ -68,7 +76,7 @@ function HandoverStage({ onDone }: { onDone: () => void }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -14, filter: "blur(6px)" }}
       transition={{ duration: 0.7, ease: easing.outExpo }}
-      className="relative w-full max-w-md"
+      className="relative col-start-1 row-start-1 w-full max-w-md"
     >
       <div className="panel sheen grain overflow-hidden">
         <div className="flex items-center gap-3 border-b border-line px-5 py-4">
@@ -172,7 +180,7 @@ function VideoStage({ onDone }: { onDone: () => void }) {
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.02, filter: "blur(8px)" }}
       transition={{ duration: 0.7, ease: easing.outExpo }}
-      className="relative w-full max-w-3xl"
+      className="relative col-start-1 row-start-1 w-full max-w-3xl"
     >
       <div className="mb-5 text-center">
         <p className="font-mono text-[10.5px] tracking-[0.22em] text-ember-500 uppercase">
@@ -283,7 +291,7 @@ function CountdownStage({ operatorId }: { operatorId: string }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="relative flex flex-col items-center"
+      className="relative col-start-1 row-start-1 flex flex-col items-center"
     >
       <p className="font-mono text-[11px] tracking-[0.28em] text-ember-500 uppercase">
         Hub opening

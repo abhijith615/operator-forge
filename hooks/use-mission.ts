@@ -11,14 +11,24 @@ import { useMissionStore } from "@/stores/mission-store";
  * "live" one.
  */
 export function useMissionHydrated(): boolean {
-  const [hydrated, setHydrated] = React.useState(() =>
-    useMissionStore.persist.hasHydrated(),
-  );
+  // Always false on the first render, on both sides, so the server and client
+  // agree. Resolving it in an effect is what makes that safe.
+  const [hydrated, setHydrated] = React.useState(false);
 
   React.useEffect(() => {
-    const unsub = useMissionStore.persist.onFinishHydration(() => setHydrated(true));
-    if (useMissionStore.persist.hasHydrated()) setHydrated(true);
-    return unsub;
+    // zustand only attaches `persist` when a storage backend exists. There is
+    // none during SSR, so this must never be assumed present.
+    const persist = useMissionStore.persist as
+      | typeof useMissionStore.persist
+      | undefined;
+
+    if (!persist) {
+      setHydrated(true);
+      return;
+    }
+
+    if (persist.hasHydrated()) setHydrated(true);
+    return persist.onFinishHydration(() => setHydrated(true));
   }, []);
 
   return hydrated;

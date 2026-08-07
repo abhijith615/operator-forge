@@ -10,7 +10,7 @@ import { MessageList } from "@/components/chat/message-list";
 import { useIsShiftLive } from "@/hooks/use-mission";
 import { AGENTS, AGENT_ORDER } from "@/lib/agents/personas";
 import { easing } from "@/lib/motion";
-import { countUnread, useChatStore } from "@/stores/chat-store";
+import { NO_MESSAGES, countUnread, useChatStore } from "@/stores/chat-store";
 import { cn } from "@/lib/utils";
 import type { AgentId } from "@/types/agents";
 
@@ -38,7 +38,7 @@ export function MessagesPanel({ configured }: { configured: boolean }) {
   );
 
   const persona = AGENTS[active];
-  const messages = threads[active] ?? [];
+  const messages = threads[active] ?? NO_MESSAGES;
 
   React.useEffect(() => {
     markRead(active);

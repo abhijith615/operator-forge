@@ -8,10 +8,10 @@ import { Composer } from "@/components/chat/composer";
 import { MessageList } from "@/components/chat/message-list";
 import { useIsShiftLive } from "@/hooks/use-mission";
 import { ASSISTANT_SUGGESTIONS } from "@/lib/agents/assistant";
-import { useChatStore } from "@/stores/chat-store";
+import { NO_MESSAGES, useChatStore } from "@/stores/chat-store";
 
 export function AssistantPanel({ configured }: { configured: boolean }) {
-  const messages = useChatStore((state) => state.threads.assistant ?? []);
+  const messages = useChatStore((state) => state.threads.assistant ?? NO_MESSAGES);
   const typing = useChatStore((state) => Boolean(state.typing.assistant));
   const send = useChatStore((state) => state.send);
   const markRead = useChatStore((state) => state.markRead);

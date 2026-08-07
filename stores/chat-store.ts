@@ -31,6 +31,12 @@ function elapsed(): number {
 
 const emptyThreads: Record<string, ChatMessage[]> = {};
 
+/**
+ * Stable empty array. A selector that returns a fresh `[]` gives zustand a new
+ * snapshot on every read, which React treats as an endless update.
+ */
+export const NO_MESSAGES: ChatMessage[] = [];
+
 export const useChatStore = create<ChatState>()(
   persist(
     (set, get) => ({

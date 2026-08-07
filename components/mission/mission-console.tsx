@@ -23,17 +23,18 @@ export function MissionConsole({ firstName }: { firstName: string }) {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: easing.outExpo }}
-        className="flex flex-wrap items-end justify-between gap-4"
+        className="max-w-3xl"
       >
-        <div>
-          <p className="font-mono text-[10.5px] tracking-[0.2em] text-ember-500 uppercase">
-            {FIRST_SHIFT.codename} · Live · {FIRST_SHIFT.location}
-          </p>
-          <h2 className="mt-2.5 text-[26px] leading-tight font-semibold tracking-[-0.03em] text-hi sm:text-[30px]">
-            {hubClock(world.elapsed)} — you have the floor, {firstName}.
-          </h2>
+        <p className="font-mono text-[10.5px] tracking-[0.2em] text-ember-500 uppercase">
+          {FIRST_SHIFT.codename} · Live · {FIRST_SHIFT.location}
+        </p>
+        <h2 className="mt-2.5 text-[26px] leading-tight font-semibold tracking-[-0.03em] text-hi sm:text-[30px]">
+          {hubClock(world.elapsed)} — you have the floor, {firstName}.
+        </h2>
+        {/* Left-aligned on purpose: the top-right corner is the notification lane. */}
+        <div className="mt-5">
+          <HubControls />
         </div>
-        <HubControls />
       </motion.div>
 
       <div className="mt-7">

@@ -52,9 +52,10 @@ export function EventToasts() {
   }, [notifications, soundEnabled]);
 
   return (
-    // Bottom-right, stacking upward. The top-right corner belongs to the
-    // console's own controls, and a toast there swallows clicks on them.
-    <div className="pointer-events-none fixed right-4 bottom-4 z-70 flex w-[min(23rem,calc(100vw-2rem))] flex-col-reverse gap-2.5 sm:right-6 sm:bottom-6">
+    // Top-right, under the topbar, is the reserved notification lane: no panel
+    // puts interactive controls there. It was bottom-right, which sat on top of
+    // the chat composer and quietly ate clicks on it.
+    <div className="pointer-events-none fixed top-18 right-4 z-70 flex w-[min(23rem,calc(100vw-2rem))] flex-col gap-2.5 sm:right-6">
       <AnimatePresence initial={false}>
         {notifications.slice(-3).map((notification) => (
           <Toast
