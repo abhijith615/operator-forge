@@ -17,3 +17,9 @@ yarn-error.log*
 next-env.d.ts
 .vercel
 *.tsbuildinfo
+
+# Briefing footage. Kept out of git — GitHub rejects blobs over 100MB, and a
+# 100MB+ asset does not belong in a repo regardless. See README for how to
+# supply it locally or point NEXT_PUBLIC_HANDOVER_VIDEO_URL at a hosted copy.
+public/handover.mp4
+*.mp4

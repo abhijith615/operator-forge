@@ -13,9 +13,15 @@ export function ChatUnavailable({ what }: { what: string }) {
       </div>
       <p className="mt-5 text-[15px] text-hi">{what} is not connected</p>
       <p className="mt-2.5 text-[13.5px] leading-relaxed text-mid">
-        Add <code className="text-ember-400">OPENAI_API_KEY</code> to{" "}
-        <code className="text-ember-400">.env.local</code> and restart the dev
-        server. Everything else on the floor keeps running without it.
+        This server has no <code className="text-ember-400">OPENAI_API_KEY</code>.
+        Add it to <code className="text-ember-400">.env.local</code> and{" "}
+        <span className="text-hi">restart the server</span> — the environment is
+        read once at boot, so a running process will not pick up a new key.
+      </p>
+      <p className="mt-3 text-[12.5px] leading-relaxed text-lo">
+        Already added it? Open <code className="text-mid">/api/chat</code> to see
+        what this process actually has. Everything else on the floor keeps
+        running without it.
       </p>
     </div>
   );

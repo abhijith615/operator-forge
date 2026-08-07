@@ -7,6 +7,7 @@ import { ChevronLeft } from "lucide-react";
 import { ChatUnavailable } from "@/components/chat/chat-unavailable";
 import { Composer } from "@/components/chat/composer";
 import { MessageList } from "@/components/chat/message-list";
+import { useChatAvailability } from "@/hooks/use-chat-availability";
 import { useIsShiftLive } from "@/hooks/use-mission";
 import { AGENTS, AGENT_ORDER } from "@/lib/agents/personas";
 import { easing } from "@/lib/motion";
@@ -20,7 +21,8 @@ const ACCENT = {
   ember: "from-ember-500/30 to-ember-600/10 text-ember-400",
 } as const;
 
-export function MessagesPanel({ configured }: { configured: boolean }) {
+export function MessagesPanel({ configured: initial }: { configured: boolean }) {
+  const configured = useChatAvailability(initial);
   const [active, setActive] = React.useState<AgentId>("hub-manager");
   const [mobileThread, setMobileThread] = React.useState(false);
 

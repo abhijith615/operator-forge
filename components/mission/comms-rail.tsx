@@ -6,6 +6,7 @@ import { MessagesSquare } from "lucide-react";
 import { ChatUnavailable } from "@/components/chat/chat-unavailable";
 import { Composer } from "@/components/chat/composer";
 import { MessageList } from "@/components/chat/message-list";
+import { useChatAvailability } from "@/hooks/use-chat-availability";
 import { useIsShiftLive } from "@/hooks/use-mission";
 import { AGENTS, AGENT_ORDER } from "@/lib/agents/personas";
 import { NO_MESSAGES, countUnread, useChatStore } from "@/stores/chat-store";
@@ -23,12 +24,13 @@ const ACCENT = {
  * losing sight of the queue, so the colleagues live in the left rail instead.
  */
 export function CommsRail({
-  configured,
+  configured: initial,
   className,
 }: {
   configured: boolean;
   className?: string;
 }) {
+  const configured = useChatAvailability(initial);
   const [active, setActive] = React.useState<AgentId>("hub-manager");
 
   const threads = useChatStore((state) => state.threads);

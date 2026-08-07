@@ -6,11 +6,13 @@ import { Sparkles } from "lucide-react";
 import { ChatUnavailable } from "@/components/chat/chat-unavailable";
 import { Composer } from "@/components/chat/composer";
 import { MessageList } from "@/components/chat/message-list";
+import { useChatAvailability } from "@/hooks/use-chat-availability";
 import { useIsShiftLive } from "@/hooks/use-mission";
 import { ASSISTANT_SUGGESTIONS } from "@/lib/agents/assistant";
 import { NO_MESSAGES, useChatStore } from "@/stores/chat-store";
 
-export function AssistantPanel({ configured }: { configured: boolean }) {
+export function AssistantPanel({ configured: initial }: { configured: boolean }) {
+  const configured = useChatAvailability(initial);
   const messages = useChatStore((state) => state.threads.assistant ?? NO_MESSAGES);
   const typing = useChatStore((state) => Boolean(state.typing.assistant));
   const send = useChatStore((state) => state.send);

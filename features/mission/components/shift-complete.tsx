@@ -1,12 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
-import { Flag } from "lucide-react";
+import { ArrowRight, Flag } from "lucide-react";
 
 import { AchievementStrip } from "@/components/mission/achievements";
 import { Timeline } from "@/components/mission/timeline";
 import { PageShell } from "@/components/shell/page-header";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { RestartShift } from "@/features/mission/components/restart-shift";
 import { easing } from "@/lib/motion";
 import { useMissionStore } from "@/stores/mission-store";
 import { FIRST_SHIFT } from "@/lib/constants/mission";
@@ -103,14 +106,23 @@ export function ShiftComplete() {
 
           <div className="panel sheen mt-5 p-6">
             <div className="flex flex-wrap items-center gap-2.5">
-              <Badge tone="neutral">Next</Badge>
+              <Badge tone="ember">Ready</Badge>
               <span className="text-[13px] text-mid">Operator Genome</span>
             </div>
             <p className="mt-4 text-[14.5px] leading-relaxed text-mid">
               The reading of this shift — ten capabilities, a minute-by-minute
-              replay, and what to keep doing — is built from the record on the
-              right. That is Phase 3, and it is not written yet.
+              replay, and what to keep doing — has been built from the record on
+              the right. It is waiting for you.
             </p>
+            <div className="mt-6 flex flex-wrap gap-2">
+              <Button asChild variant="primary" size="md">
+                <Link href="/genome">
+                  Read your Genome
+                  <ArrowRight className="transition-transform duration-300 ease-out-expo group-hover/btn:translate-x-0.5" />
+                </Link>
+              </Button>
+              <RestartShift />
+            </div>
           </div>
         </div>
 

@@ -144,7 +144,7 @@ function HandoverStage({ onDone }: { onDone: () => void }) {
             className="mt-6 flex flex-col items-center gap-3"
           >
             <Button variant="primary" size="lg" onClick={onDone} className="w-full">
-              He left a video
+              See the floor you are taking over
               <ArrowRight className="transition-transform duration-300 ease-out-expo group-hover/btn:translate-x-1" />
             </Button>
             <p className="font-mono text-[10.5px] tracking-[0.14em] text-faint uppercase">
@@ -184,11 +184,15 @@ function VideoStage({ onDone }: { onDone: () => void }) {
     >
       <div className="mb-5 text-center">
         <p className="font-mono text-[10.5px] tracking-[0.22em] text-ember-500 uppercase">
-          {FIRST_SHIFT.codename} · Handover
+          {FIRST_SHIFT.codename} · The floor
         </p>
         <h1 className="mt-3 text-[clamp(1.6rem,3.6vw,2.4rem)] leading-tight font-semibold tracking-[-0.035em] text-gradient">
-          Rohit recorded this before he left.
+          This is the hub you are about to run.
         </h1>
+        <p className="mx-auto mt-3 max-w-lg text-[14px] leading-relaxed text-mid">
+          {FIRST_SHIFT.location}, on an ordinary morning. Watch it or skip it —
+          the clock starts either way.
+        </p>
       </div>
 
       <div className="panel sheen relative aspect-video overflow-hidden p-0">
@@ -255,8 +259,8 @@ function VideoStage({ onDone }: { onDone: () => void }) {
           <ArrowRight className="transition-transform duration-300 ease-out-expo group-hover/btn:translate-x-1" />
         </Button>
         <p className="max-w-sm text-center text-[12px] leading-relaxed text-faint">
-          The mission starts the moment this ends. Thirty minutes, one attempt,
-          no pause.
+          The shift starts the moment the video ends. Thirty minutes, one
+          attempt, no pause.
         </p>
       </div>
     </motion.div>

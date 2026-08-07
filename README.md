@@ -26,8 +26,14 @@ than reporting a rank of one.
 
 ## The shift
 
-`/start` plays the handover: the WhatsApp message lands line by line, a video
-slot follows, then a five-second count-in and the hub opens.
+`/start` plays the handover: the WhatsApp message lands line by line, footage of
+the floor follows, then a five-second count-in and the hub opens.
+
+> **The briefing video is not in the repo.** Video files are gitignored —
+> GitHub rejects blobs over 100MB. Drop yours at `public/handover.mp4` for local
+> use, or point `NEXT_PUBLIC_HANDOVER_VIDEO_URL` at a hosted copy for a
+> deployment. Without either, the screen says so plainly and the shift still
+> starts.
 
 From there a **30-minute clock** runs. It derives from the run's start
 timestamp, so a refresh, a background tab or a closed laptop all resolve to the

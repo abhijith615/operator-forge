@@ -11,6 +11,7 @@ import { Replay } from "@/components/genome/replay";
 import { CountUp } from "@/components/motion/count-up";
 import { Reveal } from "@/components/motion/reveal";
 import { PageShell } from "@/components/shell/page-header";
+import { RestartShift } from "@/features/mission/components/restart-shift";
 import { capabilities } from "@/lib/constants/site";
 import { easing } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -207,6 +208,18 @@ export function GenomeReport({
           </div>
         ))}
       </div>
+
+      <Reveal className="mt-12 panel sheen flex flex-wrap items-center justify-between gap-5 p-6">
+        <div className="min-w-0">
+          <p className="text-[15px] font-medium text-hi">Run it again</p>
+          <p className="mt-1.5 max-w-lg text-[13.5px] leading-relaxed text-mid">
+            A second shift is where this gets useful — the readings that were
+            thin here get evidence, and your rating starts to move against
+            something.
+          </p>
+        </div>
+        <RestartShift variant="primary" />
+      </Reveal>
 
       <p className="mt-8 text-[12.5px] leading-relaxed text-faint">
         Everything above is derived from your own run — every decision, its
