@@ -4,7 +4,14 @@ export const site = {
   tagline: "The Flight Simulator for Future Operators.",
   description:
     "Operator Forge drops you into your first day running a real business. Thirty minutes, more work than you can finish, and three colleagues who answer back in real time.",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  /**
+   * Only read server-side, for `metadataBase` and Open Graph tags. Falls back
+   * to the Vercel deployment URL so a preview or a production build without
+   * `NEXT_PUBLIC_SITE_URL` does not advertise itself as localhost.
+   */
+  url:
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000"),
 } as const;
 
 export const capabilities = [

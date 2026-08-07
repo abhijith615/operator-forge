@@ -213,6 +213,30 @@ This runs the full arc — every world shock, the whole task queue, the close-ou
 — in about three minutes. It is ignored in production builds; a real shift runs
 in real time.
 
+### Deploying to Vercel
+
+`.env.local` is gitignored, so **nothing in it reaches a deployment**. Whatever
+you set locally has to be set again in Vercel under
+**Project → Settings → Environment Variables**, then redeployed — Next reads the
+environment at build and boot, so an existing deployment will not pick up a new
+variable on its own.
+
+| Variable | Needed for | Without it |
+| --- | --- | --- |
+| `OPENAI_API_KEY` | Messages and the AI Assistant | Both chat panels say "not connected". Everything else runs. |
+| `NEXT_PUBLIC_SITE_URL` | OAuth and magic-link redirects, Open Graph tags | Falls back to the Vercel deployment URL. Set it once you have a custom domain. |
+| `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Real accounts, durable run records, cohort ranking | Simulator Mode: a local cookie identity per browser, and no leaderboard cohort. |
+| `OPENAI_MODEL` | Overriding the model | Defaults to `gpt-4o-mini`. |
+| `NEXT_PUBLIC_HANDOVER_VIDEO_URL` | A different briefing video | Defaults to the hosted YouTube clip, which works on a deployment as-is. |
+
+To check what a running deployment actually has, sign in and open `/api/chat`:
+
+```
+{"configured":true,"model":"gpt-4o-mini"}
+```
+
+`configured: false` means that deployment has no key.
+
 ### Connecting Supabase
 
 1. Create a project at [supabase.com](https://supabase.com).
