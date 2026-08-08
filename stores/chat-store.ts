@@ -158,7 +158,12 @@ export const useChatStore = create<ChatState>()(
             patchReply({ content: buffer });
           }
 
-          patchReply({ content: buffer, pending: false, at: elapsed() });
+          // `at` deliberately keeps the time the reply was requested rather
+          // than the time the stream finished. Re-stamping it made the message
+          // land after the `lastReadAt` written when it was appended, so a
+          // reply the operator was watching arrive counted as unread — and a
+          // slow reply could also sort after messages that came later.
+          patchReply({ content: buffer, pending: false });
         } catch (error) {
           patchReply({
             pending: false,

@@ -41,10 +41,13 @@ export function MessagesPanel({ configured: initial }: { configured: boolean }) 
 
   const persona = AGENTS[active];
   const messages = threads[active] ?? NO_MESSAGES;
+  const activeUnread = unread(active);
 
+  // See comms-rail: a streamed reply completes as an in-place patch, so
+  // `messages.length` does not change and cannot be what this depends on.
   React.useEffect(() => {
     markRead(active);
-  }, [active, markRead, messages.length]);
+  }, [active, activeUnread, markRead]);
 
   function open(agentId: AgentId) {
     setActive(agentId);

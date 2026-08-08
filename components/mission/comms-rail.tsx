@@ -42,10 +42,14 @@ export function CommsRail({
 
   const persona = AGENTS[active];
   const messages = threads[active] ?? NO_MESSAGES;
+  const activeUnread = countUnread(messages, lastReadAt[active]);
 
+  // Keyed on the unread count, not `messages.length`. A streamed reply is
+  // patched in place when it completes, so the length never changes and a
+  // length-keyed effect would leave the message on screen marked unread.
   React.useEffect(() => {
     markRead(active);
-  }, [active, markRead, messages.length]);
+  }, [active, activeUnread, markRead]);
 
   return (
     <section
