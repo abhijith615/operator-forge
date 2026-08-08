@@ -185,6 +185,11 @@ function CoffeeBlock() {
             </a>
           </Button>
         ) : qr ? (
+          // Deliberately not next/image: the source is a data URI generated in
+          // the browser, so there is nothing for the optimizer to fetch or
+          // cache, and routing it through /_next/image would cost a request to
+          // re-encode bytes we already hold.
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={qr}
             alt={`UPI payment code for ${upiVpa}`}
@@ -227,7 +232,7 @@ function MentorBlock() {
         this job.
       </p>
 
-      <p className="mt-4 text-[12.5px] text-lo">Soon you'll be able to book:</p>
+      <p className="mt-4 text-[12.5px] text-lo">Soon you&rsquo;ll be able to book:</p>
       <div className="mt-2 flex flex-wrap gap-2">
         <span className="rounded-full border border-ember-500/25 bg-ember-500/[0.08] px-2.5 py-1 text-[11.5px] text-ember-400">
           1:1 Operator Sessions
