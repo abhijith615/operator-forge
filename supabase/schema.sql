@@ -138,9 +138,16 @@ revoke all on function public.mission_cohort_standing(text, integer) from anon;
 grant execute on function public.mission_cohort_standing(text, integer) to authenticated;
 
 -- ── Keep updated_at honest ────────────────────────────────────────────────
+-- `search_path = ''` pins name resolution at definition time. Without it the
+-- function resolves names against whatever search_path the calling session
+-- happens to have, which is a foothold for shadowing a referenced object. The
+-- body only calls now(), which lives in pg_catalog and is always searched, so
+-- an empty path costs nothing here.
 create or replace function public.touch_updated_at()
 returns trigger
 language plpgsql
+security invoker
+set search_path = ''
 as $$
 begin
   new.updated_at = now();
