@@ -73,7 +73,16 @@ export function AppreciationDialog() {
           observer.disconnect();
         }
       },
-      { rootMargin: "0px 0px -15% 0px" },
+      // Positive bottom margin, expanding the trigger area downward.
+      //
+      // This was `-15%`, which shrinks it instead — and since the sentinel is
+      // the last element in the document, scrolling to the very end left it
+      // resting inside the excluded band with nothing below it to scroll past.
+      // It could never intersect, so the dialog never opened for anybody.
+      //
+      // Expanding is the safe direction: it fires slightly before the absolute
+      // end, which still means the closing paragraph is on screen.
+      { rootMargin: "0px 0px 80px 0px" },
     );
 
     observer.observe(node);
