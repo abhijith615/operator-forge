@@ -1,7 +1,7 @@
 import { applyEffects } from "@/lib/mission/effects";
 import { mulberry32 } from "@/lib/mission/random";
 import type { TimelineEntry } from "@/types/mission-run";
-import type { MissionTask, TaskDecision } from "@/types/tasks";
+import type { MissionTask, TaskDecision, TaskOption } from "@/types/tasks";
 import type { WorldState } from "@/types/world";
 
 import { TASK_TEMPLATES, TEMPLATES_BY_ID } from "./index";
@@ -73,9 +73,30 @@ function instantiate(
     subjectId: draft.subjectId,
     createdAt: elapsed,
     expiresAt: ttl > 0 ? elapsed + ttl : null,
-    options: draft.options,
+    options: shuffleOptions(draft.options, rand),
     status: "pending",
   };
+}
+
+/**
+ * Templates are authored best-option-first because that is how they read when
+ * you are writing them. On screen that is a tell: an operator who notices it
+ * stops reading the options and just takes the top one, which is the opposite
+ * of the thing being measured.
+ *
+ * Seeded, so a replayed shift deals the same order — the decision record has to
+ * stay reproducible, and `optionId` is what it stores, not the index.
+ */
+function shuffleOptions(options: TaskOption[], rand: () => number): TaskOption[] {
+  const shuffled = [...options];
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rand() * (i + 1));
+    const a = shuffled[i]!;
+    const b = shuffled[j]!;
+    shuffled[i] = b;
+    shuffled[j] = a;
+  }
+  return shuffled;
 }
 
 function weightedPick(
