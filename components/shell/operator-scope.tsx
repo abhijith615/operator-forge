@@ -33,6 +33,7 @@ export function clearOperatorScope(): void {
   useTelemetryStore.getState().reset();
   useHistoryStore.getState().clear();
   useShellStore.getState().setWalkthroughSeen(false);
+  useShellStore.getState().setAppreciationSeen(false);
 
   try {
     window.localStorage.removeItem(OPERATOR_KEY);
@@ -81,10 +82,11 @@ export function OperatorScope({ operatorId }: { operatorId: string }) {
     useChatStore.getState().reset();
     useTelemetryStore.getState().reset();
     useHistoryStore.getState().clear();
-    // A new operator has not seen the walkthrough, whatever this browser
-    // remembers. Sidebar and sound stay put: those are device preferences,
-    // not a record of anybody.
+    // A new operator has not seen the walkthrough or been asked for anything,
+    // whatever this browser remembers. Sidebar and sound stay put: those are
+    // device preferences, not a record of anybody.
     useShellStore.getState().setWalkthroughSeen(false);
+    useShellStore.getState().setAppreciationSeen(false);
   }, [operatorId]);
 
   return null;

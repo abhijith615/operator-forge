@@ -164,3 +164,45 @@ drop trigger if exists mission_runs_touch_updated_at on public.mission_runs;
 create trigger mission_runs_touch_updated_at
   before update on public.mission_runs
   for each row execute function public.touch_updated_at();
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Interest signals
+--
+-- "Would you want this if it existed." Nothing here is a purchase and nothing
+-- here is a promise — the 1:1 sessions the genome mentions are not built, not
+-- priced and not staffed. This table only records that somebody said yes.
+--
+-- One row per operator per topic, so a second submission updates rather than
+-- accumulating duplicates.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create table if not exists public.interest_signals (
+  id          uuid primary key default gen_random_uuid(),
+  operator_id uuid        not null references public.operators (id) on delete cascade,
+  topic       text        not null,
+  email       text        not null,
+  note        text,
+  created_at  timestamptz not null default now(),
+  unique (operator_id, topic)
+);
+
+comment on table public.interest_signals is
+  'Waitlist interest. Not an order, not a payment, not a commitment either way.';
+
+alter table public.interest_signals enable row level security;
+
+drop policy if exists "signals_select_own" on public.interest_signals;
+create policy "signals_select_own"
+  on public.interest_signals for select
+  using (auth.uid() = operator_id);
+
+drop policy if exists "signals_insert_own" on public.interest_signals;
+create policy "signals_insert_own"
+  on public.interest_signals for insert
+  with check (auth.uid() = operator_id);
+
+drop policy if exists "signals_update_own" on public.interest_signals;
+create policy "signals_update_own"
+  on public.interest_signals for update
+  using (auth.uid() = operator_id)
+  with check (auth.uid() = operator_id);

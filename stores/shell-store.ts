@@ -35,6 +35,14 @@ interface ShellState {
   setWalkthroughSeen: (seen: boolean) => void;
   walkthroughReplay: boolean;
   setWalkthroughReplay: (replay: boolean) => void;
+
+  /**
+   * The appreciation dialog after the genome. Asked once and never again,
+   * whether they paid, registered interest or skipped — a second ask is where
+   * goodwill turns into resentment. Reset per operator, like the walkthrough.
+   */
+  appreciationSeen: boolean;
+  setAppreciationSeen: (seen: boolean) => void;
 }
 
 export const useShellStore = create<ShellState>()(
@@ -62,6 +70,8 @@ export const useShellStore = create<ShellState>()(
       setWalkthroughSeen: (walkthroughSeen) => set({ walkthroughSeen }),
       walkthroughReplay: false,
       setWalkthroughReplay: (walkthroughReplay) => set({ walkthroughReplay }),
+      appreciationSeen: false,
+      setAppreciationSeen: (appreciationSeen) => set({ appreciationSeen }),
     }),
     {
       name: "of.shell",
@@ -69,6 +79,7 @@ export const useShellStore = create<ShellState>()(
         sidebarCollapsed: state.sidebarCollapsed,
         soundEnabled: state.soundEnabled,
         walkthroughSeen: state.walkthroughSeen,
+        appreciationSeen: state.appreciationSeen,
       }),
     },
   ),

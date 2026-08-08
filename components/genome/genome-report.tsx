@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Dna, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
 
 import { AchievementStrip } from "@/components/mission/achievements";
+import { AppreciationDialog } from "@/components/genome/appreciation-dialog";
 import { CapabilityPanel } from "@/components/genome/capability-panel";
 import { GenomeRadar } from "@/components/genome/genome-radar";
 import { Reflection } from "@/components/genome/reflection";
@@ -226,6 +227,9 @@ export function GenomeReport({
         timing, the queue depth behind it, and every message you sent. None of it
         was visible to you during the shift.
       </p>
+
+      {/* Asks once, and only after the report above has been read to the end. */}
+      <AppreciationDialog />
     </PageShell>
   );
 }
