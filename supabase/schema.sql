@@ -90,6 +90,47 @@ create policy "runs_update_own"
   using (auth.uid() = operator_id)
   with check (auth.uid() = operator_id);
 
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Cohort ranking
+--
+-- Row level security means an operator can only read their own runs, which is
+-- correct — and it makes ranking impossible from the client, because a rank
+-- needs to know about everyone else's ratings.
+--
+-- This function runs as its owner, so it can count across every run, but it
+-- returns two integers and nothing else. No operator ever sees another
+-- operator's row, rating or identity.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create or replace function public.mission_cohort_standing(
+  p_mission text,
+  p_rating  integer
+)
+returns table (cohort_rank integer, cohort_total integer)
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  with completed as (
+    select rating
+    from public.mission_runs
+    where mission_id = p_mission
+      and status = 'complete'
+      and rating is not null
+  )
+  select
+    ((select count(*) from completed where rating > p_rating) + 1)::integer,
+    (select count(*) from completed)::integer;
+$$;
+
+comment on function public.mission_cohort_standing is
+  'Rank and cohort size for a rating. Security definer so it can see across '
+  'operators; returns only aggregates.';
+
+revoke all on function public.mission_cohort_standing(text, integer) from public;
+grant execute on function public.mission_cohort_standing(text, integer) to authenticated;
+
 -- ── Keep updated_at honest ────────────────────────────────────────────────
 create or replace function public.touch_updated_at()
 returns trigger

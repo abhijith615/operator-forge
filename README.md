@@ -240,22 +240,53 @@ To check what a running deployment actually has, sign in and open `/api/chat`:
 ### Connecting Supabase
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. Run [`supabase/schema.sql`](supabase/schema.sql) in the SQL editor. It
-   creates the `operators` table with row-level security scoped to `auth.uid()`.
-3. Copy `.env.example` to `.env.local` and fill in:
+
+2. Run the whole of [`supabase/schema.sql`](supabase/schema.sql) in the SQL
+   editor. It creates:
+   - `operators` — one row per signed-in person, RLS scoped to `auth.uid()`
+   - `mission_runs` — one row per shift, holding the world, timeline,
+     conversations, tasks, decisions, telemetry and rating
+   - `mission_cohort_standing()` — a security definer function for ranking
+     (see below)
+
+3. **Settings → API**: copy the Project URL and the `anon` public key into
+   `.env.local`, and into Vercel's environment variables for a deployment:
 
    ```
-   NEXT_PUBLIC_SUPABASE_URL=…
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=…
-   NEXT_PUBLIC_SITE_URL=http://localhost:3000
+   NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci…
+   NEXT_PUBLIC_SITE_URL=https://your-app.vercel.app
    ```
 
-4. In **Authentication → Providers**, enable Google and Email (magic link).
-5. In **Authentication → URL Configuration**, add `<site-url>/auth/callback` as
-   a redirect URL.
+   The anon key is meant to be public — every policy above assumes it is. Never
+   put the `service_role` key in this app.
 
-Restart the dev server. Google OAuth and magic links now run for real, and
-Simulator Mode disappears.
+4. **Authentication → Providers**: enable Email, and Google if you want it
+   (Google needs a client id and secret from Google Cloud Console).
+
+5. **Authentication → URL Configuration**: set Site URL to your origin and add
+   `<origin>/auth/callback` to Redirect URLs. Add both your Vercel URL and
+   `http://localhost:3000` if you develop locally.
+
+6. Restart the server, or redeploy. Simulator Mode disappears, sign-ins become
+   real accounts, and runs persist server-side.
+
+To confirm, sign in and open `/api/chat`:
+
+```
+{"configured":true,"model":"gpt-4o-mini","supabase":true,"identity":"supabase"}
+```
+
+#### Why ranking needs a database function
+
+RLS restricts every operator to reading their own runs, which is correct — one
+person's shift is nobody else's business. But a rank has to know about everyone
+else's ratings, so it cannot be computed from the client at all.
+
+`mission_cohort_standing()` runs as its owner, counts across every completed
+run, and returns two integers: your rank and the cohort size. No operator ever
+sees another operator's row, rating or identity. Until at least two people have
+finished a shift it reports no cohort, and the leaderboard says so.
 
 ---
 

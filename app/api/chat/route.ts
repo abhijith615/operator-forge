@@ -12,6 +12,7 @@ import {
 import { buildWorldBriefing } from "@/lib/agents/context";
 import { AGENTS, isAgentId } from "@/lib/agents/personas";
 import { getOperator } from "@/lib/auth/session";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { WorldState } from "@/types/world";
 
 export const runtime = "nodejs";
@@ -31,6 +32,10 @@ export async function GET() {
   return NextResponse.json({
     configured: isOpenAIConfigured,
     model: isOpenAIConfigured ? OPENAI_MODEL : null,
+    // Reported here too because "what does this deployment actually have" is
+    // one question, not two.
+    supabase: isSupabaseConfigured,
+    identity: isSupabaseConfigured ? "supabase" : "simulator",
   });
 }
 

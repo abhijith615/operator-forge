@@ -25,28 +25,26 @@ export async function getCohortStanding(
   const operator = await getOperator();
   if (!operator) return null;
 
+  // Ranking has to look across operators, and row level security deliberately
+  // stops the client doing that. `mission_cohort_standing` is a security
+  // definer function that counts on our behalf and returns only two integers.
   const { data, error } = await supabase
-    .from("mission_runs")
-    .select("rating")
-    .eq("mission_id", "first-shift")
-    .eq("status", "complete")
-    .not("rating", "is", null);
+    .rpc("mission_cohort_standing", {
+      p_mission: "first-shift",
+      p_rating: Math.round(rating),
+    })
+    .maybeSingle<{ cohort_rank: number; cohort_total: number }>();
 
   if (error || !data) return null;
 
-  const ratings = data
-    .map((row) => (typeof row.rating === "number" ? row.rating : null))
-    .filter((value): value is number => value !== null);
+  const { cohort_rank: rank, cohort_total: total } = data;
 
   // One run — our own — is not a cohort.
-  if (ratings.length < 2) return null;
-
-  const better = ratings.filter((value) => value > rating).length;
-  const rank = better + 1;
+  if (total < 2) return null;
 
   return {
     rank,
-    total: ratings.length,
-    percentile: Math.round(((ratings.length - rank) / (ratings.length - 1)) * 100),
+    total,
+    percentile: Math.round(((total - rank) / (total - 1)) * 100),
   };
 }
