@@ -9,9 +9,10 @@ import { Lock } from "lucide-react";
 import { useIsUnlocked } from "@/components/shell/availability";
 import { AGENT_ORDER } from "@/lib/agents/personas";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { navSections } from "@/lib/constants/navigation";
+import { adminSection, navSections } from "@/lib/constants/navigation";
 import { easing } from "@/lib/motion";
 import { countUnread, useChatStore } from "@/stores/chat-store";
+import { useShellStore } from "@/stores/shell-store";
 import { cn } from "@/lib/utils";
 import type { NavItem } from "@/types/navigation";
 
@@ -128,9 +129,15 @@ export function SidebarNav({ collapsed, onNavigate }: SidebarNavProps) {
     [threads, lastReadAt],
   );
 
+  const isAdmin = useShellStore((state) => state.isAdmin);
+  const sections = React.useMemo(
+    () => (isAdmin ? [...navSections, adminSection] : navSections),
+    [isAdmin],
+  );
+
   return (
     <nav className="flex flex-col gap-5 px-3" aria-label="Mission navigation">
-      {navSections.map((section) => (
+      {sections.map((section) => (
         <div key={section.id}>
           <AnimatePresence initial={false}>
             {!collapsed ? (

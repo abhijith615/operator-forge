@@ -206,3 +206,248 @@ create policy "signals_update_own"
   on public.interest_signals for update
   using (auth.uid() = operator_id)
   with check (auth.uid() = operator_id);
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Admin
+--
+-- Everything above is scoped to auth.uid() by row level security, which is
+-- correct and which makes an admin view impossible from the client — reading
+-- other operators means reading rows the caller must not read.
+--
+-- The usual answer is the service_role key. It is not used here: it bypasses
+-- row level security everywhere, permanently, and one leak exposes every
+-- operator's runs, conversations and telemetry. These functions run as their
+-- owner instead, check the caller against a table first, and return only the
+-- columns the panel actually shows. Granting admin is one insert; revoking it
+-- is one delete; no key exists that could bypass anything.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create table if not exists public.admins (
+  email      text primary key,
+  created_at timestamptz not null default now()
+);
+
+comment on table public.admins is
+  'Who may read the admin panel. Rows are added by hand — there is deliberately no UI for granting this.';
+
+alter table public.admins enable row level security;
+-- No policies on purpose. Nothing reads this through the API; only the
+-- security definer functions below, which run as the owner and ignore RLS.
+
+create or replace function public.is_admin()
+returns boolean
+language sql
+security definer
+set search_path = ''
+stable
+as $$
+  select exists (
+    select 1
+    from public.admins
+    where lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+  );
+$$;
+
+comment on function public.is_admin is
+  'True when the signed-in caller is listed in admins. Matched on the JWT email, not a client-supplied value.';
+
+revoke all on function public.is_admin() from public;
+revoke all on function public.is_admin() from anon;
+grant execute on function public.is_admin() to authenticated;
+
+/* ── Headline counts ──────────────────────────────────────────────────── */
+
+create or replace function public.admin_summary()
+returns table (
+  total_operators  integer,
+  operators_today  integer,
+  operators_7d     integer,
+  onboarded        integer,
+  runs_started     integer,
+  runs_completed   integer,
+  runs_dropped     integer,
+  waitlist_count   integer
+)
+language plpgsql
+security definer
+set search_path = ''
+stable
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorised' using errcode = '42501';
+  end if;
+
+  return query
+  select
+    (select count(*) from public.operators)::integer,
+    (select count(*) from public.operators
+      where created_at >= date_trunc('day', now()))::integer,
+    (select count(*) from public.operators
+      where created_at >= now() - interval '7 days')::integer,
+    (select count(*) from public.operators
+      where full_name is not null and whatsapp is not null)::integer,
+    (select count(*) from public.mission_runs)::integer,
+    (select count(*) from public.mission_runs where status = 'complete')::integer,
+    (select count(*) from public.mission_runs
+      where status in ('live', 'briefing', 'abandoned'))::integer,
+    (select count(*) from public.interest_signals)::integer;
+end;
+$$;
+
+/* ── One row per operator ─────────────────────────────────────────────── */
+
+create or replace function public.admin_operators()
+returns table (
+  id            uuid,
+  full_name     text,
+  email         text,
+  whatsapp      text,
+  created_at    timestamptz,
+  runs          integer,
+  completed     integer,
+  best_rating   integer,
+  last_activity timestamptz
+)
+language plpgsql
+security definer
+set search_path = ''
+stable
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorised' using errcode = '42501';
+  end if;
+
+  return query
+  select
+    o.id,
+    o.full_name,
+    o.email,
+    o.whatsapp,
+    o.created_at,
+    (select count(*) from public.mission_runs r where r.operator_id = o.id)::integer,
+    (select count(*) from public.mission_runs r
+      where r.operator_id = o.id and r.status = 'complete')::integer,
+    (select max(r.rating) from public.mission_runs r
+      where r.operator_id = o.id and r.status = 'complete')::integer,
+    greatest(
+      o.updated_at,
+      coalesce((select max(r.updated_at) from public.mission_runs r
+                where r.operator_id = o.id), o.updated_at)
+    )
+  from public.operators o
+  order by o.created_at desc;
+end;
+$$;
+
+/* ── Signups per day ──────────────────────────────────────────────────── */
+
+create or replace function public.admin_daily_signups(p_days integer default 30)
+returns table (day date, signups integer)
+language plpgsql
+security definer
+set search_path = ''
+stable
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorised' using errcode = '42501';
+  end if;
+
+  return query
+  select d::date, count(o.id)::integer
+  from generate_series(
+         date_trunc('day', now()) - ((greatest(p_days, 1) - 1) * interval '1 day'),
+         date_trunc('day', now()),
+         interval '1 day'
+       ) as d
+  left join public.operators o
+    on date_trunc('day', o.created_at) = d
+  group by d
+  order by d;
+end;
+$$;
+
+/* ── Who stopped, and how far in ──────────────────────────────────────── */
+
+create or replace function public.admin_dropoffs()
+returns table (
+  run_id          text,
+  email           text,
+  full_name       text,
+  status          text,
+  elapsed_seconds integer,
+  started_at      timestamptz,
+  last_touched    timestamptz
+)
+language plpgsql
+security definer
+set search_path = ''
+stable
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorised' using errcode = '42501';
+  end if;
+
+  return query
+  select
+    r.id,
+    o.email,
+    o.full_name,
+    r.status,
+    -- The shift clock, read out of the stored world. A run that never reached
+    -- handover has no completed_at, so wall time would say nothing useful.
+    coalesce(nullif(r.world ->> 'elapsed', '')::numeric, 0)::integer,
+    r.started_at,
+    r.updated_at
+  from public.mission_runs r
+  join public.operators o on o.id = r.operator_id
+  where r.status <> 'complete'
+  order by r.updated_at desc;
+end;
+$$;
+
+/* ── Waitlist ─────────────────────────────────────────────────────────── */
+
+create or replace function public.admin_waitlist()
+returns table (
+  email      text,
+  topic      text,
+  full_name  text,
+  created_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = ''
+stable
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorised' using errcode = '42501';
+  end if;
+
+  return query
+  select s.email, s.topic, o.full_name, s.created_at
+  from public.interest_signals s
+  join public.operators o on o.id = s.operator_id
+  order by s.created_at desc;
+end;
+$$;
+
+do $$
+declare fn text;
+begin
+  foreach fn in array array[
+    'admin_summary()',
+    'admin_operators()',
+    'admin_daily_signups(integer)',
+    'admin_dropoffs()',
+    'admin_waitlist()'
+  ] loop
+    execute format('revoke all on function public.%s from public', fn);
+    execute format('revoke all on function public.%s from anon', fn);
+    execute format('grant execute on function public.%s to authenticated', fn);
+  end loop;
+end $$;

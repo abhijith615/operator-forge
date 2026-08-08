@@ -19,6 +19,9 @@ export const APP_ROUTES = [
   "/genome",
   "/leaderboard",
   "/settings",
+  // Guarded twice: this puts it behind sign-in, and the page itself sends
+  // anyone not in the `admins` table back to their shift.
+  "/admin",
 ] as const;
 
 export function isAppRoute(pathname: string): boolean {

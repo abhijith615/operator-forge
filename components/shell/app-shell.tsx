@@ -1,5 +1,7 @@
 "use client";
 
+import * as React from "react";
+
 import { AchievementToast } from "@/components/mission/achievements";
 import { EventToasts } from "@/components/mission/event-toasts";
 import { Walkthrough } from "@/components/mission/walkthrough";
@@ -13,15 +15,24 @@ import { useRecordRun } from "@/hooks/use-record-run";
 import { useRunSync } from "@/hooks/use-run-sync";
 import { useShellShortcuts } from "@/hooks/use-shell-shortcuts";
 import { useTelemetry } from "@/hooks/use-telemetry";
+import { useShellStore } from "@/stores/shell-store";
 import type { Operator } from "@/types/operator";
 
 export function AppShell({
   operator,
+  isAdmin = false,
   children,
 }: {
   operator: Operator;
+  /** Decided by the database on the server. Only controls what the menu shows. */
+  isAdmin?: boolean;
   children: React.ReactNode;
 }) {
+  const setIsAdmin = useShellStore((state) => state.setIsAdmin);
+  React.useEffect(() => {
+    setIsAdmin(isAdmin);
+  }, [isAdmin, setIsAdmin]);
+
   useShellShortcuts();
   // Mounted once: the floor keeps moving whichever panel is open.
   useMissionTick();

@@ -5,6 +5,7 @@ import {
   Dna,
   MessagesSquare,
   Settings,
+  ShieldCheck,
   Sparkles,
   Trophy,
   UserRound,
@@ -115,3 +116,22 @@ export const navSections: NavSection[] = [
 ];
 
 export const flatNavItems = navSections.flatMap((section) => section.items);
+
+/**
+ * Appended to the sidebar only for accounts the database says are admins.
+ * Hiding it is presentation, not protection — the route guard and the
+ * `security definer` functions are what actually stop anyone else.
+ */
+export const adminSection: NavSection = {
+  id: "admin",
+  label: "Admin",
+  items: [
+    {
+      label: "Admin",
+      href: "/admin",
+      icon: ShieldCheck,
+      availability: "open",
+      description: "Signups, completions, drop-offs and the waitlist. Live.",
+    },
+  ],
+};

@@ -43,6 +43,15 @@ interface ShellState {
    */
   appreciationSeen: boolean;
   setAppreciationSeen: (seen: boolean) => void;
+
+  /**
+   * Whether to show the admin link. Set from the server on every render of the
+   * shell and never persisted — this decides what a menu looks like, not what
+   * anyone may read. The route guard and the `security definer` functions are
+   * what actually enforce it, and neither trusts the browser.
+   */
+  isAdmin: boolean;
+  setIsAdmin: (isAdmin: boolean) => void;
 }
 
 export const useShellStore = create<ShellState>()(
@@ -72,6 +81,9 @@ export const useShellStore = create<ShellState>()(
       setWalkthroughReplay: (walkthroughReplay) => set({ walkthroughReplay }),
       appreciationSeen: false,
       setAppreciationSeen: (appreciationSeen) => set({ appreciationSeen }),
+
+      isAdmin: false,
+      setIsAdmin: (isAdmin) => set({ isAdmin }),
     }),
     {
       name: "of.shell",
