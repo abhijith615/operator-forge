@@ -103,7 +103,11 @@ function Toast({ id, at, tone, title, body, href, actionLabel, onDismiss }: Toas
       exit={{ opacity: 0, x: 24, scale: 0.97, transition: { duration: 0.2 } }}
       transition={{ duration: 0.5, ease: easing.outExpo }}
       className={cn(
-        "glass pointer-events-auto relative overflow-hidden rounded-xl p-4",
+        // Opaque, not `glass`. These land on top of the task queue, and 5%
+        // white over a blur lets the heading and the chips underneath read
+        // straight through the notification sitting on them. `border` carries
+        // the width so the tone class only has to set the colour.
+        "pointer-events-auto relative overflow-hidden rounded-xl border bg-raised p-4",
         "shadow-[0_24px_60px_-30px_rgba(0,0,0,1)]",
         style.ring,
       )}

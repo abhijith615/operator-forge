@@ -172,8 +172,21 @@ export function Walkthrough() {
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-110"
       >
-        {/* Dim everything, then punch a hole over the target. */}
-        <div className="absolute inset-0 bg-void/72 backdrop-blur-[1px]" onClick={finish} />
+        {/*
+          Catches a click anywhere off the card so the tour can be dismissed.
+          Deliberately transparent while a target is measured: the dimming is
+          done entirely by the spotlight's outward shadow below, which stops at
+          the ring. A scrim here would sit on top of the very thing the step is
+          pointing at. Only when there is nothing to highlight does it dim, so
+          the centred card still has something to read against.
+        */}
+        <div
+          className={cn(
+            "absolute inset-0",
+            !rect && "bg-void/72 backdrop-blur-[1px]",
+          )}
+          onClick={finish}
+        />
 
         {rect ? (
           <motion.div
@@ -185,7 +198,9 @@ export function Walkthrough() {
               left: rect.left - 4,
               width: rect.width + 8,
               height: rect.height + 8,
-              boxShadow: "0 0 0 9999px rgba(5,6,9,0.72)",
+              // The hole. Everything outside the border box is covered; the
+              // target itself is left completely untouched.
+              boxShadow: "0 0 0 9999px rgba(5,6,9,0.82)",
             }}
           />
         ) : null}

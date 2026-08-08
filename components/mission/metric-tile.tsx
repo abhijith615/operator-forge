@@ -48,9 +48,15 @@ export function MetricTile({
         className,
       )}
     >
-      <div className="flex items-center gap-2">
-        <Icon className={cn("size-3.5 shrink-0", style.icon)} />
-        <span className="truncate text-[10.5px] font-medium tracking-[0.12em] text-lo uppercase">
+      {/*
+        Labels wrap rather than truncate — "Customer rating" and "Weather ·
+        store time" both clipped to an ellipsis at four columns, which is the
+        one thing a readout must never do. Two lines are reserved whether or
+        not a label needs them, so every value in a row sits on one baseline.
+      */}
+      <div className="flex min-h-[1.8rem] items-start gap-2">
+        <Icon className={cn("mt-px size-3.5 shrink-0", style.icon)} />
+        <span className="text-[10.5px] leading-[1.35] font-medium tracking-[0.1em] text-lo uppercase">
           {label}
         </span>
       </div>
@@ -62,7 +68,11 @@ export function MetricTile({
           animate={{ y: "0%", opacity: 1 }}
           transition={{ duration: 0.45, ease: easing.outExpo }}
           data-readout
-          className="text-[26px] leading-none font-semibold tracking-[-0.035em] text-hi tabular-nums"
+          // Not `leading-none`: the line box would equal the font size, and
+          // the overflow mask that hides the roll animation then shears the
+          // descender off anything with one — "Open" is the default store
+          // status, so that was most of the shift.
+          className="text-[26px] leading-[1.15] font-semibold tracking-[-0.035em] text-hi tabular-nums"
         >
           {value}
         </motion.span>
@@ -70,7 +80,7 @@ export function MetricTile({
       </div>
 
       {hint ? (
-        <p className="mt-2 truncate text-[11.5px] text-lo">{hint}</p>
+        <p className="mt-2 text-[11.5px] leading-snug text-lo">{hint}</p>
       ) : null}
     </div>
   );
