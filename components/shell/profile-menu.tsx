@@ -13,7 +13,7 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { signOut } from "@/lib/auth/actions";
+import { SignOutForm } from "@/components/shell/sign-out-form";
 import { initialsFrom } from "@/lib/utils";
 import type { Operator } from "@/types/operator";
 
@@ -75,14 +75,14 @@ export function ProfileMenu({ operator }: { operator: Operator }) {
 
         <DropdownMenuSeparator />
 
-        <form action={signOut}>
+        <SignOutForm>
           <DropdownMenuItem asChild>
             <button type="submit" className="w-full text-left">
               <LogOut />
               Sign out
             </button>
           </DropdownMenuItem>
-        </form>
+        </SignOutForm>
       </DropdownMenuContent>
     </DropdownMenu>
   );

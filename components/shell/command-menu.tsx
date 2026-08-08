@@ -7,6 +7,7 @@ import { Lock, LogOut, PanelLeft, Search } from "lucide-react";
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Kbd } from "@/components/ui/kbd";
+import { clearOperatorScope } from "@/components/shell/operator-scope";
 import { signOut } from "@/lib/auth/actions";
 import { navSections } from "@/lib/constants/navigation";
 import { useShellStore } from "@/stores/shell-store";
@@ -129,7 +130,12 @@ export function CommandMenu() {
               </Command.Item>
               <Command.Item
                 value="sign out log out"
-                onSelect={() => run(() => void signOut())}
+                onSelect={() =>
+                  run(() => {
+                    clearOperatorScope();
+                    void signOut();
+                  })
+                }
                 className={itemClass}
               >
                 <LogOut />

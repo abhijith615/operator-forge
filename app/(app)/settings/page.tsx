@@ -9,7 +9,7 @@ import { IdentityForm } from "@/features/settings/components/identity-form";
 import { MotionStatus } from "@/features/settings/components/motion-status";
 import { SoundToggle } from "@/features/settings/components/sound-toggle";
 import { WalkthroughReplay } from "@/features/settings/components/walkthrough-replay";
-import { signOut } from "@/lib/auth/actions";
+import { SignOutForm } from "@/components/shell/sign-out-form";
 import { requireOperator } from "@/lib/auth/session";
 import { flatNavItems } from "@/lib/constants/navigation";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -110,12 +110,12 @@ export default async function SettingsPage() {
           title="Session"
           description="Signing out does not delete your mission record."
         >
-          <form action={signOut}>
+          <SignOutForm>
             <Button type="submit" variant="danger" size="md">
               <LogOut />
               Sign out
             </Button>
-          </form>
+          </SignOutForm>
         </Section>
       </div>
     </PageShell>
