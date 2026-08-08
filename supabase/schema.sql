@@ -128,7 +128,13 @@ comment on function public.mission_cohort_standing is
   'Rank and cohort size for a rating. Security definer so it can see across '
   'operators; returns only aggregates.';
 
+-- `anon` must be revoked by name. Supabase's default privileges grant execute
+-- on new functions to anon, authenticated and service_role explicitly, and
+-- revoking from PUBLIC does not touch a grant made to a named role — so the
+-- revoke below is the only thing standing between a signed-out visitor and a
+-- probe of the rating distribution.
 revoke all on function public.mission_cohort_standing(text, integer) from public;
+revoke all on function public.mission_cohort_standing(text, integer) from anon;
 grant execute on function public.mission_cohort_standing(text, integer) to authenticated;
 
 -- ── Keep updated_at honest ────────────────────────────────────────────────
