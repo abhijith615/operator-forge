@@ -165,6 +165,7 @@ export const CUSTOMER_TASKS: TaskTemplate[] = [
 
   {
     id: "cust-wrong-item",
+    contends: "idle-rider",
     stream: "customers",
     priority: "high",
     weight: 9,
@@ -180,6 +181,7 @@ export const CUSTOMER_TASKS: TaskTemplate[] = [
           {
             id: "swap-both",
             label: "Send a rider to swap both baskets",
+            requires: { kind: "idle-rider" },
             outcome: "Costs a rider twenty minutes. Both customers end up right.",
             quality: 0.9,
             capabilities: ["ownership", "customer-thinking"],
@@ -740,6 +742,7 @@ export const CUSTOMER_TASKS: TaskTemplate[] = [
 
   {
     id: "cust-redirect",
+    contends: "idle-rider",
     stream: "customers",
     priority: "high",
     weight: 8,
@@ -772,6 +775,7 @@ export const CUSTOMER_TASKS: TaskTemplate[] = [
           {
             id: "rider-decides",
             label: "Send it and let the rider sort it out",
+            requires: { kind: "idle-rider" },
             outcome: "Two kilometres of someone else's problem.",
             quality: 0.15,
             capabilities: ["ownership"],

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { easing } from "@/lib/motion";
+import { shortfallNote, type ResourcePool } from "@/lib/mission/resources";
 import { cn } from "@/lib/utils";
 import type { MissionTask, TaskPriority, TaskStream } from "@/types/tasks";
 
@@ -55,6 +56,8 @@ const PRIORITY: Record<
 interface TaskCardProps {
   task: MissionTask;
   elapsed: number;
+  /** Free capacity right now. Memoised upstream so this stays comparable. */
+  pool: ResourcePool;
   disabled?: boolean;
   onResolve: (optionId: string) => void;
 }
@@ -66,6 +69,7 @@ interface TaskCardProps {
 export const TaskCard = React.memo(function TaskCard({
   task,
   elapsed,
+  pool,
   disabled = false,
   onResolve,
 }: TaskCardProps) {
@@ -127,23 +131,44 @@ export const TaskCard = React.memo(function TaskCard({
         <p className="mt-1.5 text-[11px] text-faint">{task.source}</p>
 
         <div className="mt-3 flex flex-col gap-1.5">
-          {task.options.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              disabled={disabled}
-              onClick={() => onResolve(option.id)}
-              className={cn(
-                "w-full rounded-lg border border-line px-2.5 py-2 text-left text-[12.5px] leading-snug",
-                "text-mid transition-colors duration-150",
-                "hover:border-ember-500/40 hover:bg-ember-500/[0.07] hover:text-hi",
-                "active:scale-[0.99]",
-                "disabled:pointer-events-none disabled:opacity-40",
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
+          {task.options.map((option) => {
+            // Closed because the floor cannot cover it — not because the game
+            // decided. The reason is always shown, and it is always something
+            // the operator could have seen coming.
+            const shortfall = shortfallNote(pool, option.requires);
+            const closed = shortfall !== null;
+
+            return (
+              <button
+                key={option.id}
+                type="button"
+                disabled={disabled || closed}
+                onClick={() => onResolve(option.id)}
+                aria-describedby={closed ? `${option.id}-why` : undefined}
+                className={cn(
+                  "w-full rounded-lg border border-line px-2.5 py-2 text-left text-[12.5px] leading-snug",
+                  "text-mid transition-colors duration-150",
+                  !closed &&
+                    "hover:border-ember-500/40 hover:bg-ember-500/[0.07] hover:text-hi active:scale-[0.99]",
+                  closed && "cursor-not-allowed border-dashed opacity-45",
+                  "disabled:pointer-events-none",
+                  disabled && !closed && "opacity-40",
+                )}
+              >
+                <span className={cn(closed && "line-through decoration-faint")}>
+                  {option.label}
+                </span>
+                {closed ? (
+                  <span
+                    id={`${option.id}-why`}
+                    className="mt-0.5 block text-[11px] text-warn-500/80"
+                  >
+                    {shortfall}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
         </div>
       </div>
 

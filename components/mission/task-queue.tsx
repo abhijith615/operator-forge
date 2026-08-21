@@ -7,6 +7,7 @@ import { ListChecks } from "lucide-react";
 import { TaskCard } from "@/components/mission/task-card";
 import { useIsShiftLive, useLiveElapsed } from "@/hooks/use-mission";
 import { useMissionStore } from "@/stores/mission-store";
+import type { ResourcePool } from "@/lib/mission/resources";
 import { cn } from "@/lib/utils";
 import type { MissionTask, TaskPriority, TaskStream } from "@/types/tasks";
 
@@ -46,6 +47,35 @@ export function TaskQueue({
   const elapsed = useLiveElapsed();
   const live = useIsShiftLive();
   const [filter, setFilter] = React.useState<Filter>("all");
+
+  // Selected as four numbers rather than the world, so the cards only re-render
+  // when free capacity actually moves — not on every tick of a 30-minute clock.
+  const idleRiders = useMissionStore(
+    (state) => state.world?.riders.filter((r) => r.status === "idle").length ?? 0,
+  );
+  const activePickers = useMissionStore(
+    (state) =>
+      state.world?.workers.filter((w) => w.status === "active" && w.role === "picker")
+        .length ?? 0,
+  );
+  const activePackers = useMissionStore(
+    (state) =>
+      state.world?.workers.filter((w) => w.status === "active" && w.role === "packer")
+        .length ?? 0,
+  );
+  const activeWorkers = useMissionStore(
+    (state) => state.world?.workers.filter((w) => w.status === "active").length ?? 0,
+  );
+
+  const pool: ResourcePool = React.useMemo(
+    () => ({
+      "idle-rider": idleRiders,
+      "active-picker": activePickers,
+      "active-packer": activePackers,
+      "active-worker": activeWorkers,
+    }),
+    [idleRiders, activePickers, activePackers, activeWorkers],
+  );
 
   const pending = React.useMemo(
     () => tasks.filter((task) => task.status === "pending"),
@@ -135,6 +165,7 @@ export function TaskQueue({
                   key={task.id}
                   task={task}
                   elapsed={elapsed}
+                  pool={pool}
                   disabled={!live}
                   onResolve={(optionId) => resolveTask(task.id, optionId)}
                 />

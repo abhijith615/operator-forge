@@ -103,6 +103,7 @@ export const OPERATIONS_TASKS: TaskTemplate[] = [
 
   {
     id: "ops-goods-receipt",
+    contends: "active-packer",
     stream: "operations",
     priority: "normal",
     weight: 12,
@@ -116,6 +117,7 @@ export const OPERATIONS_TASKS: TaskTemplate[] = [
         {
           id: "unload-now",
           label: "Pull a packer off to unload now",
+          requires: { kind: "active-packer" },
           outcome: "Stock lands and gets put away. Packing slows for ten minutes.",
           quality: 0.8,
           capabilities: ["decision-making", "systems-thinking"],
@@ -238,6 +240,7 @@ export const OPERATIONS_TASKS: TaskTemplate[] = [
 
   {
     id: "ops-dispatch-stall",
+    contends: "idle-rider",
     stream: "operations",
     priority: "critical",
     weight: 8,
@@ -258,6 +261,7 @@ export const OPERATIONS_TASKS: TaskTemplate[] = [
           {
             id: "recall-returning",
             label: "Turn a returning rider around early",
+            requires: { kind: "idle-rider" },
             outcome: "One rider skips their break. Two orders go out now.",
             quality: 0.8,
             capabilities: ["decision-making", "prioritization"],
@@ -609,6 +613,7 @@ export const OPERATIONS_TASKS: TaskTemplate[] = [
 
   {
     id: "ops-temperature-log",
+    contends: "active-packer",
     stream: "operations",
     priority: "normal",
     weight: 9,
@@ -636,6 +641,7 @@ export const OPERATIONS_TASKS: TaskTemplate[] = [
         {
           id: "delegate",
           label: "Ask the packer to do the round",
+          requires: { kind: "active-packer" },
           outcome: "Gets done by someone who is already near the chillers.",
           quality: 0.8,
           capabilities: ["prioritization", "decision-making"],

@@ -314,6 +314,7 @@ export const MANAGEMENT_TASKS: TaskTemplate[] = [
 
   {
     id: "mgmt-visit-prep",
+    contends: "active-picker",
     stream: "management",
     priority: "high",
     weight: 6,
@@ -334,6 +335,7 @@ export const MANAGEMENT_TASKS: TaskTemplate[] = [
         {
           id: "tidy",
           label: "Pull two pickers to tidy the aisles",
+          requires: { kind: "active-picker", count: 2 },
           outcome: "It looks better. The queue gets worse while she watches it.",
           quality: 0.2,
           capabilities: ["prioritization", "ownership"],

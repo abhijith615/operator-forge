@@ -1,5 +1,6 @@
 import type { CapabilityId } from "@/lib/constants/site";
 import type { WorldEffect } from "@/lib/mission/effects";
+import type { ResourceNeed } from "@/lib/mission/resources";
 
 /** The four things a store manager is holding at once. */
 export type TaskStream = "operations" | "people" | "customers" | "management";
@@ -25,6 +26,13 @@ export interface TaskOption {
   effects?: WorldEffect[];
   /** Template ids to queue as a direct consequence of choosing this. */
   cascades?: string[];
+  /**
+   * Floor capacity this option spends. When the floor cannot cover it the row
+   * is shown closed, with the reason — so an operator can watch their room to
+   * manoeuvre shrink while they were busy on another card, and know exactly
+   * what closed it. Nothing is hidden; the resource simply is not there.
+   */
+  requires?: ResourceNeed;
 }
 
 export interface MissionTask {

@@ -1,5 +1,6 @@
 import { applyEffects } from "@/lib/mission/effects";
 import { mulberry32 } from "@/lib/mission/random";
+import { countAvailable } from "@/lib/mission/resources";
 import type { TimelineEntry } from "@/types/mission-run";
 import type { MissionTask, TaskDecision, TaskOption } from "@/types/tasks";
 import type { WorldState } from "@/types/world";
@@ -151,6 +152,38 @@ function drawTemplate(
   return stalest[0] ?? null;
 }
 
+/**
+ * A second claim on the same scarce thing.
+ *
+ * Deliberately not weighted by `weight` — routine work is weighted heavily so
+ * the shift feels like a job rather than a disaster, and that weighting would
+ * bury the interesting collisions. Here the only thing that matters is that
+ * something else wants the same rider.
+ */
+function drawContender(
+  origin: TaskTemplate,
+  world: WorldState,
+  elapsed: number,
+  rand: () => number,
+  lastUsed: Record<string, number>,
+  pendingTemplateIds: Set<string>,
+): TaskTemplate | null {
+  const rivals = TASK_TEMPLATES.filter((template) => {
+    if (template.id === origin.id) return false;
+    if (template.contends !== origin.contends) return false;
+    if (pendingTemplateIds.has(template.id)) return false;
+    if (template.when && !template.when(world)) return false;
+    const used = lastUsed[template.id];
+    if (used !== undefined && !template.repeatable) return false;
+    if (used !== undefined && elapsed - used < template.cooldown) return false;
+    return true;
+  });
+
+  if (rivals.length === 0) return null;
+  const index = Math.min(rivals.length - 1, Math.floor(rand() * rivals.length));
+  return rivals[index] ?? null;
+}
+
 export function advanceTasks(input: AdvanceTasksInput): AdvanceTasksResult {
   const { world, elapsed, seed } = input;
   const rand = mulberry32(seed + elapsed * 7919);
@@ -243,6 +276,36 @@ export function advanceTasks(input: AdvanceTasksInput): AdvanceTasksResult {
     templateLastUsed[template.id] = elapsed;
     pending += 1;
     nextSpawnAt = elapsed + nextGap(pending, rand);
+
+    // Deal the collision. If this task wants the last rider (or the last
+    // picker) then a second, equally legitimate claim on it lands alongside —
+    // so the operator is choosing what to protect rather than working down a
+    // list. Only when the floor is genuinely down to its last unit: manufacture
+    // this on a comfortable floor and it reads as arbitrary rather than tight.
+    if (template.contends && pending < MAX_PENDING) {
+      const free = countAvailable(world, template.contends);
+      if (free <= 1) {
+        const rival = drawContender(
+          template,
+          world,
+          elapsed,
+          rand,
+          templateLastUsed,
+          new Set([
+            ...tasks.filter((t) => t.status === "pending").map((t) => t.templateId),
+          ]),
+        );
+
+        if (rival) {
+          const rivalTask = instantiate(rival, world, elapsed, rand, busySubjectsOf(tasks));
+          if (rivalTask) {
+            tasks.push(rivalTask);
+            templateLastUsed[rival.id] = elapsed;
+            pending += 1;
+          }
+        }
+      }
+    }
   }
 
   // Never let the clock drift behind the operator.

@@ -1,4 +1,5 @@
 import type { WorldEffect } from "@/lib/mission/effects";
+import type { ResourceKind } from "@/lib/mission/resources";
 import type { MissionTask, TaskOption, TaskPriority, TaskStream } from "@/types/tasks";
 import type { WorldState } from "@/types/world";
 
@@ -44,6 +45,17 @@ export interface TaskTemplate {
    * order, a different SKU running short.
    */
   repeatable?: boolean;
+  /**
+   * The scarce thing this task's best answers spend.
+   *
+   * When one of these lands and the floor is down to its last unit, the
+   * scheduler deliberately deals a second task that wants the same thing. Both
+   * are legitimate, both are visible, and there is only one of it — which is
+   * the shape of the job and the cleanest read on what someone protects when
+   * they cannot protect everything.
+   */
+  contends?: ResourceKind;
+
   /** Only offered when the floor actually warrants it. */
   when?: (world: WorldState) => boolean;
   /** Return `null` to decline the draw — the scheduler will pick another. */
