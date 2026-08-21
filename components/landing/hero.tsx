@@ -86,7 +86,7 @@ export function Hero() {
             </Link>
           </Button>
           <Button asChild variant="secondary" size="lg" className="w-full sm:w-auto">
-            <a href="#shift">Read the handover</a>
+            <a href="#platform">See what is inside</a>
           </Button>
         </motion.div>
 
@@ -103,12 +103,12 @@ export function Hero() {
       <HeroConsole />
 
       <motion.a
-        href="#shift"
+        href="#platform"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.6, duration: 1 }}
         className="mx-auto mt-16 flex w-fit flex-col items-center gap-2 text-faint transition-colors hover:text-mid"
-        aria-label="Scroll to the handover"
+        aria-label="Scroll to the platform"
       >
         <span className="font-mono text-[10px] tracking-[0.22em] uppercase">Scroll</span>
         <motion.span

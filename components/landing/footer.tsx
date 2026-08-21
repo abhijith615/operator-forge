@@ -7,11 +7,10 @@ import { site } from "@/lib/constants/site";
 
 const COLUMNS = [
   {
-    title: "Mission",
+    title: "Platform",
     links: [
-      { label: "The Shift", href: "#shift" },
-      { label: "How it runs", href: "#how" },
-      { label: "Capabilities", href: "#capabilities" },
+      { label: "Platform", href: "#platform" },
+      { label: "What gets measured", href: "#capabilities" },
       { label: "Standings", href: "#standings" },
     ],
   },

@@ -11,10 +11,15 @@ import { useScrolled } from "@/hooks/use-scrolled";
 import { easing } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
+/**
+ * Every entry must point at a section that is still on the page. `#shift` and
+ * `#how` outlived the sections they scrolled to when the landing page stopped
+ * being about one mission — a nav link that goes nowhere is worse than one
+ * that does not exist.
+ */
 const links = [
-  { label: "The Shift", href: "#shift" },
-  { label: "How it runs", href: "#how" },
-  { label: "Capabilities", href: "#capabilities" },
+  { label: "Platform", href: "#platform" },
+  { label: "What gets measured", href: "#capabilities" },
   { label: "Standings", href: "#standings" },
 ] as const;
 
