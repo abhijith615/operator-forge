@@ -8,7 +8,6 @@ import { HeroConsole } from "@/components/landing/hero-console";
 import { Button } from "@/components/ui/button";
 import { Aurora, GridField } from "@/components/visuals/aurora";
 import { easing } from "@/lib/motion";
-import { FIRST_SHIFT } from "@/lib/constants/mission";
 
 const lineOne = "Become an Operator.";
 const lineTwo = "Not a Graduate.";
@@ -46,11 +45,10 @@ export function Hero() {
           className="mx-auto inline-flex items-center gap-2.5 rounded-full border border-line-strong bg-white/[0.035] py-1.5 pr-4 pl-1.5 backdrop-blur-sm"
         >
           <span className="rounded-full bg-ember-500/15 px-2 py-0.5 font-mono text-[10px] font-semibold tracking-[0.14em] text-ember-400">
-            {FIRST_SHIFT.codename}
+            LIVE
           </span>
           <span className="text-[12.5px] text-mid">
-            {FIRST_SHIFT.name} · {FIRST_SHIFT.durationMinutes} minutes ·{" "}
-            {FIRST_SHIFT.industry}
+            Operations simulations · Real assessment · Industry mentors
           </span>
         </motion.div>
 
@@ -70,9 +68,9 @@ export function Hero() {
           transition={{ duration: 1, ease: easing.outExpo, delay: 0.55 }}
           className="mx-auto mt-7 max-w-[38rem] text-[16.5px] leading-relaxed text-mid text-balance sm:text-[17.5px]"
         >
-          Thirty minutes running a ten-minute delivery store. The work arrives
-          faster than anyone can clear it — absences, complaints, suppliers, head
-          office. There is no multiple choice. Only what you get to first.
+          Thirty-minute live operations missions, an assessment built from what
+          you actually did rather than what you claim, and the people who do this
+          work for a living. Nobody is grading an essay here.
         </motion.p>
 
         <motion.div
