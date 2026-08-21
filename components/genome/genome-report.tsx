@@ -68,7 +68,7 @@ export function GenomeReport({
       {/* ── Signature + rating ──────────────────────────────────────────── */}
       <div className="mt-8 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
         <Reveal className="panel sheen grain relative overflow-hidden p-6">
-          <span className="absolute -top-20 left-1/3 size-56 rounded-full bg-[radial-gradient(circle,rgba(255,106,43,0.2),transparent_70%)] blur-2xl" />
+          <span className="absolute -top-20 left-1/3 size-56 rounded-full bg-[radial-gradient(circle,rgba(245,196,0,0.2),transparent_70%)] blur-2xl" />
           <div className="relative">
             <div className="flex items-center gap-2 text-ember-500">
               <Sparkles className="size-3.5" />

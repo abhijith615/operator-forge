@@ -23,7 +23,7 @@ export function Input({
         "border border-line-strong bg-white/[0.025]",
         "transition-[border-color,background-color,box-shadow] duration-200 ease-out-quint",
         "focus-within:border-ember-500/60 focus-within:bg-white/[0.045]",
-        "focus-within:shadow-[0_0_0_3px_rgba(255,106,43,0.12)]",
+        "focus-within:shadow-[0_0_0_3px_rgba(245,196,0,0.12)]",
         invalid &&
           "border-alert-500/55 focus-within:border-alert-500/70 focus-within:shadow-[0_0_0_3px_rgba(255,77,94,0.12)]",
         className,

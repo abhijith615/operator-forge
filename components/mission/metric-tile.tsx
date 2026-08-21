@@ -10,7 +10,7 @@ export type MetricTone = "neutral" | "ember" | "ion" | "flux" | "warn" | "alert"
 
 const TONE: Record<MetricTone, { icon: string; glow: string }> = {
   neutral: { icon: "text-lo", glow: "" },
-  ember: { icon: "text-ember-500", glow: "shadow-[inset_0_1px_0_0_rgba(255,106,43,0.18)]" },
+  ember: { icon: "text-ember-500", glow: "shadow-[inset_0_1px_0_0_rgba(245,196,0,0.18)]" },
   ion: { icon: "text-ion-400", glow: "shadow-[inset_0_1px_0_0_rgba(36,217,181,0.18)]" },
   flux: { icon: "text-flux-400", glow: "shadow-[inset_0_1px_0_0_rgba(139,124,255,0.18)]" },
   warn: { icon: "text-warn-500", glow: "shadow-[inset_0_1px_0_0_rgba(255,191,61,0.2)]" },

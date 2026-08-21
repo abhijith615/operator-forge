@@ -47,7 +47,7 @@ export function GenomeRadar({
 
   return (
     <div className={cn("relative mx-auto aspect-square w-full max-w-[30rem]", className)}>
-      <div className="absolute inset-[20%] rounded-full bg-[radial-gradient(circle,rgba(255,106,43,0.16),transparent_70%)] blur-3xl" />
+      <div className="absolute inset-[20%] rounded-full bg-[radial-gradient(circle,rgba(245,196,0,0.16),transparent_70%)] blur-3xl" />
 
       <svg
         viewBox={`0 0 ${SIZE} ${SIZE}`}
@@ -57,8 +57,8 @@ export function GenomeRadar({
       >
         <defs>
           <radialGradient id="genome-fill" cx="50%" cy="50%">
-            <stop offset="0%" stopColor="#FF9257" stopOpacity="0.42" />
-            <stop offset="100%" stopColor="#FF6A2B" stopOpacity="0.14" />
+            <stop offset="0%" stopColor="#FFD84D" stopOpacity="0.42" />
+            <stop offset="100%" stopColor="#F5C400" stopOpacity="0.14" />
           </radialGradient>
         </defs>
 
@@ -103,7 +103,7 @@ export function GenomeRadar({
         <motion.polygon
           points={polygon(count, radiusAt)}
           fill="url(#genome-fill)"
-          stroke="#FF6A2B"
+          stroke="#F5C400"
           strokeWidth="2"
           strokeLinejoin="round"
           initial={{ scale: 0, opacity: 0 }}

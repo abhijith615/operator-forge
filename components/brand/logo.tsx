@@ -1,43 +1,33 @@
 import { cn } from "@/lib/utils";
 
 /**
- * The mark: an aperture mid-iris. Four arcs closing on a single point —
- * attention narrowing onto a decision.
+ * The supplied logo is a horizontal lockup — mark on the left, "Operator Forge"
+ * set in grey to its right, on a 2048×768 canvas.
+ *
+ * `LogoMark` shows only the mark, cropped in CSS rather than by shipping a
+ * second file — one asset to keep in sync instead of two.
+ *
+ * The wordmark half is deliberately not used at small sizes. It is set in
+ * #5F6368, which against this interface's charcoal is about 3.5:1 — fine for a
+ * logo, unreadable as a 24px UI element. Wherever the product name appears next
+ * to the mark it is set in the interface's own type, which stays crisp at every
+ * size and inherits the theme.
  */
-export function LogoMark({ className, ...props }: React.ComponentProps<"svg">) {
+export function LogoMark({ className, ...props }: React.ComponentProps<"span">) {
   return (
-    <svg
-      viewBox="0 0 32 32"
-      fill="none"
+    <span
       aria-hidden
-      className={cn("size-7", className)}
+      className={cn("block shrink-0 bg-no-repeat size-7", className)}
+      style={{
+        backgroundImage: "url(/logo.png)",
+        // 310% puts 2048 ÷ 3.1 ≈ 660px of source across the box, which is the
+        // mark and nothing else. `object-cover` on a square box would show the
+        // leftmost 768px and catch the first letter of the wordmark.
+        backgroundSize: "310% auto",
+        backgroundPosition: "0% 50%",
+      }}
       {...props}
-    >
-      <defs>
-        <linearGradient id="of-mark" x1="4" y1="2" x2="28" y2="30" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#FF9257" />
-          <stop offset="1" stopColor="#F04E0C" />
-        </linearGradient>
-      </defs>
-      <circle
-        cx="16"
-        cy="16"
-        r="13"
-        stroke="url(#of-mark)"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeDasharray="14 6.4"
-        strokeDashoffset="7"
-      />
-      <path
-        d="M16 8.5V16L21.5 19"
-        stroke="url(#of-mark)"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="16" cy="16" r="2.1" fill="url(#of-mark)" />
-    </svg>
+    />
   );
 }
 

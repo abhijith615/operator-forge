@@ -9,11 +9,11 @@
 
 @theme {
   /* ── Substrate ─────────────────────────────────────────────────────────── */
-  --color-void: #050609;
-  --color-obsidian: #08090d;
-  --color-surface: #0d0f14;
-  --color-elevated: #12151b;
-  --color-raised: #181c24;
+  --color-void: #0a0a0a;
+  --color-obsidian: #101010;
+  --color-surface: #161616;
+  --color-elevated: #1f1f1f;
+  --color-raised: #272727;
 
   /* ── Hairlines ─────────────────────────────────────────────────────────── */
   --color-line: oklch(1 0 0 / 6%);
@@ -21,18 +21,18 @@
   --color-line-bright: oklch(1 0 0 / 18%);
 
   /* ── Type ──────────────────────────────────────────────────────────────── */
-  --color-hi: #edf0f5;
-  --color-mid: #9aa2ae;
-  --color-lo: #5f6773;
-  --color-faint: #3b414b;
+  --color-hi: #f8f8f8;
+  --color-mid: #a9acb0;
+  --color-lo: #5f6368;
+  --color-faint: #3e4145;
 
   /* ── Signal: the operator accent ───────────────────────────────────────── */
-  --color-ember-50: #fff3ec;
-  --color-ember-200: #ffc9ab;
-  --color-ember-400: #ff9257;
-  --color-ember-500: #ff6a2b;
-  --color-ember-600: #f04e0c;
-  --color-ember-700: #c23c07;
+  --color-ember-50: #fffbea;
+  --color-ember-200: #ffe9a3;
+  --color-ember-400: #ffd84d;
+  --color-ember-500: #f5c400;
+  --color-ember-600: #d9ae00;
+  --color-ember-700: #a88700;
 
   /* ── Telemetry green: healthy systems ──────────────────────────────────── */
   --color-ion-400: #5ceed2;
@@ -46,7 +46,7 @@
 
   /* ── Status ────────────────────────────────────────────────────────────── */
   --color-alert-500: #ff4d5e;
-  --color-warn-500: #ffbf3d;
+  --color-warn-500: #ff8a3d;
   --color-info-500: #4cc2f0;
 
   /* ── Typography ────────────────────────────────────────────────────────── */

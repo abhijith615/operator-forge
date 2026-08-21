@@ -96,7 +96,7 @@ export function AchievementToast() {
                 initial={{ opacity: 0.55, scale: 0.55 }}
                 animate={{ opacity: 0, scale: 1.7 }}
                 transition={{ duration: 1.1, ease: easing.outExpo }}
-                className="absolute inset-0 -z-10 rounded-full bg-[radial-gradient(circle,rgba(255,106,43,0.55)_0%,rgba(255,106,43,0)_70%)]"
+                className="absolute inset-0 -z-10 rounded-full bg-[radial-gradient(circle,rgba(245,196,0,0.55)_0%,rgba(245,196,0,0)_70%)]"
               />
             ) : null}
 
@@ -128,9 +128,9 @@ export function AchievementToast() {
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ ...settle, delay: 0.08 }}
                   className={cn(
-                    "grid size-10 place-items-center rounded-full text-ember-300",
-                    "bg-[linear-gradient(145deg,rgba(255,106,43,0.28),rgba(255,106,43,0.09))]",
-                    "shadow-[inset_0_1px_0_0_rgba(255,255,255,0.14),0_0_18px_-4px_rgba(255,106,43,0.75)]",
+                    "grid size-10 place-items-center rounded-full text-ember-200",
+                    "bg-[linear-gradient(145deg,rgba(245,196,0,0.28),rgba(245,196,0,0.09))]",
+                    "shadow-[inset_0_1px_0_0_rgba(255,255,255,0.14),0_0_18px_-4px_rgba(245,196,0,0.75)]",
                   )}
                 >
                   <Award className="size-[18px]" />

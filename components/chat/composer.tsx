@@ -70,7 +70,7 @@ export function Composer({
         className={cn(
           "flex items-end gap-2 rounded-2xl border border-line-strong bg-white/[0.025] p-2 pl-3.5",
           "transition-[border-color,box-shadow] duration-200",
-          "focus-within:border-ember-500/50 focus-within:shadow-[0_0_0_3px_rgba(255,106,43,0.1)]",
+          "focus-within:border-ember-500/50 focus-within:shadow-[0_0_0_3px_rgba(245,196,0,0.1)]",
         )}
       >
         <textarea

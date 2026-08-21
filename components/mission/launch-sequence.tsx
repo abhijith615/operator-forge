@@ -262,7 +262,7 @@ function VideoStage({ onDone }: { onDone: () => void }) {
             className="absolute inset-0 grid place-items-center bg-void/50 backdrop-blur-[2px] transition-colors hover:bg-void/35"
             aria-label="Play the handover video"
           >
-            <span className="grid size-16 place-items-center rounded-full bg-ember-500 text-white shadow-[0_12px_40px_-12px_rgba(255,106,43,0.9)] transition-transform duration-300 ease-out-expo hover:scale-105">
+            <span className="grid size-16 place-items-center rounded-full bg-ember-500 text-white shadow-[0_12px_40px_-12px_rgba(245,196,0,0.9)] transition-transform duration-300 ease-out-expo hover:scale-105">
               <Play className="size-6 translate-x-0.5" fill="currentColor" />
             </span>
           </button>
@@ -343,7 +343,7 @@ function CountdownStage({ operatorId }: { operatorId: string }) {
           transition={{ duration: 1, ease: easing.outExpo }}
           className="absolute inset-0 rounded-full border border-ember-500/50"
         />
-        <span className="absolute inset-6 rounded-full bg-[radial-gradient(circle,rgba(255,106,43,0.22),transparent_70%)] blur-2xl" />
+        <span className="absolute inset-6 rounded-full bg-[radial-gradient(circle,rgba(245,196,0,0.22),transparent_70%)] blur-2xl" />
 
         <AnimatePresence mode="wait">
           <motion.span

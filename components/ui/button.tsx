@@ -19,10 +19,13 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary: [
-          "text-white rounded-full",
+          // Charcoal, not white. White on #F5C400 is about 1.9:1 — the label
+          // would be a suggestion. Dark text on the brand yellow is ~11:1 and
+          // is how the colour is meant to be used.
+          "text-void rounded-full font-semibold",
           "bg-linear-to-b from-ember-400 to-ember-600",
-          "shadow-[0_1px_0_0_rgba(255,255,255,0.28)_inset,0_8px_24px_-8px_rgba(255,106,43,0.65)]",
-          "hover:shadow-[0_1px_0_0_rgba(255,255,255,0.34)_inset,0_12px_34px_-8px_rgba(255,106,43,0.85)]",
+          "shadow-[0_1px_0_0_rgba(255,255,255,0.28)_inset,0_8px_24px_-8px_rgba(245,196,0,0.65)]",
+          "hover:shadow-[0_1px_0_0_rgba(255,255,255,0.34)_inset,0_12px_34px_-8px_rgba(245,196,0,0.85)]",
           "hover:brightness-[1.06]",
         ],
         secondary: [

@@ -32,7 +32,7 @@ function polygon(radius: number) {
 export function CapabilityRadar() {
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[26rem]">
-      <div className="absolute inset-[18%] rounded-full bg-[radial-gradient(circle,rgba(255,106,43,0.14),transparent_70%)] blur-2xl" />
+      <div className="absolute inset-[18%] rounded-full bg-[radial-gradient(circle,rgba(245,196,0,0.14),transparent_70%)] blur-2xl" />
 
       <svg
         viewBox={`0 0 ${SIZE} ${SIZE}`}
@@ -42,12 +42,12 @@ export function CapabilityRadar() {
       >
         <defs>
           <linearGradient id="radar-sweep" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#FF6A2B" stopOpacity="0" />
-            <stop offset="100%" stopColor="#FF6A2B" stopOpacity="0.55" />
+            <stop offset="0%" stopColor="#F5C400" stopOpacity="0" />
+            <stop offset="100%" stopColor="#F5C400" stopOpacity="0.55" />
           </linearGradient>
           <radialGradient id="radar-core">
-            <stop offset="0%" stopColor="#FF9257" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#FF6A2B" stopOpacity="0" />
+            <stop offset="0%" stopColor="#FFD84D" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="#F5C400" stopOpacity="0" />
           </radialGradient>
         </defs>
 

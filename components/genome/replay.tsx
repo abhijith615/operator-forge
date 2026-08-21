@@ -145,8 +145,8 @@ export function Replay() {
         >
           <defs>
             <linearGradient id="replay-rating" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#FF6A2B" stopOpacity="0.28" />
-              <stop offset="100%" stopColor="#FF6A2B" stopOpacity="0" />
+              <stop offset="0%" stopColor="#F5C400" stopOpacity="0.28" />
+              <stop offset="100%" stopColor="#F5C400" stopOpacity="0" />
             </linearGradient>
           </defs>
 
@@ -157,7 +157,7 @@ export function Replay() {
           <motion.path
             d={pathFrom(traces, (t) => t.rating, minRating, maxRating)}
             fill="none"
-            stroke="#FF6A2B"
+            stroke="#F5C400"
             strokeWidth="2"
             strokeLinecap="round"
             initial={{ pathLength: 0 }}

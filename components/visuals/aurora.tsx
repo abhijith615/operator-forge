@@ -11,7 +11,7 @@ export function Aurora({ className, ...props }: React.ComponentProps<"div">) {
       className={cn("pointer-events-none absolute inset-0 overflow-hidden", className)}
       {...props}
     >
-      <div className="absolute -top-1/3 left-1/2 size-[62rem] max-w-none -translate-x-1/2 animate-aurora rounded-full bg-[radial-gradient(circle,rgba(255,106,43,0.16),transparent_62%)] blur-3xl" />
+      <div className="absolute -top-1/3 left-1/2 size-[62rem] max-w-none -translate-x-1/2 animate-aurora rounded-full bg-[radial-gradient(circle,rgba(245,196,0,0.16),transparent_62%)] blur-3xl" />
       <div className="absolute top-1/4 -right-1/4 size-[46rem] animate-aurora rounded-full bg-[radial-gradient(circle,rgba(139,124,255,0.13),transparent_65%)] blur-3xl [animation-delay:-6s]" />
       <div className="absolute -bottom-1/4 -left-1/5 size-[44rem] animate-aurora rounded-full bg-[radial-gradient(circle,rgba(36,217,181,0.09),transparent_66%)] blur-3xl [animation-delay:-12s]" />
     </div>

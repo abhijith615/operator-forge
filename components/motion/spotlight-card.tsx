@@ -12,7 +12,7 @@ interface SpotlightCardProps extends React.ComponentProps<"div"> {
 }
 
 const TONE_RGB: Record<NonNullable<SpotlightCardProps["tone"]>, string> = {
-  ember: "255,106,43",
+  ember: "245,196,0",
   ion: "36,217,181",
   flux: "139,124,255",
   neutral: "255,255,255",
