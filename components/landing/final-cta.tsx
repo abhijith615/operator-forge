@@ -5,7 +5,6 @@ import { Container, Section } from "@/components/landing/section";
 import { Reveal } from "@/components/motion/reveal";
 import { Button } from "@/components/ui/button";
 import { Aurora } from "@/components/visuals/aurora";
-import { FIRST_SHIFT } from "@/lib/constants/mission";
 
 export function FinalCta() {
   return (
@@ -16,20 +15,21 @@ export function FinalCta() {
 
           <Reveal>
             <p className="font-mono text-[10.5px] tracking-[0.22em] text-ember-500 uppercase">
-              {FIRST_SHIFT.codename} · {FIRST_SHIFT.name}
+              First mission · Live now
             </p>
           </Reveal>
 
           <Reveal delay={0.06}>
             <h2 className="mx-auto mt-6 max-w-3xl text-[clamp(2.1rem,5.2vw,3.75rem)] leading-[1.02] font-semibold tracking-[-0.04em] text-gradient text-balance">
-              The store opens at nine. Somebody has to run it.
+              The only way to find out is to run one.
             </h2>
           </Reveal>
 
           <Reveal delay={0.12}>
             <p className="mx-auto mt-6 max-w-lg text-[16px] leading-relaxed text-mid text-balance">
-              One shift. Thirty minutes. More work than anyone could finish, and
-              nobody to tell you which half matters.
+              Thirty minutes, one store, and more work than anyone could
+              finish. Your genome is written from what you did with it — and it
+              is yours, whatever it says.
             </p>
           </Reveal>
 
