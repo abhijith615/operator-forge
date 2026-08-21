@@ -21,7 +21,7 @@ const ROWS = [
 const HIGHLIGHTS = [
   { label: "Operator Rating", value: 1740, suffix: "", hint: "Composite of ten capabilities" },
   { label: "Missions run", value: 3, suffix: "", hint: "One shift each, no retakes" },
-  { label: "Percentile", value: 82, suffix: "th", hint: "Against operators on Store 114" },
+  { label: "Percentile", value: 82, suffix: "nd", hint: "Against operators on Store 114" },
 ] as const;
 
 function DeltaPill({ delta }: { delta: number }) {

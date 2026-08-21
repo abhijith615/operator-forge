@@ -6,7 +6,6 @@ import { LandingNav } from "@/components/landing/landing-nav";
 import { Platform } from "@/components/landing/platform";
 import { ScrollProgress } from "@/components/landing/scroll-progress";
 import { Standings } from "@/components/landing/standings";
-import { Testimonials } from "@/components/landing/testimonials";
 import { Horizon } from "@/components/visuals/aurora";
 
 export default function LandingPage() {
@@ -22,7 +21,6 @@ export default function LandingPage() {
         <Capabilities />
         <Horizon />
         <Standings />
-        <Testimonials />
         <FinalCta />
       </main>
       <Footer />
