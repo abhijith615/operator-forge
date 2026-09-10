@@ -4,7 +4,6 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, ChevronDown } from "lucide-react";
 
-import { HeroConsole } from "@/components/landing/hero-console";
 import { Button } from "@/components/ui/button";
 import { Aurora, GridField } from "@/components/visuals/aurora";
 import { easing } from "@/lib/motion";
@@ -45,10 +44,10 @@ export function Hero() {
           className="mx-auto inline-flex items-center gap-2.5 rounded-full border border-line-strong bg-white/[0.035] py-1.5 pr-4 pl-1.5 backdrop-blur-sm"
         >
           <span className="rounded-full bg-ember-500/15 px-2 py-0.5 font-mono text-[10px] font-semibold tracking-[0.14em] text-ember-400">
-            DAY 1 LIVE
+            LIVE
           </span>
           <span className="text-[12.5px] text-mid">
-            7-Day Dark Store Operations Challenge
+            Operations simulations · Real assessment · Industry mentors
           </span>
         </motion.div>
 
@@ -68,9 +67,9 @@ export function Hero() {
           transition={{ duration: 1, ease: easing.outExpo, delay: 0.55 }}
           className="mx-auto mt-7 max-w-[38rem] text-[16.5px] leading-relaxed text-mid text-balance sm:text-[17.5px]"
         >
-          Six days. Fifteen minutes each. You run a quick-commerce dark store
-          through a real shift — and the store answers back. On day seven you
-          put your questions to someone who does this for a living.
+          Thirty-minute live operations missions, an assessment built from what
+          you actually did rather than what you claim, and the people who do this
+          work for a living. Nobody is grading an essay here.
         </motion.p>
 
         <motion.div
@@ -80,13 +79,13 @@ export function Hero() {
           className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
         >
           <Button asChild variant="primary" size="lg" className="w-full sm:w-auto">
-            <Link href="/challenge/day-1">
-              Start Day 1
+            <Link href="/challenge">
+              7-Day Challenge
               <ArrowRight className="transition-transform duration-300 ease-out-expo group-hover/btn:translate-x-1" />
             </Link>
           </Button>
           <Button asChild variant="secondary" size="lg" className="w-full sm:w-auto">
-            <Link href="/challenge">See all seven days</Link>
+            <a href="#platform">See what is inside</a>
           </Button>
         </motion.div>
 
@@ -96,11 +95,9 @@ export function Hero() {
           transition={{ duration: 1, delay: 0.9 }}
           className="mt-5 font-mono text-[11px] tracking-[0.1em] text-faint uppercase"
         >
-          15 minutes · No signup to play · Free
+          No prep. No syllabus. One shift.
         </motion.p>
       </div>
-
-      <HeroConsole />
 
       <motion.a
         href="#platform"

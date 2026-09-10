@@ -12,15 +12,15 @@ import { easing } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 /**
- * Every entry must point at a section that is still on the page. `#shift` and
- * `#how` outlived the sections they scrolled to when the landing page stopped
- * being about one mission — a nav link that goes nowhere is worse than one
- * that does not exist.
+ * Entries must point at something that still exists — a section id on this
+ * page, or a route. `#capabilities` and `#standings` outlived their sections
+ * twice now; a nav link that goes nowhere is worse than one that is absent.
  */
 const links = [
-  { label: "Platform", href: "#platform" },
-  { label: "What gets measured", href: "#capabilities" },
-  { label: "Standings", href: "#standings" },
+  // Rooted, not bare: the nav renders on /challenge too, where a bare
+  // #platform points at a section that is not on the page.
+  { label: "Platform", href: "/#platform" },
+  { label: "7-Day Challenge", href: "/challenge" },
 ] as const;
 
 export function LandingNav() {

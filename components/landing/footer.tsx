@@ -9,9 +9,9 @@ const COLUMNS = [
   {
     title: "Platform",
     links: [
-      { label: "Platform", href: "#platform" },
-      { label: "What gets measured", href: "#capabilities" },
-      { label: "Standings", href: "#standings" },
+      { label: "Platform", href: "/#platform" },
+      { label: "7-Day Challenge", href: "/challenge" },
+      { label: "Start Day 1", href: "/challenge/day-1" },
     ],
   },
   {

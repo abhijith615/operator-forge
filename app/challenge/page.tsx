@@ -1,19 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Lock, Mic } from "lucide-react";
+import { ArrowRight, Lock, Mic, Users } from "lucide-react";
 
+import { HeroConsole } from "@/components/landing/hero-console";
 import { LandingNav } from "@/components/landing/landing-nav";
 import { Footer } from "@/components/landing/footer";
 import { Container, Section, SectionHeading } from "@/components/landing/section";
 import { Reveal } from "@/components/motion/reveal";
 import { Button } from "@/components/ui/button";
-import { Horizon } from "@/components/visuals/aurora";
+import { Aurora, GridField, Horizon } from "@/components/visuals/aurora";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "7-Day Dark Store Operations Challenge",
+  title: "7-Day Challenge",
   description:
-    "Six 15-minute operations simulations and a live AMA with a Cluster Manager. Run a real dark store, one shift at a time.",
+    "A cohort-based challenge. Try the job before you interview for it — seven days of real operations problems, then decide whether the career is yours.",
 };
 
 interface Day {
@@ -77,54 +78,106 @@ export default function ChallengePage() {
     <>
       <LandingNav />
       <main id="main" className="relative overflow-x-clip">
-        <Section className="pt-32 sm:pt-40">
-          <Container>
+        {/* ── Hero: what the challenge is for ── */}
+        <section className="relative isolate overflow-hidden pt-36 pb-20 sm:pt-44 sm:pb-24">
+          <Aurora />
+          <GridField />
+
+          <Container className="relative text-center">
             <Reveal>
-              <p className="font-mono text-[10.5px] tracking-[0.2em] text-ember-500 uppercase">
-                Free · Starts when you do
-              </p>
+              <span className="mx-auto inline-flex items-center gap-2.5 rounded-full border border-line-strong bg-white/[0.035] py-1.5 pr-4 pl-1.5 backdrop-blur-sm">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-ember-500/15 px-2 py-0.5 font-mono text-[10px] font-semibold tracking-[0.14em] text-ember-400">
+                  <Users className="size-3" aria-hidden />
+                  COHORT
+                </span>
+                <span className="text-[12.5px] text-mid">
+                  7 days · You and everyone else who started this week
+                </span>
+              </span>
             </Reveal>
+
             <Reveal delay={0.06}>
-              <h1 className="mt-4 max-w-3xl text-[clamp(2.2rem,6vw,3.6rem)] leading-[1.03] font-semibold tracking-[-0.04em] text-gradient text-balance">
-                The 7-Day Dark Store Operations Challenge
+              <h1 className="mx-auto mt-8 max-w-4xl text-[clamp(2.4rem,6.6vw,4.4rem)] leading-[1.02] font-semibold tracking-[-0.045em] text-gradient text-balance">
+                Try the job before you interview for it.
               </h1>
             </Reveal>
+
             <Reveal delay={0.12}>
-              <p className="mt-6 max-w-xl text-[16px] leading-relaxed text-mid">
-                Six days. Fifteen minutes each. You run a quick-commerce dark
-                store through a real shift — allocating people, chasing
-                bottlenecks, deciding what to let go of — and the store answers
-                back. On day seven you put your questions to someone who does
-                this for a living.
+              <p className="mx-auto mt-7 max-w-2xl text-[16.5px] leading-relaxed text-mid text-balance">
+                Most people choose a career from a job description and find out
+                what it actually involves eighteen months later. This is seven
+                days of the real thing — the problems an operations manager
+                handles on an ordinary morning, put in front of you while the
+                decision is still yours to make.
               </p>
             </Reveal>
+
             <Reveal delay={0.18}>
-              <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+              <p className="mx-auto mt-5 max-w-xl text-[14px] leading-relaxed text-lo text-balance">
+                You run it alongside a cohort that started the same week. Six
+                fifteen-minute simulations, one live session with someone who
+                does this for a living, and an honest read on how you actually
+                think under pressure.
+              </p>
+            </Reveal>
+
+            <Reveal delay={0.24}>
+              <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Button asChild variant="primary" size="lg" className="w-full sm:w-auto">
                   <Link href="/challenge/day-1">
                     Start Day 1
                     <ArrowRight />
                   </Link>
                 </Button>
-                <span className="self-center font-mono text-[11px] tracking-[0.12em] text-faint uppercase">
-                  15 minutes · No signup to play
-                </span>
+                <Button asChild variant="secondary" size="lg" className="w-full sm:w-auto">
+                  <a href="#dark-store">What is in the challenge</a>
+                </Button>
               </div>
             </Reveal>
+
+            <Reveal delay={0.3}>
+              <p className="mt-5 font-mono text-[11px] tracking-[0.1em] text-faint uppercase">
+                15 minutes a day · No signup to play · Free
+              </p>
+            </Reveal>
           </Container>
-        </Section>
+        </section>
 
         <Horizon />
 
-        <Section id="days">
+        {/* ── Section 1: the challenge itself ── */}
+        <Section id="dark-store">
           <Container>
             <SectionHeading
-              eyebrow="The seven days"
-              title="One shift at a time."
-              description="Each day is a continuous simulation, not a quiz. Your decisions move the store's numbers, and the numbers are what you are assessed on."
+              eyebrow="Challenge 01"
+              title="The 7-Day Dark Store Manager Challenge"
+              description="A dark store is the ten-minute delivery warehouse behind your grocery app. Somebody runs it. For seven days, that is you — and this is the board you run it from."
             />
 
-            <ol className="mt-12 space-y-2.5">
+            {/* First subsection: the live store, moved off the home page. */}
+            <div className="mt-12">
+              <HeroConsole />
+            </div>
+
+            <Reveal delay={0.1}>
+              <p className="mx-auto mt-8 max-w-2xl text-center text-[13.5px] leading-relaxed text-mid">
+                Every number on that board moves because of something you did.
+                Click-to-dispatch is the one the store is judged on — under 180
+                seconds, from the moment an order lands to the moment a rider
+                leaves with it. Everything else is what makes that number
+                possible.
+              </p>
+            </Reveal>
+
+            <div className="mt-16">
+              <SectionHeading
+                eyebrow="Seven days"
+                title="One shift at a time."
+                description="Each day is a continuous simulation, not a quiz. Your decisions move the store's numbers, and the numbers are what you are assessed on."
+              />
+            </div>
+
+            <ol className="mt-10 space-y-2.5">
               {DAYS.map((entry, index) => {
                 const live = entry.state === "live";
                 const body = (
