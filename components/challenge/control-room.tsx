@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { CommsPanel } from "@/components/challenge/comms";
+import { FloorBackdrop } from "@/components/challenge/floor-backdrop";
 import {
   FloorBoard,
   NilPickBoard,
@@ -88,9 +89,11 @@ export function ControlRoom(props: ControlRoomProps) {
   const urgent = props.remaining <= 120;
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-obsidian">
+    <div className="relative flex h-dvh flex-col overflow-hidden bg-void">
+      <FloorBackdrop />
+
       {/* ── Clock bar ── */}
-      <header className="shrink-0 border-b border-line bg-obsidian/95 backdrop-blur-sm">
+      <header className="relative z-10 shrink-0 border-b border-line bg-obsidian/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-[1600px] items-center gap-3 px-4 py-2.5">
           <span
             data-readout
@@ -167,12 +170,18 @@ export function ControlRoom(props: ControlRoomProps) {
       </header>
 
       {/* ── Panels ── */}
-      <div className="mx-auto grid w-full max-w-[1600px] min-h-0 flex-1 gap-3 p-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,0.9fr)]">
+      <div className="relative z-10 mx-auto grid w-full max-w-[1600px] min-h-0 flex-1 gap-3 p-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,0.9fr)]">
         {/* Task queue */}
         <section
           aria-label="Task queue"
           className={cn(
-            "min-h-0 flex-col rounded-card border border-line bg-surface",
+            // Translucent, so the floor reads through the panel rather than
+            // only around it. `backdrop-blur-2xl` is what makes that safe: it
+            // replaces the photograph under the panel with a local average, so
+            // the LED strips stop being bright pixels behind small text. The
+            // blurred backdrop's 99th percentile lands near `elevated` — a
+            // grey this design already sets text on.
+            "min-h-0 flex-col rounded-card border border-line bg-surface/60 backdrop-blur-2xl",
             lane === "queue" ? "flex" : "hidden",
             "xl:flex",
           )}
@@ -219,7 +228,13 @@ export function ControlRoom(props: ControlRoomProps) {
         <section
           aria-label="Store dashboard"
           className={cn(
-            "min-h-0 flex-col rounded-card border border-line bg-surface",
+            // Translucent, so the floor reads through the panel rather than
+            // only around it. `backdrop-blur-2xl` is what makes that safe: it
+            // replaces the photograph under the panel with a local average, so
+            // the LED strips stop being bright pixels behind small text. The
+            // blurred backdrop's 99th percentile lands near `elevated` — a
+            // grey this design already sets text on.
+            "min-h-0 flex-col rounded-card border border-line bg-surface/60 backdrop-blur-2xl",
             lane === "board" ? "flex" : "hidden",
             "xl:flex",
           )}

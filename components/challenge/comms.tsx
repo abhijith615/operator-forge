@@ -63,7 +63,11 @@ export function CommsPanel({ onAsk }: { onAsk?: (question: string) => void }) {
 
   return (
     <section
-      className="flex min-h-0 flex-col rounded-card border border-line bg-surface"
+      // Same translucent surface as the other two control-room panels, and
+      // `flex-1` so it fills its column like they do. It sized to its
+      // transcript before, which read as a short card on a flat background and
+      // reads as a hole in the floor now that there is one behind it.
+      className="flex min-h-0 flex-1 flex-col rounded-card border border-line bg-surface/60 backdrop-blur-2xl"
       aria-label="Communications"
     >
       <header className="flex shrink-0 items-center gap-2 border-b border-line px-4 py-3">
