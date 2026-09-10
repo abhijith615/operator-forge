@@ -16,10 +16,14 @@ import {
   readStaffing,
 } from "@/lib/challenge/engine";
 import { buildResult } from "@/lib/challenge/feedback";
+import { ROUTINE_TASKS } from "@/lib/challenge/routine";
 import {
+  MAX_PENDING,
+  MIN_PENDING,
   SCHEDULE,
   SHIFT_SECONDS,
   driftFor,
+  routineGap,
   storeClock,
   timeScale,
 } from "@/lib/challenge/schedule";
@@ -57,6 +61,9 @@ function Shift({ operatorName }: { operatorName: string }) {
   const [previous, setPrevious] = React.useState<Metrics | null>(null);
   const [flash, setFlash] = React.useState<Flash | null>(null);
   const [result, setResult] = React.useState<ChallengeResult | null>(null);
+  /** Routine tasks already dealt, so the pool never repeats within a shift. */
+  const usedRoutine = React.useRef<string[]>([]);
+  const lastArrival = React.useRef(0);
 
   const finished = result !== null;
   const remaining = Math.max(0, SHIFT_SECONDS - elapsed);
@@ -91,7 +98,49 @@ function Shift({ operatorName }: { operatorName: string }) {
           !prev.some((open) => open.id === task.id),
       );
       if (due.length === 0) return prev;
+      lastArrival.current = elapsed;
       return [...prev, ...due.map((task) => ({ ...task, landedAt: elapsed }))];
+    });
+
+    // Fill the gap. The scored spine above arrives on its own timetable; this
+    // keeps the board from emptying between beats, which is what made the
+    // first version feel like a quiz with pauses rather than a shift.
+    setReleased((prev) => {
+      if (prev.length >= MIN_PENDING || prev.length >= MAX_PENDING) return prev;
+      if (elapsed - lastArrival.current < routineGap(prev.length)) return prev;
+      // Nothing new in the last ninety seconds of the shift: let the recovery
+      // plan be the last thing on the board.
+      if (elapsed > SHIFT_SECONDS - 90) return prev;
+
+      // Recycle when the pool runs dry. Twelve routine items is roughly nine
+      // minutes of filler; a store does not stop having deliveries and break
+      // requests after nine minutes, and letting the pool empty puts the
+      // original two-and-a-half minute gaps straight back.
+      let pool = ROUTINE_TASKS.filter(
+        (task) =>
+          !usedRoutine.current.includes(task.id) &&
+          !prev.some((open) => open.id === task.id),
+      );
+      if (pool.length === 0) {
+        usedRoutine.current = prev.map((open) => open.id);
+        pool = ROUTINE_TASKS.filter(
+          (task) => !prev.some((open) => open.id === task.id),
+        );
+      }
+      const next = pool[0];
+      if (!next) return prev;
+
+      usedRoutine.current = [...usedRoutine.current, next.id];
+      lastArrival.current = elapsed;
+      return [
+        ...prev,
+        {
+          ...next,
+          kind: "choice" as const,
+          releaseAt: elapsed,
+          landedAt: elapsed,
+        },
+      ];
     });
 
     // The store keeps moving between decisions, so the board is never a
@@ -117,25 +166,31 @@ function Shift({ operatorName }: { operatorName: string }) {
     );
 
     for (const task of expired) {
-      logEvent("recovery_action_selected", { expired: task.id });
+      // Routine work timing out during a peak is triage, not failure — a
+      // first-timer who reads slowly would otherwise accumulate a dozen
+      // penalties for behaving exactly as the shift intends. It still costs
+      // the store; it just does not read as a verdict on their judgement.
+      const routine = task.id.startsWith("r-");
+      logEvent("recovery_action_selected", { expired: task.id, routine });
       setState((s) =>
         commitDecision(s, {
           scene: "flow",
           decisionId: task.id,
           chosenAction: "expired",
           simulatedTime: storeClock(elapsed),
-          // An unanswered task is an absent decision, not a wrong one. It costs
-          // the store, and the store is what says so.
-          signals: { priority: -2 },
-          tags: ["reacted_late"],
-          metricEffect: { ctd: 8, ordersWaiting: 3 },
+          signals: routine ? {} : { priority: -2 },
+          tags: routine ? [] : ["reacted_late"],
+          metricEffect: routine
+            ? { ordersWaiting: 1 }
+            : { ctd: 8, ordersWaiting: 3 },
         }),
       );
     }
+    const worst = expired.find((task) => !task.id.startsWith("r-")) ?? expired[0]!;
     setFlash({
-      tone: "critical",
+      tone: worst.id.startsWith("r-") ? "warning" : "critical",
       headline: "Nobody got to it",
-      body: `${expired[0]!.title} timed out. The store absorbed it, and the clock shows where.`,
+      body: `${worst.title} timed out. The store absorbed it, and the board shows where.`,
     });
   }, [elapsed, released, finished]);
 
@@ -162,9 +217,12 @@ function Shift({ operatorName }: { operatorName: string }) {
 
   React.useEffect(() => {
     if (finished) return;
-    const allDone = resolved.length >= SCHEDULE.length && released.length === 0;
+    // Only the scored spine decides when the shift is done — routine work is
+    // endless by design and must never hold the shift open.
+    const spineDone = SCHEDULE.every((task) => resolved.includes(task.id));
+    const allDone = spineDone && released.length === 0;
     if (remaining === 0 || allDone) finish();
-  }, [remaining, resolved.length, released.length, finished, finish]);
+  }, [remaining, resolved, released.length, finished, finish]);
 
   /* ── Resolution helpers ── */
   function close(taskId: string, next: Flash) {

@@ -89,7 +89,7 @@ export const SCHEDULE: ScheduledTask[] = [
   },
   {
     id: "packing-intervention",
-    releaseAt: 150,
+    releaseAt: 120,
     kind: "choice",
     stream: "operations",
     priority: "high",
@@ -102,7 +102,7 @@ export const SCHEDULE: ScheduledTask[] = [
   },
   {
     id: "nil-pick-resolution",
-    releaseAt: 330,
+    releaseAt: 270,
     kind: "nil-pick",
     stream: "operations",
     priority: "critical",
@@ -113,7 +113,7 @@ export const SCHEDULE: ScheduledTask[] = [
   },
   {
     id: "packing-configuration",
-    releaseAt: 510,
+    releaseAt: 420,
     kind: "packing",
     stream: "customers",
     priority: "high",
@@ -124,7 +124,7 @@ export const SCHEDULE: ScheduledTask[] = [
   },
   {
     id: "dispatch-action",
-    releaseAt: 660,
+    releaseAt: 570,
     kind: "choice",
     stream: "customers",
     priority: "critical",
@@ -137,7 +137,7 @@ export const SCHEDULE: ScheduledTask[] = [
   },
   {
     id: "recovery-plan",
-    releaseAt: 780,
+    releaseAt: 720,
     kind: "recovery",
     stream: "management",
     priority: "critical",
@@ -151,6 +151,28 @@ export const SCHEDULE: ScheduledTask[] = [
 
 /** Nil-pick options are reused unchanged; exported for the panel. */
 export const NIL_PICK_OPTIONS = NIL_PICK_CHOICES;
+
+/* ── Pacing ───────────────────────────────────────────────────────────── */
+
+/**
+ * Six scored scenarios across fifteen minutes leaves the queue empty about
+ * sixty per cent of the time, which reads as a quiz with pauses. Routine work
+ * fills the gaps, released against the board rather than a timetable: whenever
+ * the operator drops below MIN_PENDING and enough time has passed since the
+ * last arrival, something lands.
+ *
+ * The spine stays on fixed times so the shift still has a shape — the peak
+ * arrives when it arrives. Only the filler is adaptive.
+ */
+export const MIN_PENDING = 2;
+export const MAX_PENDING = 4;
+
+/** Seconds between arrivals, so a burst of resolutions is not met by a burst. */
+export function routineGap(pending: number): number {
+  if (pending === 0) return 12;
+  if (pending === 1) return 26;
+  return 38;
+}
 
 /**
  * Ambient drift.
