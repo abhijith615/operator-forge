@@ -193,7 +193,7 @@ export function Scorecard({ result }: { result: ChallengeResult }) {
           </Link>
         </Button>
         <Button asChild variant="secondary" size="lg" className="w-full">
-          <Link href="/login">Save this scorecard to an account</Link>
+          <Link href="/challenge/leaderboard">See where you stand</Link>
         </Button>
       </div>
     </div>

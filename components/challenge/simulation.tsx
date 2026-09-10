@@ -3,7 +3,6 @@
 import * as React from "react";
 
 import { ControlRoom, type OpenTask } from "@/components/challenge/control-room";
-import { Gate } from "@/components/challenge/gate";
 import { Scorecard } from "@/components/challenge/scorecard";
 import { PEAK_METRICS, type RecoveryAction } from "@/lib/challenge/day-one";
 import {
@@ -17,7 +16,6 @@ import {
   readStaffing,
 } from "@/lib/challenge/engine";
 import { buildResult } from "@/lib/challenge/feedback";
-import { recordResult, readParticipant, type Participant } from "@/lib/challenge/participant";
 import {
   SCHEDULE,
   SHIFT_SECONDS,
@@ -25,6 +23,7 @@ import {
   storeClock,
   timeScale,
 } from "@/lib/challenge/schedule";
+import { saveChallengeRun } from "@/lib/challenge/save-run";
 import { logDecision, logEvent, saveCompletion } from "@/lib/challenge/telemetry";
 import type {
   ChallengeResult,
@@ -44,21 +43,11 @@ type Flash = { headline: string; body: string; tone: "healthy" | "warning" | "cr
  * scoring and feedback underneath are the same ones the scene version used —
  * only the delivery changed.
  */
-export function DayOneSimulation() {
-  const [participant, setParticipant] = React.useState<Participant | null>(null);
-  const [checked, setChecked] = React.useState(false);
-
-  React.useEffect(() => {
-    setParticipant(readParticipant());
-    setChecked(true);
-  }, []);
-
-  if (!checked) return null;
-  if (!participant) return <Gate onEnter={setParticipant} />;
-  return <Shift participant={participant} />;
+export function DayOneSimulation({ operatorName }: { operatorName: string }) {
+  return <Shift operatorName={operatorName} />;
 }
 
-function Shift({ participant }: { participant: Participant }) {
+function Shift({ operatorName }: { operatorName: string }) {
   const [state, setState] = React.useState<SimulationState>(() => createState());
   const [plan, setPlan] = React.useState<StaffingPlan>(() => createState().staffing);
   const [elapsed, setElapsed] = React.useState(0);
@@ -73,8 +62,8 @@ function Shift({ participant }: { participant: Participant }) {
   const remaining = Math.max(0, SHIFT_SECONDS - elapsed);
 
   React.useEffect(() => {
-    logEvent("simulation_started", { participant: participant.email });
-  }, [participant.email]);
+    logEvent("simulation_started", { operator: operatorName });
+  }, [operatorName]);
 
   /* ── The clock ── */
   React.useEffect(() => {
@@ -162,14 +151,14 @@ function Shift({ participant }: { participant: Participant }) {
       setResult(built);
       logEvent("simulation_completed", { score: built.score, band: built.band });
       saveCompletion(completed, built);
-      void recordResult(
-        participant,
+      // Server action: the operator id comes from the session, never the client.
+      void saveChallengeRun(
         built,
         completed.decisions.map((d) => ({ scene: d.scene, action: d.chosenAction })),
       );
       return completed;
     });
-  }, [participant]);
+  }, []);
 
   React.useEffect(() => {
     if (finished) return;

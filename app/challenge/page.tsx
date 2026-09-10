@@ -130,14 +130,14 @@ export default function ChallengePage() {
                   </Link>
                 </Button>
                 <Button asChild variant="secondary" size="lg" className="w-full sm:w-auto">
-                  <a href="#dark-store">What is in the challenge</a>
+                  <Link href="/challenge/leaderboard">Leaderboard</Link>
                 </Button>
               </div>
             </Reveal>
 
             <Reveal delay={0.3}>
               <p className="mt-5 font-mono text-[11px] tracking-[0.1em] text-faint uppercase">
-                15 minutes a day · No signup to play · Free
+                15 minutes a day · Free · One account, seven days
               </p>
             </Reveal>
           </Container>

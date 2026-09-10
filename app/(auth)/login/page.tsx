@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { LoginPanel } from "@/components/auth/login-panel";
+import { safeNext } from "@/lib/constants/routes";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 export const metadata: Metadata = {
@@ -11,9 +12,15 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; next?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, next } = await searchParams;
 
-  return <LoginPanel configured={isSupabaseConfigured} initialError={error} />;
+  return (
+    <LoginPanel
+      configured={isSupabaseConfigured}
+      initialError={error}
+      next={safeNext(next)}
+    />
+  );
 }

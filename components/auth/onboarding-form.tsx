@@ -21,7 +21,8 @@ export function OnboardingForm({
   defaultName,
   defaultWhatsapp,
   email,
-}: OnboardingFormProps) {
+  next,
+}: OnboardingFormProps & { next?: string }) {
   const [state, formAction, pending] = React.useActionState(
     completeOnboarding,
     idleFormState,
@@ -45,6 +46,9 @@ export function OnboardingForm({
       </p>
 
       <form action={formAction} className="mt-8 space-y-5">
+        {/* Where to land after saving. Validated server-side by safeNext. */}
+        {next ? <input type="hidden" name="next" value={next} /> : null}
+
         <div className="space-y-2">
           <Label htmlFor="fullName">Full name</Label>
           <Input

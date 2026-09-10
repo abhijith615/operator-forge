@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 
 import { OPERATORS_TABLE, isSupabaseConfigured } from "@/lib/supabase/config";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { safeNext } from "@/lib/constants/routes";
 import { absoluteUrl } from "@/lib/utils";
 import type { Operator } from "@/types/operator";
 
@@ -21,8 +22,9 @@ import {
 
 /* ── Google ─────────────────────────────────────────────────────────────── */
 
-export async function signInWithGoogle(): Promise<FormState> {
+export async function signInWithGoogle(next?: string): Promise<FormState> {
   const supabase = await getSupabaseServerClient();
+  const destination = safeNext(next);
 
   if (!supabase) {
     // Simulator Mode: mint a local identity and go straight to onboarding.
@@ -33,7 +35,9 @@ export async function signInWithGoogle(): Promise<FormState> {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: absoluteUrl("/auth/callback"),
+      redirectTo: absoluteUrl(
+        `/auth/callback?next=${encodeURIComponent(destination)}`,
+      ),
       queryParams: { prompt: "select_account" },
     },
   });
@@ -73,7 +77,13 @@ export async function sendMagicLink(
 
   const { error } = await supabase.auth.signInWithOtp({
     email: parsed.data.email,
-    options: { emailRedirectTo: absoluteUrl("/auth/callback") },
+    options: {
+      emailRedirectTo: absoluteUrl(
+        `/auth/callback?next=${encodeURIComponent(
+          safeNext(formData.get("next")?.toString()),
+        )}`,
+      ),
+    },
   });
 
   if (error) {
@@ -147,7 +157,8 @@ export async function completeOnboarding(
 ): Promise<FormState> {
   const result = await saveProfile(formData);
   if (result.status === "error") return result;
-  redirect("/mission");
+  // Where they were headed before we asked for a name.
+  redirect(safeNext(formData.get("next")?.toString()));
 }
 
 /** Same fields, but stays on the settings page. */

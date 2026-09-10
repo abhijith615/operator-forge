@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { HOME_ROUTE, LOGIN_ROUTE, ONBOARDING_ROUTE } from "@/lib/constants/routes";
+import {
+  LOGIN_ROUTE,
+  ONBOARDING_ROUTE,
+  safeNext,
+} from "@/lib/constants/routes";
 import { getOperator } from "@/lib/auth/session";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -11,7 +15,9 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
-  const next = searchParams.get("next");
+  // Validated: `new URL("//evil.com", origin)` resolves to https://evil.com,
+  // so an unchecked next here is an open redirect out of our own sign-in.
+  const next = safeNext(searchParams.get("next"));
   const authError = searchParams.get("error_description") ?? searchParams.get("error");
 
   if (authError) {
@@ -38,8 +44,10 @@ export async function GET(request: NextRequest) {
   }
 
   if (!operator.onboarded) {
-    return NextResponse.redirect(new URL(ONBOARDING_ROUTE, origin));
+    const url = new URL(ONBOARDING_ROUTE, origin);
+    url.searchParams.set("next", next);
+    return NextResponse.redirect(url);
   }
 
-  return NextResponse.redirect(new URL(next ?? HOME_ROUTE, origin));
+  return NextResponse.redirect(new URL(next, origin));
 }

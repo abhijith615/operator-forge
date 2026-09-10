@@ -451,3 +451,108 @@ begin
     execute format('grant execute on function public.%s to authenticated', fn);
   end loop;
 end $$;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 7-Day Challenge
+--
+-- Challenge days are played by operator accounts, so a score belongs to
+-- somebody and the leaderboard has a name to show. One row per operator per
+-- day: replaying a day replaces the row rather than accumulating attempts.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create table if not exists public.challenge_runs (
+  id           uuid primary key default gen_random_uuid(),
+  operator_id  uuid        not null references public.operators (id) on delete cascade,
+  day          integer     not null default 1,
+  score        integer     not null,
+  band         text        not null,
+  signature    text        not null,
+  competencies jsonb       not null default '{}'::jsonb,
+  decisions    jsonb       not null default '[]'::jsonb,
+  sop_breaches integer     not null default 0,
+  duration_ms  integer,
+  completed_at timestamptz not null default now(),
+  unique (operator_id, day)
+);
+
+create index if not exists challenge_runs_day_score_idx
+  on public.challenge_runs (day, score desc);
+
+alter table public.challenge_runs enable row level security;
+
+drop policy if exists "challenge_runs_select_own" on public.challenge_runs;
+create policy "challenge_runs_select_own"
+  on public.challenge_runs for select using (auth.uid() = operator_id);
+
+drop policy if exists "challenge_runs_insert_own" on public.challenge_runs;
+create policy "challenge_runs_insert_own"
+  on public.challenge_runs for insert with check (auth.uid() = operator_id);
+
+drop policy if exists "challenge_runs_update_own" on public.challenge_runs;
+create policy "challenge_runs_update_own"
+  on public.challenge_runs for update
+  using (auth.uid() = operator_id) with check (auth.uid() = operator_id);
+
+-- ── Leaderboard ───────────────────────────────────────────────────────────
+--
+-- Row level security correctly stops one operator reading another's row, so a
+-- board every operator can see has to run as its owner. What it returns is
+-- deliberately narrow: rank, score, band, signature and a shortened name.
+-- Never an email, never a phone number, never the decision record.
+--
+-- Names are shortened to a first name plus a last initial. A leaderboard is a
+-- public surface inside the product, and "Ananya R." is enough to recognise
+-- yourself and your cohort without publishing a directory of full names to
+-- everyone who signs up.
+
+create or replace function public.challenge_leaderboard(
+  p_day integer default 1,
+  p_limit integer default 50
+)
+returns table (
+  rank integer, display_name text, score integer, band text,
+  signature text, completed_at timestamptz, is_you boolean
+)
+language sql security definer set search_path = '' stable
+as $$
+  select
+    row_number() over (order by r.score desc, r.completed_at asc)::integer,
+    case
+      when coalesce(nullif(trim(o.full_name), ''), '') = '' then 'Operator'
+      when position(' ' in trim(o.full_name)) = 0 then trim(o.full_name)
+      else split_part(trim(o.full_name), ' ', 1) || ' ' ||
+           left(split_part(trim(o.full_name), ' ',
+                array_length(string_to_array(trim(o.full_name), ' '), 1)), 1) || '.'
+    end,
+    r.score, r.band, r.signature, r.completed_at,
+    r.operator_id = auth.uid()
+  from public.challenge_runs r
+  join public.operators o on o.id = r.operator_id
+  where r.day = p_day
+  order by r.score desc, r.completed_at asc
+  limit greatest(1, least(p_limit, 200));
+$$;
+
+revoke all on function public.challenge_leaderboard(integer, integer) from public;
+revoke all on function public.challenge_leaderboard(integer, integer) from anon;
+grant execute on function public.challenge_leaderboard(integer, integer) to authenticated;
+
+/* Where the signed-in operator sits, including outside the visible top N. */
+create or replace function public.challenge_standing(p_day integer default 1)
+returns table (rank integer, total integer, score integer)
+language sql security definer set search_path = '' stable
+as $$
+  with mine as (
+    select score from public.challenge_runs
+    where day = p_day and operator_id = auth.uid()
+  )
+  select
+    ((select count(*) from public.challenge_runs r
+       where r.day = p_day and r.score > (select score from mine)) + 1)::integer,
+    (select count(*) from public.challenge_runs where day = p_day)::integer,
+    (select score from mine)::integer;
+$$;
+
+revoke all on function public.challenge_standing(integer) from public;
+revoke all on function public.challenge_standing(integer) from anon;
+grant execute on function public.challenge_standing(integer) to authenticated;

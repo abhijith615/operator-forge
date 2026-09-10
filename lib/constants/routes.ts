@@ -29,3 +29,17 @@ export function isAppRoute(pathname: string): boolean {
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
 }
+
+/**
+ * A `next` parameter is attacker-controlled. Only a single-slash, same-origin
+ * path is ever followed — "//evil.com" and "https://evil.com" are both valid
+ * values for a browser to treat as absolute, and both would turn our sign-in
+ * into an open redirect.
+ */
+export function safeNext(value: string | null | undefined, fallback = HOME_ROUTE): string {
+  if (!value) return fallback;
+  if (!value.startsWith("/")) return fallback;
+  if (value.startsWith("//")) return fallback;
+  if (value.includes("\\")) return fallback;
+  return value;
+}

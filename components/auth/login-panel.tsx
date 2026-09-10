@@ -21,9 +21,11 @@ interface LoginPanelProps {
   /** False when Supabase env vars are absent — enables Simulator Mode. */
   configured: boolean;
   initialError?: string;
+  /** Where to land after signing in. Already validated on the server. */
+  next?: string;
 }
 
-export function LoginPanel({ configured, initialError }: LoginPanelProps) {
+export function LoginPanel({ configured, initialError, next }: LoginPanelProps) {
   const [state, formAction, pending] = React.useActionState(
     sendMagicLink,
     idleFormState,
@@ -74,7 +76,9 @@ export function LoginPanel({ configured, initialError }: LoginPanelProps) {
         loading={oauthPending}
         disabled={busy}
         onClick={() =>
-          handleProvider(configured ? signInWithGoogle : startSimulatorSession)
+          handleProvider(
+            configured ? () => signInWithGoogle(next) : startSimulatorSession,
+          )
         }
         className="mt-8 w-full rounded-xl"
       >
@@ -109,6 +113,10 @@ export function LoginPanel({ configured, initialError }: LoginPanelProps) {
         </motion.div>
       ) : (
         <form action={formAction} className="space-y-3">
+          {/* Carried into the magic-link callback so the operator lands where
+              they were headed rather than on the default route. */}
+          {next ? <input type="hidden" name="next" value={next} /> : null}
+
           <div className="space-y-2">
             <Label htmlFor="email">Work or personal email</Label>
             <Input
