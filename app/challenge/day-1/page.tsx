@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { DayOneSimulation } from "@/components/challenge/simulation";
 import { getOperator } from "@/lib/auth/session";
+import { readOwnRun } from "@/lib/challenge/runs";
 import { LOGIN_ROUTE, ONBOARDING_ROUTE } from "@/lib/constants/routes";
 
 export const metadata: Metadata = {
@@ -26,6 +27,12 @@ export default async function DayOnePage() {
   if (!operator.onboarded) {
     redirect(`${ONBOARDING_ROUTE}?next=%2Fchallenge%2Fday-1`);
   }
+
+  // Day 1 is played once. A shift you can retake until the score flatters you
+  // is not an assessment, and the leaderboard is only worth reading if every
+  // row on it is somebody's first attempt. Coming back shows the scorecard.
+  const existing = await readOwnRun(1);
+  if (existing) redirect("/challenge/day-1/scorecard");
 
   return <DayOneSimulation operatorName={operator.fullName} />;
 }

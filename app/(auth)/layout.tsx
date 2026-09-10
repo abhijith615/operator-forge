@@ -1,15 +1,9 @@
+import { Suspense } from "react";
 import Link from "next/link";
 
+import { AuthNarrative, AuthNarrativeFallback } from "@/components/auth/auth-narrative";
 import { LogoMark } from "@/components/brand/logo";
 import { Aurora, GridField } from "@/components/visuals/aurora";
-import { FIRST_SHIFT } from "@/lib/constants/mission";
-
-const MARKERS = [
-  { k: "Mission", v: FIRST_SHIFT.name },
-  { k: "Role", v: FIRST_SHIFT.role },
-  { k: "Duration", v: `${FIRST_SHIFT.durationMinutes} minutes` },
-  { k: "Store", v: FIRST_SHIFT.location },
-] as const;
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -26,28 +20,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </span>
         </Link>
 
-        <div className="relative max-w-md">
-          <p className="font-mono text-[10.5px] tracking-[0.22em] text-ember-500 uppercase">
-            {FIRST_SHIFT.codename} · Standing by
-          </p>
-          <h1 className="mt-6 text-[clamp(2rem,3.4vw,2.9rem)] leading-[1.05] font-semibold tracking-[-0.04em] text-gradient text-balance">
-            The store opens at nine. Somebody has to run it.
-          </h1>
-          <p className="mt-5 text-[15px] leading-relaxed text-mid">
-            {FIRST_SHIFT.tagline}
-          </p>
-        </div>
-
-        <dl className="relative grid grid-cols-2 gap-px overflow-hidden rounded-panel border border-line bg-line">
-          {MARKERS.map((marker) => (
-            <div key={marker.k} className="bg-obsidian/80 px-5 py-4 backdrop-blur-sm">
-              <dt className="font-mono text-[10px] tracking-[0.14em] text-faint uppercase">
-                {marker.k}
-              </dt>
-              <dd className="mt-1.5 text-[13.5px] text-hi">{marker.v}</dd>
-            </div>
-          ))}
-        </dl>
+        {/* Reads `next` to decide what it is standing beside. */}
+        <Suspense fallback={<AuthNarrativeFallback />}>
+          <AuthNarrative />
+        </Suspense>
       </aside>
 
       {/* ── Form side ──────────────────────────────────────────────────── */}

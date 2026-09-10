@@ -69,6 +69,47 @@ export async function readOwnRun(day = 1): Promise<StoredRun | null> {
   return data;
 }
 
+/**
+ * The stored scorecard, for showing a completed day again.
+ *
+ * Returns null both when there is no run and when the run predates the
+ * `result` column — the caller has to handle a run without a scorecard either
+ * way, so collapsing the two into one absent case keeps the branch honest.
+ */
+export async function readOwnResult(day = 1): Promise<ChallengeResult | null> {
+  const supabase = await getSupabaseServerClient();
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from("challenge_runs")
+    .select("result")
+    .eq("day", day)
+    .maybeSingle<{ result: unknown }>();
+  if (error || !data) return null;
+  return isResult(data.result) ? data.result : null;
+}
+
+/**
+ * The column is ours to write and row level security keeps it ours to read, so
+ * this is not a trust boundary — it is a guard against rendering a row written
+ * by an older shape of the code and crashing on a missing array.
+ */
+function isResult(value: unknown): value is ChallengeResult {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Partial<ChallengeResult>;
+  return (
+    typeof candidate.score === "number" &&
+    typeof candidate.band === "string" &&
+    Array.isArray(candidate.competencies) &&
+    Array.isArray(candidate.sopViolations) &&
+    Array.isArray(candidate.replay) &&
+    Array.isArray(candidate.learned) &&
+    Array.isArray(candidate.strengths) &&
+    Array.isArray(candidate.gaps) &&
+    typeof candidate.signature === "object" &&
+    candidate.signature !== null
+  );
+}
+
 /** Shape sent from the browser when a shift finishes. */
 export function toRow(
   operatorId: string,
@@ -85,6 +126,9 @@ export function toRow(
       result.competencies.map((entry) => [entry.dimension, entry.score]),
     ),
     decisions,
+    // The whole scorecard, so returning to a finished day shows what the
+    // operator actually earned rather than a summary rebuilt from columns.
+    result,
     sop_breaches: result.sopViolations.length,
     duration_ms: Math.round(result.durationMs),
     completed_at: new Date().toISOString(),

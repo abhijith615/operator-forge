@@ -469,11 +469,20 @@ create table if not exists public.challenge_runs (
   signature    text        not null,
   competencies jsonb       not null default '{}'::jsonb,
   decisions    jsonb       not null default '[]'::jsonb,
+  -- The full scorecard. Day 1 is playable once, so the second visit reads this
+  -- back rather than re-running the shift — the scorecard an operator returns
+  -- to is the one they earned, not an approximation rebuilt from the columns.
+  -- Nullable: rows written before the column existed have no stored result.
+  result       jsonb,
   sop_breaches integer     not null default 0,
   duration_ms  integer,
   completed_at timestamptz not null default now(),
   unique (operator_id, day)
 );
+
+-- `create table if not exists` above is a no-op on a database that already has
+-- the table, so columns added later need saying twice.
+alter table public.challenge_runs add column if not exists result jsonb;
 
 create index if not exists challenge_runs_day_score_idx
   on public.challenge_runs (day, score desc);

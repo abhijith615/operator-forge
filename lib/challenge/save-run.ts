@@ -23,12 +23,17 @@ export async function saveChallengeRun(
   const supabase = await getSupabaseServerClient();
   if (!supabase) return { ok: false };
 
-  // Replaying a day replaces the row rather than accumulating attempts. The
-  // leaderboard reads one score per operator, and "best of many silent
-  // retries" is a different product decision than this one.
+  // A day is played once. The page guard sends a returning operator to their
+  // scorecard rather than the floor, and this is the other half of the same
+  // rule: if a second run does finish — two tabs, a race, a reload caught
+  // mid-shift — the first score stands. Overwriting would quietly turn the
+  // leaderboard into best-of-many-retries, which is a different product.
   const { error } = await supabase
     .from("challenge_runs")
-    .upsert(toRow(operator.id, result, decisions), { onConflict: "operator_id,day" });
+    .upsert(toRow(operator.id, result, decisions), {
+      onConflict: "operator_id,day",
+      ignoreDuplicates: true,
+    });
 
   return { ok: !error };
 }
