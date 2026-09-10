@@ -7,6 +7,12 @@
  * Days 2–6 can reuse the whole engine and only supply new content.
  */
 
+/**
+ * Streams and priorities are shared with the 30-minute mission so a task reads
+ * the same wherever it appears.
+ */
+export type { TaskPriority, TaskStream } from "@/types/tasks";
+
 /* ── Assessment dimensions ────────────────────────────────────────────── */
 
 export const DIMENSIONS = [

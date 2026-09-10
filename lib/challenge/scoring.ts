@@ -140,6 +140,8 @@ interface SignatureContext {
   score: (dimension: Dimension) => number;
   violations: number;
   medianDecisionMs: number;
+  /** Share of decisions that were timeouts rather than choices. */
+  expiredRatio: number;
 }
 
 /**
@@ -148,6 +150,14 @@ interface SignatureContext {
  * rather than falling through to the safe middle.
  */
 const SIGNATURES: SignatureRule[] = [
+  {
+    name: "Watcher · Slow to Commit",
+    blurb:
+      "Most of the board timed out rather than being decided. The store does not wait for certainty — an imperfect call made in time beats a good one made after the queue has moved.",
+    // Checked before everything else: a run that barely engaged should not be
+    // handed a name that describes an operating style it never demonstrated.
+    test: (c) => c.expiredRatio >= 0.5,
+  },
   {
     name: "High-Speed Executor · Process Risk",
     blurb:
@@ -219,9 +229,15 @@ export function decisionSignature(
     )
     .sort((a, b) => a - b);
 
+  const expired = state.decisions.filter(
+    (decision) => decision.chosenAction === "expired",
+  ).length;
+
   const context: SignatureContext = {
     has: (tag) => tagSet.has(tag as never),
     score: (dimension) => byDimension.get(dimension) ?? 50,
+    expiredRatio:
+      state.decisions.length > 0 ? expired / state.decisions.length : 0,
     violations: state.sopViolations.length,
     medianDecisionMs: latencies[Math.floor(latencies.length / 2)] ?? 0,
   };
