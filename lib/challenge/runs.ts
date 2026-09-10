@@ -115,10 +115,11 @@ export function toRow(
   operatorId: string,
   result: ChallengeResult,
   decisions: { scene: string; action: string }[],
+  day = 1,
 ) {
   return {
     operator_id: operatorId,
-    day: 1,
+    day,
     score: result.score,
     band: result.band,
     signature: result.signature.name,

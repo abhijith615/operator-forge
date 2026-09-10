@@ -23,7 +23,30 @@ export type ChallengeEventName =
   | "recovery_action_selected"
   | "recovery_plan_executed"
   | "simulation_completed"
-  | "scorecard_viewed";
+  | "scorecard_viewed"
+  /* ── Day 2 · inventory forensics ── */
+  | "day2_started"
+  | "earbuds_case_opened"
+  | "physical_count_started"
+  | "physical_unit_counted"
+  | "physical_count_confirmed"
+  | "investigation_tool_opened"
+  | "movement_log_viewed"
+  | "order_trace_opened"
+  | "missing_scan_discovered"
+  | "evidence_added"
+  | "access_log_viewed"
+  | "cctv_opened"
+  | "cctv_timestamp_viewed"
+  | "process_variance_confirmed"
+  | "exception_area_checked"
+  | "cancelled_order_found"
+  | "stock_recovered"
+  | "hypothesis_created"
+  | "premature_theft_assumption"
+  | "action_board_completed"
+  | "earbuds_reconciliation_signed"
+  | "earbuds_case_completed";
 
 export interface ChallengeEvent {
   name: ChallengeEventName;

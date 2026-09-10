@@ -16,6 +16,7 @@ import type { ChallengeResult } from "./types";
 export async function saveChallengeRun(
   result: ChallengeResult,
   decisions: { scene: string; action: string }[],
+  day = 1,
 ): Promise<{ ok: boolean }> {
   const operator = await getOperator();
   if (!operator) return { ok: false };
@@ -30,7 +31,7 @@ export async function saveChallengeRun(
   // leaderboard into best-of-many-retries, which is a different product.
   const { error } = await supabase
     .from("challenge_runs")
-    .upsert(toRow(operator.id, result, decisions), {
+    .upsert(toRow(operator.id, result, decisions, day), {
       onConflict: "operator_id,day",
       ignoreDuplicates: true,
     });

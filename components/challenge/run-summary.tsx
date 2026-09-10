@@ -2,8 +2,19 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { BAND_RANGE } from "@/lib/challenge/scoring";
-import { DIMENSION_LABEL, type Band, type Dimension } from "@/lib/challenge/types";
+import { DAY_TWO_DIMENSION_LABEL } from "@/lib/challenge/day-two/types";
+import { DIMENSION_LABEL, type Band } from "@/lib/challenge/types";
 import type { StoredRun } from "@/lib/challenge/runs";
+
+/**
+ * Each day assesses its own dimensions, and a stored row holds only their
+ * keys. One lookup across both days keeps a legacy row from printing
+ * "rootCause" at somebody.
+ */
+const LABELS: Record<string, string> = {
+  ...DIMENSION_LABEL,
+  ...DAY_TWO_DIMENSION_LABEL,
+};
 
 /**
  * A finished day whose written scorecard was never stored.
@@ -63,7 +74,7 @@ export function RunSummary({ run }: { run: StoredRun }) {
             <li key={dimension}>
               <div className="flex items-baseline gap-3">
                 <span className="text-[13.5px] font-medium text-hi">
-                  {DIMENSION_LABEL[dimension as Dimension] ?? dimension}
+                  {LABELS[dimension] ?? dimension}
                 </span>
                 <span className="ml-auto font-mono text-[15px] font-semibold text-hi tabular-nums">
                   {score}

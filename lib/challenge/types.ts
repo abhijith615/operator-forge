@@ -207,8 +207,14 @@ export interface SimulationState {
 
 /* ── Result ───────────────────────────────────────────────────────────── */
 
+/**
+ * `dimension` is a plain string rather than the Day 1 union because each day
+ * assesses its own set: Day 1 reads five operating dimensions, Day 2 reads six
+ * investigative ones. The label travels with the score so a stored result can
+ * be rendered years later without the reader knowing which day produced it.
+ */
 export interface CompetencyScore {
-  dimension: Dimension;
+  dimension: string;
   label: string;
   score: number;
   blurb: string;
@@ -226,9 +232,19 @@ export interface FeedbackItem {
   body: string;
 }
 
+/**
+ * What a finished day produces, whichever day it was.
+ *
+ * `band` is a string and `finalMetrics` is optional so days with different
+ * shapes can share one stored result, one leaderboard row and one save path.
+ * `day` says which set of rules produced the numbers, so a renderer never has
+ * to guess.
+ */
 export interface ChallengeResult {
+  day: number;
   score: number;
-  band: Band;
+  band: string;
+  bandRange: string;
   competencies: CompetencyScore[];
   signature: { name: string; blurb: string };
   strengths: FeedbackItem[];
@@ -237,6 +253,25 @@ export interface ChallengeResult {
   learned: FeedbackItem[];
   sopViolations: SopViolation[];
   decisionCount: number;
-  finalMetrics: Metrics;
+  /** Day 1 only — the store's board at the end of the shift. */
+  finalMetrics?: Metrics;
+  /** Day 2 only — the value reconciliation and investigation quality. */
+  forensics?: ForensicSummary;
   durationMs: number;
+}
+
+/** The Day 2 numbers a scorecard needs, flattened for storage. */
+export interface ForensicSummary {
+  originalVariance: number;
+  explainedValue: number;
+  recoveredValue: number;
+  unresolvedValue: number;
+  caseExposure: number;
+  caseExplainedUnits: number;
+  caseRecoveredUnits: number;
+  caseUnresolvedUnits: number;
+  evidenceEfficiency: number;
+  usefulActions: number;
+  totalActions: number;
+  unsupportedFindings: number;
 }

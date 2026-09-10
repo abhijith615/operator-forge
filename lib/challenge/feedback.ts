@@ -1,4 +1,10 @@
-import { bandFor, decisionSignature, scoreCompetencies, scoreOverall } from "./scoring";
+import {
+  BAND_RANGE,
+  bandFor,
+  decisionSignature,
+  scoreCompetencies,
+  scoreOverall,
+} from "./scoring";
 import type {
   ChallengeResult,
   CompetencyScore,
@@ -191,7 +197,7 @@ export function buildResult(state: SimulationState): ChallengeResult {
   const weakest = [...competencies]
     .sort((a, b) => a.score - b.score)
     .slice(0, 2)
-    .map((entry) => entry.dimension);
+    .map((entry) => entry.dimension as Dimension);
 
   const replay: string[] = [];
   for (const dimension of weakest) {
@@ -204,7 +210,7 @@ export function buildResult(state: SimulationState): ChallengeResult {
     );
   }
   while (replay.length < 3) {
-    const filler = REPLAY_BY_DIMENSION[weakest[0] ?? "priority"][1];
+    const filler = REPLAY_BY_DIMENSION[weakest[0] ?? "priority"]?.[1];
     if (!filler || replay.includes(filler)) break;
     replay.push(filler);
   }
@@ -214,9 +220,13 @@ export function buildResult(state: SimulationState): ChallengeResult {
     replay.push(extra);
   }
 
+  const band = bandFor(score);
+
   return {
+    day: 1,
     score,
-    band: bandFor(score),
+    band,
+    bandRange: BAND_RANGE[band],
     competencies,
     signature: decisionSignature(state, competencies),
     strengths: strengths.length > 0 ? strengths : fallbackStrength(competencies),

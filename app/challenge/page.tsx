@@ -36,9 +36,11 @@ const DAYS: Day[] = [
   },
   {
     day: 2,
-    title: "₹18,640 Has Disappeared",
-    teaser: "System says the stock exists. The shelf says it doesn't. You find out why.",
-    state: "locked",
+    title: "₹18,640 Is Missing",
+    teaser:
+      "01:47 AM. A lean-shift inventory audit turns up a variance nobody can explain. You establish what is actually on the shelf, rebuild the movement trail, and find out how much of it is really loss.",
+    href: "/challenge/day-2",
+    state: "live",
   },
   {
     day: 3,
@@ -244,9 +246,9 @@ export default function ChallengePage() {
 
             <Reveal delay={0.3}>
               <p className="mt-8 text-[12.5px] leading-relaxed text-faint">
-                Days 2–6 and the AMA are not built yet. Day 1 is complete and
-                playable now — finishing it is how you find out whether the rest
-                is worth your week.
+                Days 3–6 and the AMA are not built yet. Days 1 and 2 are complete
+                and playable now — finishing them is how you find out whether
+                the rest is worth your week.
               </p>
             </Reveal>
           </Container>

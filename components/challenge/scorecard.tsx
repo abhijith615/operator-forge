@@ -8,7 +8,6 @@ import { ArrowRight, ShieldAlert } from "lucide-react";
 import { CountUp } from "@/components/motion/count-up";
 import { Button } from "@/components/ui/button";
 import { DAY_TWO_TEASER } from "@/lib/challenge/day-one";
-import { BAND_RANGE } from "@/lib/challenge/scoring";
 import type { ChallengeResult } from "@/lib/challenge/types";
 import { easing } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -74,7 +73,7 @@ export function Scorecard({ result }: { result: ChallengeResult }) {
         </p>
         <p className="mt-3 text-[14px] font-medium text-ember-400">{result.band}</p>
         <p className="mt-1 font-mono text-[11px] text-faint">
-          Band range {BAND_RANGE[result.band]}
+          Band range {result.bandRange}
         </p>
         <p className="mt-4 border-t border-line pt-4 text-[11.5px] leading-relaxed text-faint">
           A practice assessment from a simulated shift. Not an employment

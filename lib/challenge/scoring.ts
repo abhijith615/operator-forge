@@ -88,7 +88,7 @@ export function scoreOverall(
   state: SimulationState,
 ): number {
   const weighted = competencies.reduce(
-    (sum, entry) => sum + entry.score * DAY_ONE_WEIGHTS[entry.dimension],
+    (sum, entry) => sum + entry.score * (DAY_ONE_WEIGHTS[entry.dimension as Dimension] ?? 0),
     0,
   );
 
