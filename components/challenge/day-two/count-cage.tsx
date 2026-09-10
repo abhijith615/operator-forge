@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
 import { Check, ScanLine } from "lucide-react";
 
 import { MoneyCounter, Reveal } from "@/components/challenge/day-two/ui";
 import { Button } from "@/components/ui/button";
 import { CAGE_UNITS, EARBUDS } from "@/lib/challenge/day-two/earbuds";
-import { rupees } from "@/lib/challenge/day-two/ledger";
+import { EARBUDS_ROW, rupees } from "@/lib/challenge/day-two/ledger";
 import { easing } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -98,21 +99,25 @@ export function CountCage({
                       : "border-line-strong bg-void/60 hover:border-ember-500/50 hover:bg-white/[0.03]",
                   )}
                 >
-                  {/* The box. Plain shapes, not an illustration. */}
+                  {/* The actual product. A cage full of the thing you are
+                      counting reads as inventory; a row of grey rectangles
+                      reads as a form. Unscanned units sit dimmed and
+                      desaturated so the shelf visibly fills as you work. */}
                   <span
                     aria-hidden
                     className={cn(
-                      "grid h-9 w-11 place-items-center rounded-[5px] border transition-colors",
+                      "relative size-11 overflow-hidden rounded-[6px] border transition-all duration-200",
                       isScanned
-                        ? "border-ion-500/50 bg-ion-500/15"
-                        : "border-line-bright bg-raised",
+                        ? "border-ion-500/50"
+                        : "border-line-bright opacity-45 saturate-[0.35]",
                     )}
                   >
-                    <span
-                      className={cn(
-                        "h-3.5 w-6 rounded-[2px] border",
-                        isScanned ? "border-ion-500/50" : "border-line-bright",
-                      )}
+                    <Image
+                      src={EARBUDS_ROW.photo}
+                      alt=""
+                      width={88}
+                      height={88}
+                      className="size-full object-cover"
                     />
                   </span>
 

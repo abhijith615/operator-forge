@@ -18,7 +18,9 @@ import {
 import { ActionBoard } from "@/components/challenge/day-two/action-board";
 import { CountCage } from "@/components/challenge/day-two/count-cage";
 import { EvidenceTray } from "@/components/challenge/day-two/evidence-tray";
-import { LedgerBoard, NextCases } from "@/components/challenge/day-two/ledger-board";
+import { AuditQueue } from "@/components/challenge/day-two/audit-queue";
+import { CasePanel } from "@/components/challenge/day-two/case-panel";
+import { LedgerBoard } from "@/components/challenge/day-two/ledger-board";
 import { Reconciliation } from "@/components/challenge/day-two/reconciliation";
 import { Day2Scorecard } from "@/components/challenge/day-two/scorecard";
 import {
@@ -54,7 +56,13 @@ import {
   viewCctvMarker,
 } from "@/lib/challenge/day-two/engine";
 import { buildDay2Result, caseInsight } from "@/lib/challenge/day-two/feedback";
-import { DAY_TWO_BRIEF, auditClock, rupees } from "@/lib/challenge/day-two/ledger";
+import {
+  DAY_TWO_BRIEF,
+  EARBUDS_ROW,
+  LOSS_ROWS,
+  auditClock,
+  rupees,
+} from "@/lib/challenge/day-two/ledger";
 import { MANAGER_BRIEF, TOOL_META } from "@/lib/challenge/day-two/earbuds";
 import type { CaseState, Day2Tool, FindingId } from "@/lib/challenge/day-two/types";
 import { logEvent } from "@/lib/challenge/telemetry";
@@ -90,10 +98,14 @@ export function DayTwoSimulation({ operatorName }: { operatorName: string }) {
   const [trayOpen, setTrayOpen] = React.useState(false);
   const [result, setResult] = React.useState<ChallengeResult | null>(null);
   const [showScorecard, setShowScorecard] = React.useState(false);
+  /** Which line of the variance report is open in the queue. */
+  const [selectedCase, setSelectedCase] = React.useState<string>("earbuds");
   const reduced = useReducedMotion();
 
   const ledger = caseLedger(state);
   const master = masterLedger(state);
+  /** Signed cases. Only the earbuds case is playable in this release. */
+  const completedIds = state.stage === "complete" ? ["earbuds"] : [];
 
   /**
    * Every transition goes through here.
@@ -285,6 +297,9 @@ export function DayTwoSimulation({ operatorName }: { operatorName: string }) {
               {state.stage === "brief" ? (
                 <Brief
                   master={master}
+                  selectedId={selectedCase}
+                  onSelect={setSelectedCase}
+                  completedIds={completedIds}
                   onOpenCase={openCase}
                 />
               ) : state.stage === "count" ? (
@@ -339,15 +354,26 @@ export function DayTwoSimulation({ operatorName }: { operatorName: string }) {
 
                   <LedgerBoard
                     master={master}
-                    caseComplete
-                    caseSummary={{
-                      accountedUnits: ledger.explainedUnits + ledger.recoveredUnits,
-                      unresolvedValue: ledger.unresolvedValue,
-                    }}
-                    onOpenCase={() => undefined}
+                    selectedId="earbuds"
+                    onSelect={() => undefined}
+                    completedIds={completedIds}
                   />
 
-                  <NextCases unresolvedValue={master.unresolvedValue} />
+                  <section className="rounded-card border border-line border-dashed bg-surface p-5">
+                    <p className="font-mono text-[10px] tracking-[0.2em] text-lo uppercase">
+                      Remaining cases
+                    </p>
+                    <p className="mt-2.5 text-[13px] leading-relaxed text-mid">
+                      Three SKUs and {rupees(master.unresolvedValue - ledger.unresolvedValue)}{" "}
+                      are still unreconciled: a pack-size drift, an open-shelf
+                      shrinkage and a short-life dump posting. Each is its own
+                      investigation.
+                    </p>
+                    <p className="mt-3 text-[12px] leading-relaxed text-faint">
+                      Those cases are not built yet. The earbuds case is complete
+                      and is the one that carries the method.
+                    </p>
+                  </section>
 
                   <Button
                     variant="primary"
@@ -451,23 +477,39 @@ function Header({
 
 /* ── Brief ────────────────────────────────────────────────────────────── */
 
+/**
+ * The Day 2 landing surface: the audit queue beside the loss ledger.
+ *
+ * The operator picks which line to open. Only the earbuds case is built, and
+ * the queue says so on the cards that are not — but the choice is genuinely
+ * theirs, and going at the ₹11,997 secure cage before the ₹1,072 of milk is
+ * the whole of prioritisation.
+ */
 function Brief({
   master,
+  selectedId,
+  onSelect,
+  completedIds,
   onOpenCase,
 }: {
   master: ReturnType<typeof masterLedger>;
+  selectedId: string;
+  onSelect: (id: string) => void;
+  completedIds: string[];
   onOpenCase: () => void;
 }) {
+  const row = LOSS_ROWS.find((r) => r.id === selectedId) ?? EARBUDS_ROW;
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <section>
         <p className="font-mono text-[10px] tracking-[0.2em] text-alert-500 uppercase">
           Day 2 · {DAY_TWO_BRIEF.clock} · {DAY_TWO_BRIEF.store}
         </p>
-        <h1 className="mt-2.5 text-[clamp(1.8rem,4.5vw,2.6rem)] leading-[1.05] font-semibold tracking-[-0.04em] text-hi">
+        <h1 className="mt-2.5 text-[clamp(1.7rem,4vw,2.4rem)] leading-[1.05] font-semibold tracking-[-0.04em] text-hi">
           {rupees(master.totalOriginalVariance)} is missing.
         </h1>
-        <p className="mt-3 max-w-prose text-[15px] leading-relaxed text-mid">
+        <p className="mt-2.5 max-w-prose text-[14.5px] leading-relaxed text-mid">
           {DAY_TWO_BRIEF.subtitle}
         </p>
       </section>
@@ -485,12 +527,35 @@ function Brief({
         </div>
       </section>
 
-      <LedgerBoard
-        master={master}
-        caseComplete={false}
-        caseSummary={null}
-        onOpenCase={onOpenCase}
-      />
+      {/* Queue and ledger, side by side above xl. */}
+      <div className="grid gap-3 xl:grid-cols-[320px_minmax(0,1fr)]">
+        <aside
+          aria-label="Audit queue"
+          className="self-start rounded-card border border-line bg-surface"
+        >
+          <AuditQueue
+            selectedId={selectedId}
+            onSelect={onSelect}
+            completedIds={completedIds}
+          />
+        </aside>
+
+        <div className="min-w-0 space-y-3">
+          <CasePanel
+            row={row}
+            completed={completedIds.includes(row.id)}
+            summary={null}
+            onOpen={onOpenCase}
+            onOpenEarbuds={() => onSelect("earbuds")}
+          />
+          <LedgerBoard
+            master={master}
+            selectedId={selectedId}
+            onSelect={onSelect}
+            completedIds={completedIds}
+          />
+        </div>
+      </div>
     </div>
   );
 }

@@ -6,87 +6,101 @@ import type { MasterLedger } from "./types";
  * Every line here is arithmetically true and the lines sum to the headline.
  * That sounds like a low bar until you consider what this day assesses: an
  * audit whose own totals do not reconcile teaches the opposite of the lesson.
- * If any of these numbers change, `DAY_TWO_TOTAL_VARIANCE` must be recomputed
- * from the rows rather than edited — which is what the export below does.
+ * `DAY_TWO_TOTAL_VARIANCE` is derived from the rows rather than typed, so the
+ * two cannot drift apart when a line changes.
  */
 
-export type CaseStatus = "open" | "investigating" | "escalated" | "closed";
+export type CaseSeverity = "critical" | "medium";
 
 export interface LossRow {
   id: string;
   product: string;
+  /** Short name for the audit queue card. */
+  caseTitle: string;
   /** Negative: physical is short of system. */
   qtyVariance: number;
   unitValue: number;
   group: string;
-  /** Only the earbuds case is playable in this build. */
+  /** Left-hand chip on the queue card. */
+  category: string;
+  severity: CaseSeverity;
+  /** Square product photo in /public/products. */
+  photo: string;
+  /** Alt text. Describes the item, not the brand's marketing. */
+  photoAlt: string;
+  /** Only the earbuds case is built in this release. */
   playable: boolean;
   note: string;
+  /** Shown on the case panel for the cases that are not built yet. */
+  approach: string;
 }
 
 export const LOSS_ROWS: LossRow[] = [
   {
     id: "earbuds",
     product: "Wireless Earbuds",
+    caseTitle: "Wireless Earbuds variance",
     qtyVariance: -3,
     unitValue: 3999,
-    group: "Electronics · Secure cage",
+    group: "Electronics",
+    category: "High value",
+    severity: "critical",
+    photo: "/products/earbuds.webp",
+    photoAlt: "A pair of wireless earbuds with their charging case",
     playable: true,
     note: "Secure cage count is short by 3 units.",
+    approach:
+      "Count the cage, rebuild the movement trail and find out how much of this is really loss.",
+  },
+  {
+    id: "biscuits",
+    product: "Parle-G 30g / 40g",
+    caseTitle: "Parle-G 30g vs 40g mismatch",
+    // A drift measured in hundreds of units is what SKU confusion looks like on
+    // a fast-moving line: cheap per unit, expensive in aggregate.
+    qtyVariance: -303,
+    unitValue: 12,
+    group: "Packaged food",
+    category: "SKU drift",
+    severity: "medium",
+    photo: "/products/biscuits.webp",
+    photoAlt: "A pack of Parle-G biscuits",
+    playable: false,
+    note: "System and physical counts are diverging across similar SKUs.",
+    approach:
+      "Two pack sizes that scan alike. The work is separating a picking error from a master-data error.",
   },
   {
     id: "face-wash",
     product: "Face Wash 100ml",
+    caseTitle: "Face wash shelf variance",
     qtyVariance: -9,
     unitValue: 215,
     group: "Personal care",
+    category: "Shrinkage",
+    severity: "medium",
+    photo: "/products/face-wash.webp",
+    photoAlt: "A 100ml tube of neem face wash",
     playable: false,
-    note: "Shelf and system counts have drifted across similar pack sizes.",
-  },
-  {
-    id: "eggs",
-    product: "Eggs 12 Pack",
-    qtyVariance: -18,
-    unitValue: 92,
-    group: "Fresh food",
-    playable: false,
-    note: "Damage and dump posting not reconciled against the shelf.",
+    note: "Small, high-margin units missing from an open shelf.",
+    approach:
+      "Open-shelf units with no cage and no scan trail. Returns, damages and shelf recovery all have to be ruled out first.",
   },
   {
     id: "milk",
     product: "Fresh Milk 1L",
+    caseTitle: "Fresh milk short-life loss",
     qtyVariance: -16,
     unitValue: 67,
     group: "Fresh food",
+    category: "Perishables",
+    severity: "medium",
+    photo: "/products/fresh-milk.webp",
+    photoAlt: "A one litre carton of fresh milk",
     playable: false,
     note: "Short-life stock with no recorded dump against expiry.",
-  },
-  {
-    id: "cold-drink",
-    product: "Cold Drink Can 300ml",
-    qtyVariance: -24,
-    unitValue: 40,
-    group: "Beverages",
-    playable: false,
-    note: "High-velocity SKU with repeated single-unit picking errors.",
-  },
-  {
-    id: "bread",
-    product: "Bread Loaf",
-    qtyVariance: -10,
-    unitValue: 52,
-    group: "Bakery",
-    playable: false,
-    note: "Returns and damage posted to the wrong location.",
-  },
-  {
-    id: "oil",
-    product: "Cooking Oil 1L",
-    qtyVariance: -2,
-    unitValue: 250,
-    group: "Packaged food",
-    playable: false,
-    note: "Two units unaccounted for after an inbound receiving correction.",
+    approach:
+      "Perishable variance is usually a posting failure rather than a missing carton. The dump log is where this one starts.",
   },
 ];
 
@@ -106,12 +120,16 @@ export const HIGH_VALUE_EXPOSURE = LOSS_ROWS.filter(
 
 export const EARBUDS_ROW = LOSS_ROWS.find((row) => row.id === "earbuds")!;
 
+/** Share of the night's variance a line represents, for the contribution bars. */
+export function lossShare(row: LossRow): number {
+  return (lossValue(row) / DAY_TWO_TOTAL_VARIANCE) * 100;
+}
+
 /* ── Money ────────────────────────────────────────────────────────────── */
 
 /**
- * Indian digit grouping — 18,640 not 18,640 by luck. `en-IN` puts the commas
- * in the places the store's own paperwork puts them, which matters on a screen
- * that is asking somebody to trust its arithmetic.
+ * Indian digit grouping. The commas land where the store's own paperwork puts
+ * them, which matters on a screen asking somebody to trust its arithmetic.
  */
 export function rupees(value: number): string {
   return `₹${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value)}`;
