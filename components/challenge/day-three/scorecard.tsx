@@ -7,6 +7,7 @@ import { AlertTriangle, ArrowRight, Check } from "lucide-react";
 
 import { CountUp } from "@/components/motion/count-up";
 import { Button } from "@/components/ui/button";
+import { DAY_FOUR_TEASER } from "@/lib/challenge/day-four/scenario";
 import { logEvent } from "@/lib/challenge/telemetry";
 import type { ChallengeResult } from "@/lib/challenge/types";
 import { rupees } from "@/lib/challenge/day-two/ledger";
@@ -227,6 +228,21 @@ export function Day3Scorecard({ result }: { result: ChallengeResult }) {
               </li>
             ))}
           </ul>
+        </section>
+
+        {/* ── Day 4 ── */}
+        <section className="rounded-card border border-ember-500/30 bg-elevated p-6">
+          <p className="font-mono text-[10px] tracking-[0.2em] text-ember-500 uppercase">{DAY_FOUR_TEASER.eyebrow}</p>
+          <p className="mt-3 text-[22px] leading-tight font-semibold tracking-[-0.03em] text-hi">
+            {DAY_FOUR_TEASER.headline}
+          </p>
+          <p className="mt-2 text-[13.5px] leading-relaxed text-mid">{DAY_FOUR_TEASER.body}</p>
+          <Button asChild variant="secondary" size="md" className="mt-4">
+            <Link href="/challenge/day-4">
+              Open Day 4
+              <ArrowRight />
+            </Link>
+          </Button>
         </section>
 
         <div className="space-y-2.5">

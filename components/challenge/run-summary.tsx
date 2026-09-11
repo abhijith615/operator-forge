@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { BAND_RANGE } from "@/lib/challenge/scoring";
+import { DAY_FOUR_DIMENSION_LABEL } from "@/lib/challenge/day-four/types";
 import { DAY_THREE_DIMENSION_LABEL } from "@/lib/challenge/day-three/types";
 import { DAY_TWO_DIMENSION_LABEL } from "@/lib/challenge/day-two/types";
 import { DIMENSION_LABEL, type Band } from "@/lib/challenge/types";
@@ -16,6 +17,7 @@ const LABELS: Record<string, string> = {
   ...DIMENSION_LABEL,
   ...DAY_TWO_DIMENSION_LABEL,
   ...DAY_THREE_DIMENSION_LABEL,
+  ...DAY_FOUR_DIMENSION_LABEL,
 };
 
 /**

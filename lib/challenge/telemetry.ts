@@ -87,7 +87,27 @@ export type ChallengeEventName =
   | "audit_rescheduled"
   | "shift_plan_locked"
   | "peak_simulation_started"
-  | "day3_completed";
+  | "day3_completed"
+  /* ── Day 4 · Clear the Floor ── */
+  | "day4_started"
+  | "zone_inspected"
+  | "bottleneck_marked"
+  | "vehicle_sequence_changed"
+  | "vehicle_held"
+  | "vehicle_unload_started"
+  | "batch_qc_started"
+  | "batch_qc_completed"
+  | "batch_grn_completed"
+  | "batch_putaway_started"
+  | "batch_pick_ready"
+  | "quality_issue_found"
+  | "quality_action_selected"
+  | "aisle_clearance_started"
+  | "aisle_cleared"
+  | "recovery_action_assigned"
+  | "recovery_plan_locked"
+  | "recovery_executed"
+  | "day4_completed";
 
 export interface ChallengeEvent {
   name: ChallengeEventName;

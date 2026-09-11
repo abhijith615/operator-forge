@@ -53,9 +53,11 @@ const DAYS: Day[] = [
   },
   {
     day: 4,
-    title: "Cold Chain",
-    teaser: "A chiller fails at the worst possible hour, and nobody logged it.",
-    state: "locked",
+    title: "Clear the Floor",
+    teaser:
+      "10:18 AM. Three vehicles have arrived, staging is nearly full and pickers are walking round Aisle C. Find the real bottleneck and get the store ready before lunch.",
+    href: "/challenge/day-4",
+    state: "live",
   },
   {
     day: 5,
@@ -249,7 +251,7 @@ export default function ChallengePage() {
 
             <Reveal delay={0.3}>
               <p className="mt-8 text-[12.5px] leading-relaxed text-faint">
-                Days 4–6 and the AMA are not built yet. Days 1 to 3 are complete
+                Days 5–6 and the AMA are not built yet. Days 1 to 4 are complete
                 and playable now — finishing them is how you find out whether
                 the rest is worth your week.
               </p>

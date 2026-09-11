@@ -259,7 +259,37 @@ export interface ChallengeResult {
   forensics?: ForensicSummary;
   /** Day 3 only — the peak plan, what it did, and how it was built. */
   workforce?: WorkforceSummary;
+  /** Day 4 only — the floor before and after, and how it was cleared. */
+  flow?: FlowSummary;
   durationMs: number;
+}
+
+/** The Day 4 numbers a scorecard needs, flattened for storage. */
+export interface FlowSummary {
+  outcome: {
+    title: "FLOOR CLEARED" | "FLOOR STABILISED" | "FLOOR UNDER PRESSURE";
+    peakReady: boolean;
+    congestion: { from: number; to: number };
+    routeDelay: { from: number; to: number };
+    pickReady: { from: number; to: number };
+    ctd: { from: number; to: number };
+    priorityReadiness: number;
+    qcFlags: number;
+    quarantined: number;
+  };
+  metrics: {
+    flowEfficiency: number;
+    bottleneckAccuracy: "Strong" | "Moderate" | "Weak";
+    congestionMinutes: number;
+    congestionShare: number;
+    priorityReadiness: number;
+    sopIntegrity: number;
+  };
+  timeline: { time: string; tone: "good" | "warn"; text: string }[];
+  bestCall: FeedbackItem | null;
+  developmentArea: { area: string; body: string };
+  operatorCompetencies: Record<string, number>;
+  lockedByClock: boolean;
 }
 
 /** The Day 3 numbers a scorecard needs, flattened for storage. */
