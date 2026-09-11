@@ -30,7 +30,21 @@ export function ExplainerVideo({
   className?: string;
 }) {
   const [failed, setFailed] = React.useState(false);
+  const videoRef = React.useRef<HTMLVideoElement>(null);
   const { source, title } = video;
+
+  // The <video> arrives in the server HTML and starts loading before React
+  // hydrates. If the source fails fast — a missing file answers in a few
+  // milliseconds — the error event fires before `onError` is attached and is
+  // lost, leaving an empty player. So check the element's own state once we
+  // are attached, as well as listening for later failures.
+  React.useEffect(() => {
+    const element = videoRef.current;
+    if (!element) return;
+    if (element.error || element.networkState === HTMLMediaElement.NETWORK_NO_SOURCE) {
+      setFailed(true);
+    }
+  }, []);
 
   return (
     <div
@@ -49,6 +63,7 @@ export function ExplainerVideo({
         />
       ) : source.kind === "file" && !failed ? (
         <video
+          ref={videoRef}
           // `#t=0.1` asks the browser to paint a first frame, so the player
           // shows a picture before play rather than a black box.
           src={`${source.src}#t=0.1`}

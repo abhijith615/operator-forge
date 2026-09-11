@@ -565,3 +565,16 @@ $$;
 revoke all on function public.challenge_standing(integer) from public;
 revoke all on function public.challenge_standing(integer) from anon;
 grant execute on function public.challenge_standing(integer) to authenticated;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Challenge explainer videos
+--
+-- A public bucket, so the Day 1 / Day 2 players can stream by URL with no
+-- session. No insert, update or delete policy exists for it: uploads are an
+-- admin action done from the dashboard (or a short-lived, name-scoped policy
+-- dropped straight after), never something the app's anon key can do.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('challenge-videos', 'challenge-videos', true, 104857600, array['video/mp4'])
+on conflict (id) do nothing;
