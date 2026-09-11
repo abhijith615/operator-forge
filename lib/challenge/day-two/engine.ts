@@ -8,6 +8,8 @@ import {
   ORDERS,
 } from "./earbuds";
 import { masterFrom } from "./ledger";
+import { pgExplainedValue } from "./parleg/engine";
+import type { ParleGState } from "./parleg/types";
 import {
   emptyDay2Signals,
   type ActionLane,
@@ -84,6 +86,21 @@ export function caseLedger(state: CaseState): CaseLedger {
 export function masterLedger(state: CaseState) {
   const ledger = caseLedger(state);
   return masterFrom(ledger.explainedValue, ledger.recoveredValue);
+}
+
+/**
+ * The day's ledger, across both cases. Case 02 contributes to "explained" and
+ * never to "recovered": the forty-gram packs genuinely left the store, so its
+ * ₹85 is a record that did not follow the stock — the same category as Case
+ * 01's unscanned unit. Its 34 corrected record units are reported separately
+ * and never enter this arithmetic.
+ */
+export function dayMaster(state: CaseState, parleg: ParleGState | null) {
+  const ledger = caseLedger(state);
+  return masterFrom(
+    ledger.explainedValue + (parleg ? pgExplainedValue(parleg) : 0),
+    ledger.recoveredValue,
+  );
 }
 
 /* ── Signal plumbing ──────────────────────────────────────────────────── */

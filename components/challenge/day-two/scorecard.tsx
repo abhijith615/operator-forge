@@ -13,19 +13,42 @@ import type { ChallengeResult } from "@/lib/challenge/types";
 import { easing } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
+const EARBUDS_WORK = [
+  "A physical count of a secure cage, taken rather than assumed",
+  "A movement trail rebuilt from the system's own record",
+  "An order that completed without its high-value scan",
+  "A camera window covering the moment stock left the cage",
+  "Cancelled-order stock standing in an exception tote",
+  "A plan for the unit nobody could account for",
+];
+
+const PARLEG_WORK = [
+  "Two adjacent shelves counted, and one pattern read across them",
+  "A pick log filtered down to the scans that never happened",
+  "A wrong-size pick rebuilt from a single transaction",
+  "Two SKUs reconciled, and the control that bent them put back",
+];
+
 /**
  * The Day 2 scorecard.
  *
- * It leads with the value reconciliation rather than the score, because the
+ * It leads with the reconciliation rather than the score, because the
  * reconciliation is the thing the learner actually produced and the score is
- * our reading of it. The two new Day 2 metrics — evidence efficiency and
- * unsupported conclusions — are reported as ratios rather than folded silently
- * into the headline: they measure how the work was done, and a learner should
- * be able to see the working.
+ * our reading of it. Money and records are reported separately: the value
+ * split never includes record units, and record units are never shown in
+ * rupees. Dimensions only Case 02 reads are listed as not reached when it was
+ * not reached, rather than scored as zero.
  */
 export function Day2Scorecard({ result }: { result: ChallengeResult }) {
   const reduced = useReducedMotion();
   const f = result.forensics;
+  const pg = f?.parleg;
+
+  const heading = f?.timedOut
+    ? "The clock closed the audit."
+    : pg?.reconciled
+      ? "You worked tonight's variances to the bottom."
+      : "You reconciled a high-value variance.";
 
   return (
     <div className="min-h-dvh bg-obsidian">
@@ -35,19 +58,10 @@ export function Day2Scorecard({ result }: { result: ChallengeResult }) {
             {f?.timedOut ? "Day 2 · Audit closed at time" : "Day 2 · Audit signed"}
           </p>
           <h1 className="mt-2 text-[26px] leading-tight font-semibold tracking-[-0.03em] text-hi">
-            {f?.timedOut
-              ? "The clock closed the audit."
-              : "You reconciled a high-value variance."}
+            {heading}
           </h1>
           <ul className="mt-4 space-y-1.5 text-[13px] leading-relaxed text-mid">
-            {[
-              "A physical count of a secure cage, taken rather than assumed",
-              "A movement trail rebuilt from the system's own record",
-              "An order that completed without its high-value scan",
-              "A camera window covering the moment stock left the cage",
-              "Cancelled-order stock standing in an exception tote",
-              "A plan for the unit nobody could account for",
-            ].map((line) => (
+            {[...EARBUDS_WORK, ...(pg ? PARLEG_WORK : [])].map((line) => (
               <li key={line} className="flex gap-2">
                 <span aria-hidden className="text-ember-500">
                   ·
@@ -58,16 +72,15 @@ export function Day2Scorecard({ result }: { result: ChallengeResult }) {
           </ul>
         </section>
 
-        {/* ── The reconciliation, before the score ── */}
+        {/* ── Money, before the score ── */}
         {f ? (
           <section>
             <h2 className="font-mono text-[10px] tracking-[0.18em] text-lo uppercase">
               Value accounted for
             </h2>
             <p className="mt-2 mb-3.5 text-[12.5px] leading-relaxed text-mid">
-              Opened at {rupees(f.originalVariance)} across the lines that did
-              not match. These three are different outcomes and are never added
-              together.
+              Opened at {rupees(f.originalVariance)} across the lines that did not
+              match. These three are different outcomes and are never added together.
             </p>
             <DispositionSplit
               explained={f.explainedValue}
@@ -75,10 +88,67 @@ export function Day2Scorecard({ result }: { result: ChallengeResult }) {
               unresolved={f.unresolvedValue}
             />
             <p className="mt-3 text-[11.5px] leading-relaxed text-faint">
-              Of the earbuds case specifically: {f.caseExplainedUnits} explained,{" "}
-              {f.caseRecoveredUnits} recovered, {f.caseUnresolvedUnits} unresolved
-              against an exposure of {rupees(f.caseExposure)}.
+              Earbuds: {f.caseExplainedUnits} explained, {f.caseRecoveredUnits} recovered,{" "}
+              {f.caseUnresolvedUnits} unresolved against an exposure of {rupees(f.caseExposure)}.
+              {pg
+                ? pg.rootCauseEstablished && pg.reconciled
+                  ? ` Parle-G: ${rupees(pg.netValueImpact)} explained as wrong-size picking.`
+                  : ` Parle-G: ${rupees(pg.netValueImpact)} still unexplained — the cause was not established.`
+                : ""}
             </p>
+          </section>
+        ) : null}
+
+        {/* ── Records, beside the money ── */}
+        {pg ? (
+          <section>
+            <h2 className="font-mono text-[10px] tracking-[0.18em] text-lo uppercase">
+              Inventory records
+            </h2>
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              <div
+                className={cn(
+                  "rounded-card border bg-surface p-4",
+                  pg.reconciled ? "border-ion-500/35" : "border-warn-500/40",
+                )}
+              >
+                <p className="font-mono text-[10px] tracking-[0.14em] text-lo uppercase">
+                  Record units corrected
+                </p>
+                <p
+                  data-readout
+                  className={cn(
+                    "mt-2 text-[24px] leading-none font-semibold tabular-nums",
+                    pg.reconciled ? "text-ion-400" : "text-warn-500",
+                  )}
+                >
+                  {pg.recordUnitsCorrected}
+                  <span className="text-[15px] text-lo">/{pg.recordUnitsAffected}</span>
+                </p>
+              </div>
+              <div className="rounded-card border border-line bg-surface p-4">
+                <p className="font-mono text-[10px] tracking-[0.14em] text-lo uppercase">
+                  Transactions affected
+                </p>
+                <p data-readout className="mt-2 text-[24px] leading-none font-semibold text-hi tabular-nums">
+                  {pg.affectedTransactions}
+                </p>
+              </div>
+              <div className="rounded-card border border-line bg-surface p-4">
+                <p className="font-mono text-[10px] tracking-[0.14em] text-lo uppercase">
+                  Preventive controls
+                </p>
+                {pg.preventiveControls.length > 0 ? (
+                  <ul className="mt-2 space-y-1 text-[12px] leading-snug text-mid">
+                    {pg.preventiveControls.map((control) => (
+                      <li key={control}>{control}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-2 text-[12.5px] text-warn-500">None selected</p>
+                )}
+              </div>
+            </div>
           </section>
         ) : null}
 
@@ -95,16 +165,13 @@ export function Day2Scorecard({ result }: { result: ChallengeResult }) {
             <span className="text-[22px] text-lo">/100</span>
           </p>
           <p className="mt-3 text-[14px] font-medium text-ember-400">{result.band}</p>
-          <p className="mt-1 font-mono text-[11px] text-faint">
-            Band range {result.bandRange}
-          </p>
+          <p className="mt-1 font-mono text-[11px] text-faint">Band range {result.bandRange}</p>
           <p className="mt-4 border-t border-line pt-4 text-[11.5px] leading-relaxed text-faint">
-            A practice assessment from a simulated audit. Not an employment
-            certification.
+            A practice assessment from a simulated audit. Not an employment certification.
           </p>
         </section>
 
-        {/* ── Day 2 metrics ── */}
+        {/* ── How the work was done ── */}
         {f ? (
           <section>
             <h2 className="font-mono text-[10px] tracking-[0.18em] text-lo uppercase">
@@ -113,7 +180,7 @@ export function Day2Scorecard({ result }: { result: ChallengeResult }) {
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               <div className="rounded-card border border-line bg-surface p-4">
                 <p className="font-mono text-[10px] tracking-[0.14em] text-lo uppercase">
-                  Evidence efficiency
+                  Evidence efficiency · Case 01
                 </p>
                 <p
                   data-readout
@@ -126,9 +193,9 @@ export function Day2Scorecard({ result }: { result: ChallengeResult }) {
                   </span>
                 </p>
                 <p className="mt-2 text-[11.5px] leading-relaxed text-faint">
-                  Records you opened that could move the case, over everything
-                  you opened. Not folded into the score — reading widely and
-                  arriving at the truth is not a failure.
+                  Records you opened that could move the case, over everything you opened. Not
+                  folded into the score — reading widely and arriving at the truth is not a
+                  failure.
                 </p>
               </div>
 
@@ -151,8 +218,8 @@ export function Day2Scorecard({ result }: { result: ChallengeResult }) {
                   {f.unsupportedFindings}
                 </p>
                 <p className="mt-2 text-[11.5px] leading-relaxed text-faint">
-                  Findings you committed to before the tray held the records
-                  that support them. This one does affect the score.
+                  Findings you committed to before the tray held the records that support them.
+                  This one does affect the score.
                 </p>
               </div>
             </div>
@@ -167,9 +234,7 @@ export function Day2Scorecard({ result }: { result: ChallengeResult }) {
           <p className="mt-2 text-[19px] leading-tight font-semibold tracking-[-0.02em] text-hi">
             {result.signature.name}
           </p>
-          <p className="mt-2 text-[13px] leading-relaxed text-mid">
-            {result.signature.blurb}
-          </p>
+          <p className="mt-2 text-[13px] leading-relaxed text-mid">{result.signature.blurb}</p>
         </section>
 
         {/* ── Competencies ── */}
@@ -212,6 +277,12 @@ export function Day2Scorecard({ result }: { result: ChallengeResult }) {
               </li>
             ))}
           </ul>
+          {f?.dimensionsNotReached && f.dimensionsNotReached.length > 0 ? (
+            <p className="mt-4 rounded-card border border-line border-dashed px-4 py-3 text-[12px] leading-relaxed text-faint">
+              Not read on this run: {f.dimensionsNotReached.join(", ")}. Case 02 assesses these,
+              and it was not reached — they are left out of the score, not scored as zero.
+            </p>
+          ) : null}
         </section>
 
         {result.strengths.length > 0 ? (

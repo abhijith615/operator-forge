@@ -1,12 +1,15 @@
-import { day2Metrics, efficiencyTags } from "./engine";
+import { day2Metrics, dayMaster, efficiencyTags } from "./engine";
 import { EARBUDS_ROW, lossShare, rupees } from "./ledger";
+import { AFFECTED_PICKS, NET_VALUE_IMPACT, RECORD_UNITS_AFFECTED } from "./parleg/content";
+import { pgPreventiveControls, pgReached, pgRecordUnitsCorrected } from "./parleg/engine";
+import { OVERREACH_TAGS } from "./parleg/scoring";
+import type { ParleGState, PgTag } from "./parleg/types";
 import {
   breachesIn,
   DAY_TWO_BAND_RANGE,
   day2Band,
   day2Signature,
-  scoreDay2Competencies,
-  scoreDay2Overall,
+  scoreDay2,
 } from "./scoring";
 import type { CaseState, Day2Tag } from "./types";
 import type { ChallengeResult, FeedbackItem } from "../types";
@@ -14,17 +17,25 @@ import type { ChallengeResult, FeedbackItem } from "../types";
 /**
  * Day 2 feedback.
  *
- * Every line is gated on tags the run actually produced, and the case insight
- * quotes the learner's own numbers back at them. Generic encouragement is
- * worse than silence here — the entire value of a forensics exercise is being
- * told what *you* did, and "good investigative thinking!" is what a simulation
- * says when it has not been watching.
+ * Every line is gated on tags the run actually produced, and the case insights
+ * quote the learner's own numbers back at them. Generic encouragement is worse
+ * than silence here — the entire value of a forensics exercise is being told
+ * what *you* did, and "good investigative thinking!" is what a simulation says
+ * when it has not been watching. Each case keeps its own pool, so a line about
+ * the secure cage can never fire because of something done at the biscuit bay.
  */
 
 interface Gated {
   when: (has: (tag: Day2Tag) => boolean, state: CaseState) => boolean;
   item: FeedbackItem;
 }
+
+interface PgGated {
+  when: (has: (tag: PgTag) => boolean, state: ParleGState) => boolean;
+  item: FeedbackItem;
+}
+
+/* ── Case 01 ──────────────────────────────────────────────────────────── */
 
 const STRENGTHS: Gated[] = [
   {
@@ -144,6 +155,85 @@ const GAPS: Gated[] = [
   },
 ];
 
+/* ── Case 02 ──────────────────────────────────────────────────────────── */
+
+const PG_STRENGTHS: PgGated[] = [
+  {
+    when: (has) => has("mirrored_variance_recognised") && has("both_skus_verified"),
+    item: {
+      title: "You saw one event where the report showed two",
+      body: "+17 on one bin and −17 on the next reads as two problems on a variance report. You counted both shelves and read them as one.",
+    },
+  },
+  {
+    when: (has) => has("scan_gap_identified") && has("wrong_size_pick_identified"),
+    item: {
+      title: "You found the control behind the pick",
+      body: "The order record said 30 g every time. The scan log showed the product was never scanned — which is exactly why the record could say 30 g while a 40 g pack left.",
+    },
+  },
+  {
+    when: (has) => has("scan_control_selected") && has("shelf_separation_selected"),
+    item: {
+      title: "You fixed the mechanism, not only its output",
+      body: "Correcting the counts closes tonight's variance. A mandatory product scan and physically separated pack sizes are what stop it rebuilding.",
+    },
+  },
+  {
+    when: (has) => has("record_impact_understood") && has("financial_impact_understood"),
+    item: {
+      title: "You sized the problem correctly",
+      body: `${rupees(NET_VALUE_IMPACT)} is small. ${RECORD_UNITS_AFFECTED} wrong record units are not: they are tomorrow's nil picks and a replenishment order sized to stock that is not there.`,
+    },
+  },
+];
+
+const PG_GAPS: PgGated[] = [
+  {
+    when: (has) => has("corrected_without_cause"),
+    item: {
+      title: "You changed the numbers before you knew why they moved",
+      body: "Both Parle-G records now match the shelf. The pick process that bent them has not changed, so the drift will rebuild — and the next audit will find it without the trail you had tonight.",
+    },
+  },
+  {
+    when: (has) => has("blind_writeoff"),
+    item: {
+      title: "You wrote off stock that was on the shelf",
+      body: `Every unit was accounted for — ${AFFECTED_PICKS} extra on one bin, ${AFFECTED_PICKS} missing from the next. A write-off books a loss for inventory the store still holds.`,
+    },
+  },
+  {
+    when: (has) => OVERREACH_TAGS.some(has) && !has("blind_writeoff"),
+    item: {
+      title: "Your controls were wider than the problem",
+      body: "One pair of adjacent SKUs and one skippable scan step. Stopping picking, delisting the product or recounting the store all cost more than the drift they answer.",
+    },
+  },
+  {
+    when: (has, state) =>
+      state.reconciled && !has("scan_control_selected") && !has("corrected_without_cause"),
+    item: {
+      title: "The barcode gap is still open",
+      body: `You reconciled both SKUs, but nothing in your plan makes the product scan mandatory. The ${AFFECTED_PICKS} picks got through because that step could be skipped, and it still can.`,
+    },
+  },
+  {
+    when: (has) => has("flow_needed_retries"),
+    item: {
+      title: "The two directions took more than one pass",
+      body: "The wrong pick was clear. Why it pushes one SKU's record down and the other SKU's shelf down took retries — and it is the part that explains every mirrored variance you will meet.",
+    },
+  },
+  {
+    when: (has) => has("case_timed_out") || has("case_left_open"),
+    item: {
+      title: "Case 02 closed unreconciled",
+      body: `Both Parle-G records still disagree with their shelves. On a real night that is ${RECORD_UNITS_AFFECTED} units of wrong availability going into the morning.`,
+    },
+  },
+];
+
 function pick(pool: Gated[], state: CaseState, has: (tag: Day2Tag) => boolean, limit: number) {
   return pool
     .filter((entry) => entry.when(has, state))
@@ -151,7 +241,16 @@ function pick(pool: Gated[], state: CaseState, has: (tag: Day2Tag) => boolean, l
     .map((entry) => entry.item);
 }
 
-/* ── Case insight ─────────────────────────────────────────────────────── */
+function pickPg(pool: PgGated[], state: ParleGState | null, limit: number): FeedbackItem[] {
+  if (!state || !pgReached(state)) return [];
+  const has = (tag: PgTag) => state.tags.includes(tag);
+  return pool
+    .filter((entry) => entry.when(has, state))
+    .slice(0, limit)
+    .map((entry) => entry.item);
+}
+
+/* ── Case 01 insight ──────────────────────────────────────────────────── */
 
 /**
  * The short note shown immediately after signing, before the day's scorecard.
@@ -234,18 +333,53 @@ const LEARNED: FeedbackItem[] = [
   },
 ];
 
-export function buildDay2Result(state: CaseState): ChallengeResult {
-  const competencies = scoreDay2Competencies(state);
-  const score = scoreDay2Overall(competencies, state);
-  const band = day2Band(score);
-  const metrics = day2Metrics(state);
+const PG_LEARNED: FeedbackItem[] = [
+  {
+    title: "A small value loss can hide a large record error",
+    body: `${AFFECTED_PICKS} wrong picks cost ${rupees(NET_VALUE_IMPACT)}. They also left ${RECORD_UNITS_AFFECTED} record units wrong across two SKUs — the difference between an item showing as available and a nil pick tomorrow.`,
+  },
+  {
+    title: "The system records what was scanned, not what was picked",
+    body: "With the product scan skipped, the record follows the order, not the pack. Every pick like that moves one SKU's record and a different SKU's shelf — which is why the variances come out mirrored.",
+  },
+];
 
-  const allTags = new Set<Day2Tag>([...state.tags, ...efficiencyTags(state)]);
+const REPLAY: Record<string, string> = {
+  inventoryReasoning:
+    "Count first, then reason. The physical number is the only figure in an audit that is not somebody's assertion, and everything downstream is arithmetic on top of it.",
+  rootCause:
+    "Follow the unit, not the number. The movement log tells you what the system believes happened; the order trace and the camera tell you what actually did.",
+  evidenceDiscipline:
+    "Let the tray decide. If you cannot point at the record that supports a finding, the finding is a hypothesis and belongs in the follow-up column, not the report.",
+  prioritisation:
+    "Open the record most likely to move the case, and the case most likely to move the night. Size of exposure first; everything else in its turn.",
+  lossPrevention:
+    "Close the control, escalate the gap, keep the store trading. All three, in that order — a variance that stops fulfilment costs more than it saves.",
+  delegation:
+    "Decide what only you can do tonight. Recounts, sweeps and record pulls belong to the people whose shift it is.",
+  patternRecognition:
+    "Read variances in pairs. When two lines move by the same amount in opposite directions they are almost always one event — find it before working either line alone.",
+  processDiscipline:
+    "Ask which control should have caught it. A variance is the output of a step that was skipped; the fix that lasts is the step, not the number.",
+  correctiveAction:
+    "Size the fix to the mechanism. Two adjacent SKUs and one skippable scan need a separated shelf and a mandatory scan — not a stopped store.",
+};
+
+export function buildDay2Result(
+  earbuds: CaseState,
+  parleg: ParleGState | null = null,
+): ChallengeResult {
+  const { competencies, score, notReached } = scoreDay2(earbuds, parleg);
+  const band = day2Band(score);
+  const metrics = day2Metrics(earbuds);
+  const master = dayMaster(earbuds, parleg);
+  const reached = parleg ? pgReached(parleg) : false;
+
+  const allTags = new Set<Day2Tag>([...earbuds.tags, ...efficiencyTags(earbuds)]);
   const has = (tag: Day2Tag) => allTags.has(tag);
 
   const weakest = [...competencies].sort((a, b) => a.score - b.score).slice(0, 2);
   const replay: string[] = [];
-
   for (const entry of weakest) {
     const line = REPLAY[entry.dimension];
     if (line && !replay.includes(line)) replay.push(line);
@@ -261,26 +395,34 @@ export function buildDay2Result(state: CaseState): ChallengeResult {
     );
   }
 
+  const strengths = [...pick(STRENGTHS, earbuds, has, 3), ...pickPg(PG_STRENGTHS, parleg, 2)];
+  const gaps = [...pick(GAPS, earbuds, has, 3), ...pickPg(PG_GAPS, parleg, 2)];
+
+  const finishedAt = Math.max(earbuds.completedAt ?? 0, parleg?.completedAt ?? 0) || Date.now();
+  const pgActions = parleg
+    ? parleg.actions.fixNow.length + parleg.actions.preventRepeat.length + parleg.actions.notNeeded.length
+    : 0;
+
   return {
     day: 2,
     score,
     band,
     bandRange: DAY_TWO_BAND_RANGE[band],
     competencies,
-    signature: day2Signature(state, competencies),
-    strengths: pick(STRENGTHS, state, has, 3),
-    gaps: pick(GAPS, state, has, 3),
+    signature: day2Signature(earbuds, competencies, parleg),
+    strengths: strengths.slice(0, 4),
+    gaps: gaps.slice(0, 4),
     replay: replay.slice(0, 3),
-    learned: LEARNED,
+    learned: reached ? [...LEARNED, ...PG_LEARNED] : LEARNED,
     // Day 2 records judgement breaches rather than SOP breaches; they are
     // surfaced through the scorecard's own section, not this one.
     sopViolations: [],
-    decisionCount: metrics.totalActions + state.findings.length,
+    decisionCount: metrics.totalActions + earbuds.findings.length + pgActions,
     forensics: {
-      originalVariance: metrics.master.totalOriginalVariance,
-      explainedValue: metrics.master.explainedValue,
-      recoveredValue: metrics.master.recoveredValue,
-      unresolvedValue: metrics.master.unresolvedValue,
+      originalVariance: master.totalOriginalVariance,
+      explainedValue: master.explainedValue,
+      recoveredValue: master.recoveredValue,
+      unresolvedValue: master.unresolvedValue,
       caseExposure: metrics.ledger.exposure,
       caseExplainedUnits: metrics.ledger.explainedUnits,
       caseRecoveredUnits: metrics.ledger.recoveredUnits,
@@ -289,25 +431,26 @@ export function buildDay2Result(state: CaseState): ChallengeResult {
       usefulActions: metrics.usefulActions,
       totalActions: metrics.totalActions,
       unsupportedFindings: metrics.unsupportedFindings,
-      timedOut: state.tags.includes("audit_timed_out"),
+      timedOut:
+        earbuds.tags.includes("audit_timed_out") ||
+        (parleg?.tags.includes("case_timed_out") ?? false),
+      parleg:
+        parleg && reached
+          ? {
+              reconciled: parleg.reconciled,
+              rootCauseEstablished: parleg.flowSolved,
+              recordUnitsCorrected: pgRecordUnitsCorrected(parleg),
+              recordUnitsAffected: RECORD_UNITS_AFFECTED,
+              netValueImpact: NET_VALUE_IMPACT,
+              affectedTransactions: AFFECTED_PICKS,
+              preventiveControls: pgPreventiveControls(parleg),
+              timedOut: parleg.tags.includes("case_timed_out"),
+            }
+          : undefined,
+      dimensionsNotReached: notReached,
     },
-    durationMs: (state.completedAt ?? Date.now()) - state.startedAt,
+    durationMs: finishedAt - earbuds.startedAt,
   };
 }
-
-const REPLAY: Record<string, string> = {
-  inventoryReasoning:
-    "Count first, then reason. The physical number is the only figure in an audit that is not somebody's assertion, and everything downstream is arithmetic on top of it.",
-  rootCause:
-    "Follow the unit, not the number. The movement log tells you what the system believes happened; the order trace and the camera tell you what actually did.",
-  evidenceDiscipline:
-    "Let the tray decide. If you cannot point at the record that supports a finding, the finding is a hypothesis and belongs in the follow-up column, not the report.",
-  prioritisation:
-    "Open the record most likely to move the case. Six logs were available and three of them could not have changed the outcome.",
-  lossPrevention:
-    "Close the control, escalate the gap, keep the store trading. All three, in that order — a variance that stops fulfilment costs more than it saves.",
-  delegation:
-    "Decide what only you can do tonight. Recounts, sweeps and record pulls belong to the people whose shift it is.",
-};
 
 export { breachesIn };

@@ -1,3 +1,4 @@
+import { DAY_TWO_TOTAL_VARIANCE, rupees } from "./day-two/ledger";
 import type {
   Employee,
   Metrics,
@@ -484,7 +485,8 @@ export const RECOVERY_ACTIONS: RecoveryAction[] = [
 ];
 
 export const DAY_TWO_TEASER = {
-  amount: "₹18,640",
+  // Taken from Day 2's own ledger so the teaser and the day cannot disagree.
+  amount: rupees(DAY_TWO_TOTAL_VARIANCE),
   headline: "of inventory has disappeared.",
   body: "System says it exists. The shelf says it doesn't.",
   hook: "Tomorrow, you're responsible for finding out why.",

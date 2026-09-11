@@ -10,23 +10,28 @@ import {
   HIGH_VALUE_EXPOSURE,
   LOSS_ROWS,
   VARIANCE_ROWS,
+  formatQty,
   isMatched,
   lossShare,
   lossValue,
   rupees,
+  skuLines,
+  type LossRow,
 } from "@/lib/challenge/day-two/ledger";
 import type { MasterLedger } from "@/lib/challenge/day-two/types";
 import { easing } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
+type RowStatus = "open" | "investigate" | "escalated" | "reconciled" | "matched";
+
 /**
  * The Loss Ledger.
  *
  * Everything on it is derived from LOSS_ROWS, including the headline and every
- * percentage, so the table and the total cannot drift apart. Rows are
- * selectable and stay in step with the audit queue beside them — clicking a
- * line here and a card there are the same action, because on a real variance
- * report they would be.
+ * percentage, so the table and the total cannot drift apart. A line that spans
+ * two SKUs shows both — "+17 / −17", "₹5 / ₹10" — because collapsing it to a
+ * single net number would hide exactly the thing its case is about. Record
+ * corrections are shown beside the money, never inside it.
  */
 export function LedgerBoard({
   master,
@@ -34,6 +39,7 @@ export function LedgerBoard({
   onSelect,
   completedIds,
   timedOut = false,
+  recordUnitsCorrected = 0,
 }: {
   master: MasterLedger;
   selectedId: string | null;
@@ -41,6 +47,8 @@ export function LedgerBoard({
   completedIds: string[];
   /** The clock closed the audit, so nothing is still under investigation. */
   timedOut?: boolean;
+  /** Inventory record units corrected tonight. A count, not money. */
+  recordUnitsCorrected?: number;
 }) {
   const reduced = useReducedMotion();
   const sorted = [...LOSS_ROWS].sort((a, b) => lossValue(b) - lossValue(a));
@@ -49,6 +57,12 @@ export function LedgerBoard({
   const contributing = sorted.filter((row) => !isMatched(row));
   const largest = lossValue(contributing[0]!);
   const openCases = VARIANCE_ROWS.length - completedIds.length;
+
+  function statusOf(row: LossRow): RowStatus {
+    if (completedIds.includes(row.id)) return row.skus ? "reconciled" : "escalated";
+    if (isMatched(row)) return "matched";
+    return row.playable && !timedOut ? "investigate" : "open";
+  }
 
   return (
     <div className="space-y-3">
@@ -88,8 +102,8 @@ export function LedgerBoard({
       {/* ── The split, once anything has been settled ── */}
       {master.explainedValue + master.recoveredValue > 0 ? (
         <motion.div
-          initial={reduced ? false : { opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={reduced ? false : { y: 8 }}
+          animate={{ y: 0 }}
           transition={{ duration: 0.4, ease: easing.outExpo }}
         >
           <DispositionSplit
@@ -98,6 +112,16 @@ export function LedgerBoard({
             unresolved={master.unresolvedValue}
           />
         </motion.div>
+      ) : null}
+
+      {recordUnitsCorrected > 0 ? (
+        <p className="flex flex-wrap items-center gap-2 rounded-card border border-ion-500/35 bg-ion-500/[0.05] px-4 py-2.5 text-[12.5px] text-mid">
+          <span className="font-mono text-[10px] tracking-[0.14em] text-ion-400 uppercase">
+            Records corrected
+          </span>
+          <span className="font-semibold text-hi">{recordUnitsCorrected} inventory record units</span>
+          <span className="text-faint">— a count of records, not money</span>
+        </p>
       ) : null}
 
       {/* ── Product table ── */}
@@ -112,7 +136,7 @@ export function LedgerBoard({
         </header>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[520px] border-collapse text-left">
+          <table className="w-full min-w-[540px] border-collapse text-left">
             <thead>
               <tr className="border-b border-line">
                 {["Product", "Qty var", "Unit value", "Loss value", "Status"].map((head, i) => (
@@ -131,9 +155,9 @@ export function LedgerBoard({
             </thead>
             <tbody>
               {sorted.map((row) => {
-                const done = completedIds.includes(row.id);
                 const selected = selectedId === row.id;
                 const matched = isMatched(row);
+                const lines = skuLines(row);
                 return (
                   <tr
                     key={row.id}
@@ -142,7 +166,7 @@ export function LedgerBoard({
                       "cursor-pointer border-b border-line transition-colors last:border-0",
                       selected
                         ? "bg-info-500/[0.07]"
-                        : row.playable
+                        : row.severity === "critical"
                           ? "bg-alert-500/[0.04] hover:bg-alert-500/[0.07]"
                           : "hover:bg-white/[0.025]",
                     )}
@@ -170,40 +194,49 @@ export function LedgerBoard({
                     </th>
                     <td
                       data-readout
-                      className={cn(
-                        "px-4 py-2.5 text-right font-mono text-[13px] tabular-nums",
-                        matched ? "text-ion-400" : "text-alert-500",
-                      )}
+                      className="px-4 py-2.5 text-right font-mono text-[13px] tabular-nums whitespace-nowrap"
                     >
-                      {row.qtyVariance}
+                      {lines.map((line, i) => (
+                        <React.Fragment key={line.label}>
+                          {i > 0 ? <span className="text-faint"> / </span> : null}
+                          <span
+                            className={
+                              line.qtyVariance > 0
+                                ? "text-warn-500"
+                                : line.qtyVariance < 0
+                                  ? "text-alert-500"
+                                  : "text-ion-400"
+                            }
+                          >
+                            {formatQty(line.qtyVariance)}
+                          </span>
+                        </React.Fragment>
+                      ))}
                     </td>
                     <td
                       data-readout
-                      className="px-4 py-2.5 text-right font-mono text-[13px] text-mid tabular-nums"
+                      className="px-4 py-2.5 text-right font-mono text-[13px] whitespace-nowrap text-mid tabular-nums"
                     >
-                      {rupees(row.unitValue)}
+                      {lines.map((line) => rupees(line.unitValue)).join(" / ")}
                     </td>
                     <td
                       data-readout
                       className={cn(
                         "px-4 py-2.5 text-right font-mono text-[13px] font-semibold tabular-nums",
-                        row.playable ? "text-alert-500" : matched ? "text-faint" : "text-mid",
+                        row.severity === "critical"
+                          ? "text-alert-500"
+                          : matched
+                            ? "text-faint"
+                            : "text-mid",
                       )}
                     >
                       {rupees(lossValue(row))}
+                      {row.skus ? (
+                        <span className="block text-[10px] font-normal text-faint">net</span>
+                      ) : null}
                     </td>
                     <td className="px-4 py-2.5 text-right">
-                      <StatusChip
-                        state={
-                          done
-                            ? "escalated"
-                            : matched
-                              ? "matched"
-                              : row.playable && !timedOut
-                                ? "investigate"
-                                : "open"
-                        }
-                      />
+                      <StatusChip state={statusOf(row)} />
                     </td>
                   </tr>
                 );
@@ -242,11 +275,11 @@ export function LedgerBoard({
               <span className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
                 <motion.span
                   initial={reduced ? false : { width: 0 }}
-                  animate={{ width: `${(lossValue(row) / largest) * 100}%` }}
+                  animate={{ width: `${Math.max(1, (lossValue(row) / largest) * 100)}%` }}
                   transition={{ duration: 0.7, ease: easing.outExpo }}
                   className={cn(
                     "block h-full rounded-full",
-                    row.playable ? "bg-alert-500" : "bg-info-500/70",
+                    row.severity === "critical" ? "bg-alert-500" : "bg-info-500/70",
                   )}
                 />
               </span>
@@ -269,25 +302,22 @@ export function LedgerBoard({
           <span aria-hidden className="text-info-500">
             ⓘ
           </span>
-          Wireless Earbuds account for {lossShare(contributing[0]!).toFixed(1)}% of
-          the total loss.
+          {contributing[0]!.product} account for {lossShare(contributing[0]!).toFixed(1)}% of the
+          value. Value is not the only measure: a small line can still carry many wrong records.
         </p>
       </section>
     </div>
   );
 }
 
-function StatusChip({
-  state,
-}: {
-  state: "open" | "investigate" | "escalated" | "matched";
-}) {
-  const map = {
+function StatusChip({ state }: { state: RowStatus }) {
+  const map: Record<RowStatus, { label: string; cls: string }> = {
     open: { label: "Open", cls: "border-alert-500/35 text-alert-500" },
     investigate: { label: "Investigate", cls: "border-warn-500/40 text-warn-500" },
     escalated: { label: "Escalated", cls: "border-info-500/40 text-info-500" },
+    reconciled: { label: "Reconciled", cls: "border-ion-500/40 text-ion-400" },
     matched: { label: "Matched", cls: "border-ion-500/40 text-ion-400" },
-  } as const;
+  };
   const { label, cls } = map[state];
   return (
     <span

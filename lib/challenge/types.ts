@@ -276,4 +276,17 @@ export interface ForensicSummary {
   unsupportedFindings: number;
   /** The fifteen minutes ran out before the audit entry was signed. */
   timedOut?: boolean;
+  /** Case 02, if it was opened. Record units are reported, never added to money. */
+  parleg?: {
+    reconciled: boolean;
+    rootCauseEstablished: boolean;
+    recordUnitsCorrected: number;
+    recordUnitsAffected: number;
+    netValueImpact: number;
+    affectedTransactions: number;
+    preventiveControls: string[];
+    timedOut: boolean;
+  };
+  /** Dimensions no reached case could read — shown as "not reached", not as zero. */
+  dimensionsNotReached?: string[];
 }

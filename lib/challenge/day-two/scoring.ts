@@ -1,41 +1,51 @@
 import { day2Metrics, efficiencyTags } from "./engine";
+import { pgReached } from "./parleg/engine";
+import { OVERREACH_TAGS, pgBreaches, scoreParleG } from "./parleg/scoring";
+import type { ParleGState, PgTag } from "./parleg/types";
 import {
   DAY_TWO_DIMENSIONS,
   DAY_TWO_DIMENSION_BLURB,
   DAY_TWO_DIMENSION_LABEL,
+  EARBUDS_DIMENSIONS,
   type CaseState,
   type Day2Dimension,
   type Day2Signals,
   type Day2Tag,
+  type EarbudsDimension,
+  type ParlegDimension,
 } from "./types";
 import type { CompetencyScore } from "../types";
 
 /**
  * Day 2 assessment configuration.
  *
- * Same discipline as Day 1: every number that shapes a score is in this file,
- * and no component knows a weight. What differs is what is being measured —
- * Day 1 rewards deciding under time pressure, Day 2 rewards not deciding until
- * the evidence is in. A learner who scores well here and badly there has told
- * us something real, which is the point of running both.
+ * Same discipline as Day 1: every number that shapes a score is in this file
+ * or in the case's own scoring file, and no component knows a weight. Day 2
+ * now reads two cases. Each scores the dimensions it can actually observe;
+ * where both read the same dimension, the day's score is their average, and a
+ * dimension only one case reads is left out entirely if that case was never
+ * reached — an operator is not scored on work they did not get to.
  */
 
 export const DAY_TWO_WEIGHTS: Record<Day2Dimension, number> = {
-  rootCause: 0.24,
-  evidenceDiscipline: 0.24,
-  inventoryReasoning: 0.22,
-  lossPrevention: 0.12,
-  prioritisation: 0.1,
-  delegation: 0.08,
+  rootCause: 0.18,
+  evidenceDiscipline: 0.16,
+  inventoryReasoning: 0.16,
+  patternRecognition: 0.1,
+  processDiscipline: 0.1,
+  correctiveAction: 0.08,
+  lossPrevention: 0.08,
+  prioritisation: 0.08,
+  delegation: 0.06,
 };
 
 /**
- * Reachable signal ranges, derived by walking every path in earbuds.ts and
- * engine.ts rather than guessed. `ceiling` is what a thorough, disciplined run
- * actually accumulates — not a theoretical maximum nobody can hit, which is
- * how a scale ends up unable to award a 90 to a genuinely excellent run.
+ * Case 01's reachable signal ranges, derived by walking every path in
+ * earbuds.ts and engine.ts rather than guessed. `ceiling` is what a thorough,
+ * disciplined run actually accumulates — not a theoretical maximum nobody can
+ * hit, which is how a scale ends up unable to award a 90 to an excellent run.
  */
-const BOUNDS: Record<Day2Dimension, { floor: number; ceiling: number }> = {
+const BOUNDS: Record<EarbudsDimension, { floor: number; ceiling: number }> = {
   inventoryReasoning: { floor: 1, ceiling: 15 },
   rootCause: { floor: -5, ceiling: 20 },
   evidenceDiscipline: { floor: -18, ceiling: 24 },
@@ -52,10 +62,10 @@ function clamp(value: number, min = 0, max = 100): number {
 }
 
 /**
- * Prioritisation is the one dimension almost nothing in the interaction model
- * emits directly — you cannot click "I was targeted". It is derived at scoring
- * time from how the investigation was actually shaped: how much of what the
- * learner opened was worth opening, and how wide they cast the net.
+ * Prioritisation is the one dimension almost nothing in Case 01's interaction
+ * model emits directly — you cannot click "I was targeted". It is derived at
+ * scoring time from how the investigation was actually shaped: how much of
+ * what the learner opened was worth opening, and how wide they cast the net.
  */
 function derivedSignals(state: CaseState): Partial<Day2Signals> {
   const metrics = day2Metrics(state);
@@ -130,13 +140,13 @@ export function breachesIn(state: CaseState): Breach[] {
   return BREACHES.filter((breach) => state.tags.includes(breach.tag));
 }
 
-/* ── Competencies ─────────────────────────────────────────────────────── */
+/* ── Case 01 competencies ─────────────────────────────────────────────── */
 
 export function scoreDay2Competencies(state: CaseState): CompetencyScore[] {
   const signals = totalSignals(state);
   const severe = breachesIn(state).length >= 2;
 
-  return DAY_TWO_DIMENSIONS.map((dimension) => {
+  return EARBUDS_DIMENSIONS.map((dimension) => {
     const { floor, ceiling } = BOUNDS[dimension];
     const normalised = clamp(
       Math.round(((signals[dimension] - floor) / (ceiling - floor)) * 100),
@@ -150,19 +160,60 @@ export function scoreDay2Competencies(state: CaseState): CompetencyScore[] {
   });
 }
 
-export function scoreDay2Overall(
-  competencies: CompetencyScore[],
-  state: CaseState,
-): number {
-  const weighted = competencies.reduce(
-    (sum, entry) =>
-      sum + entry.score * (DAY_TWO_WEIGHTS[entry.dimension as Day2Dimension] ?? 0),
+/* ── The day, across both cases ───────────────────────────────────────── */
+
+export interface Day2Score {
+  competencies: CompetencyScore[];
+  score: number;
+  breaches: { label: string; severity: number }[];
+  /** Labels of dimensions no reached case could read. */
+  notReached: string[];
+}
+
+export function scoreDay2(earbuds: CaseState, parleg: ParleGState | null): Day2Score {
+  const fromEarbuds = new Map(scoreDay2Competencies(earbuds).map((c) => [c.dimension, c.score]));
+  const fromParleg = parleg ? scoreParleG(parleg) : null;
+
+  const competencies: CompetencyScore[] = [];
+  const notReached: string[] = [];
+
+  for (const dimension of DAY_TWO_DIMENSIONS) {
+    const readings: number[] = [];
+    const e = fromEarbuds.get(dimension);
+    if (e !== undefined) readings.push(e);
+    const p = fromParleg?.[dimension as ParlegDimension];
+    if (p !== undefined) readings.push(p);
+
+    if (readings.length === 0) {
+      notReached.push(DAY_TWO_DIMENSION_LABEL[dimension]);
+      continue;
+    }
+    competencies.push({
+      dimension,
+      label: DAY_TWO_DIMENSION_LABEL[dimension],
+      score: Math.round(readings.reduce((sum, value) => sum + value, 0) / readings.length),
+      blurb: DAY_TWO_DIMENSION_BLURB[dimension],
+    });
+  }
+
+  // Weights renormalised over the dimensions actually read.
+  const totalWeight = competencies.reduce(
+    (sum, entry) => sum + DAY_TWO_WEIGHTS[entry.dimension as Day2Dimension],
     0,
   );
+  const weighted =
+    competencies.reduce(
+      (sum, entry) => sum + entry.score * DAY_TWO_WEIGHTS[entry.dimension as Day2Dimension],
+      0,
+    ) / (totalWeight || 1);
 
   // Diminishing, exactly as Day 1: two breaches is already a clear verdict and
   // multiplying them raw produces a number that stops carrying information.
-  const integrity = breachesIn(state)
+  const breaches = [
+    ...breachesIn(earbuds).map(({ label, severity }) => ({ label, severity })),
+    ...(parleg ? pgBreaches(parleg).map(({ label, severity }) => ({ label, severity })) : []),
+  ];
+  const integrity = [...breaches]
     .sort((a, b) => a.severity - b.severity)
     .reduce(
       (multiplier, breach, index) =>
@@ -171,10 +222,9 @@ export function scoreDay2Overall(
     );
 
   const scored = weighted * integrity;
-  const floored =
-    breachesIn(state).length >= 2 ? scored : Math.max(scored, SOFT_FLOOR_TOTAL);
+  const floored = breaches.length >= 2 ? scored : Math.max(scored, SOFT_FLOOR_TOTAL);
 
-  return clamp(Math.round(floored));
+  return { competencies, score: clamp(Math.round(floored)), breaches, notReached };
 }
 
 /* ── Bands ────────────────────────────────────────────────────────────── */
@@ -212,6 +262,10 @@ interface SignatureRule {
 
 interface SignatureContext {
   has: (tag: Day2Tag) => boolean;
+  pg: (tag: PgTag) => boolean;
+  pgReached: boolean;
+  pgFlowSolved: boolean;
+  pgOverreach: boolean;
   score: (dimension: Day2Dimension) => number;
   breaches: number;
   settled: number;
@@ -235,13 +289,25 @@ const SIGNATURES: SignatureRule[] = [
     name: "Closer · Books Before Answers",
     blurb:
       "You wanted the number settled tonight. Writing a high-value gap off before it is understood turns a solvable process problem into an accepted cost.",
-    test: (c) => c.has("premature_writeoff"),
+    test: (c) => c.has("premature_writeoff") || c.pg("blind_writeoff"),
+  },
+  {
+    name: "Fixed the Numbers, Not the Cause",
+    blurb:
+      "You brought the Parle-G records back into line without finding out why they drifted. They are right tonight; the pick process that bent them is unchanged.",
+    test: (c) => c.pg("corrected_without_cause"),
   },
   {
     name: "Out of Time · Trail Unfinished",
     blurb:
-      "The clock closed the audit before you did. Two of the three units were accountable from records already on the screen — the gap was pace through the trail, not the ability to read it.",
-    test: (c) => c.has("audit_timed_out") && c.settled < 2,
+      "The clock closed the audit before you did. The records that explained what you had not reached were already on the screen — the gap was pace through the trail, not the ability to read it.",
+    test: (c) => (c.has("audit_timed_out") && c.settled < 2) || c.pg("case_timed_out"),
+  },
+  {
+    name: "Found It · Overcorrected",
+    blurb:
+      "You worked the drift out and then reached for controls far wider than a two-SKU picking error. Those controls cost the store every shift after tonight.",
+    test: (c) => c.pgOverreach && c.pgFlowSolved,
   },
   {
     name: "Counted, Not Investigated",
@@ -254,6 +320,17 @@ const SIGNATURES: SignatureRule[] = [
     blurb:
       "You got there, and you opened a great deal to do it. At two in the morning with one shift's worth of records that works; across a cluster of stores it does not scale.",
     test: (c) => c.settled >= 2 && c.efficiency < 0.55,
+  },
+  {
+    name: "Systems Thinker · Cause Before Correction",
+    blurb:
+      "In both cases you found the mechanism before touching the numbers — a scan step that was skipped, in two different ways — and you put the control back rather than only fixing its output.",
+    test: (c) =>
+      c.settled >= 2 &&
+      c.unsupported === 0 &&
+      c.pg("inventory_flow_understood") &&
+      c.pg("scan_control_selected") &&
+      !c.pgOverreach,
   },
   {
     name: "Trail Reader · Held the Line",
@@ -280,7 +357,7 @@ const SIGNATURES: SignatureRule[] = [
   {
     name: "Cautious Auditor",
     blurb:
-      "You worked carefully and did not overreach. The gap to close is finishing the trail — two of these three units were accountable with the records already in front of you.",
+      "You worked carefully and did not overreach. The gap to close is finishing the trail — most of what was missing was accountable with the records already in front of you.",
     test: () => true,
   },
 ];
@@ -288,13 +365,19 @@ const SIGNATURES: SignatureRule[] = [
 export function day2Signature(
   state: CaseState,
   competencies: CompetencyScore[],
+  parleg: ParleGState | null = null,
 ): { name: string; blurb: string } {
   const byDimension = new Map(competencies.map((c) => [c.dimension, c.score]));
   const metrics = day2Metrics(state);
   const tags = new Set<Day2Tag>([...state.tags, ...efficiencyTags(state)]);
+  const pgTags = new Set<PgTag>(parleg?.tags ?? []);
 
   const context: SignatureContext = {
     has: (t) => tags.has(t),
+    pg: (t) => pgTags.has(t),
+    pgReached: parleg ? pgReached(parleg) : false,
+    pgFlowSolved: parleg?.flowSolved ?? false,
+    pgOverreach: OVERREACH_TAGS.some((t) => pgTags.has(t)),
     score: (dimension) => byDimension.get(dimension) ?? 50,
     breaches: breachesIn(state).length,
     settled: state.settled.length,

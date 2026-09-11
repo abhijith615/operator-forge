@@ -47,7 +47,25 @@ export type ChallengeEventName =
   | "action_board_completed"
   | "earbuds_reconciliation_signed"
   | "earbuds_case_completed"
-  | "day2_timed_out";
+  | "day2_timed_out"
+  | "day2_completed"
+  /* ── Day 2 · Case 02 · Parle-G SKU drift ── */
+  | "parleg_case_started"
+  | "sku30_scanned"
+  | "sku30_count_confirmed"
+  | "sku40_scanned"
+  | "sku40_count_confirmed"
+  | "mirrored_variance_seen"
+  | "orders_opened"
+  | "scan_log_opened"
+  | "pick_replay_opened"
+  | "wrong_product_identified"
+  | "causal_connection_created"
+  | "root_cause_identified"
+  | "corrective_action_assigned"
+  | "reconciliation_started"
+  | "reconciliation_completed"
+  | "parleg_case_completed";
 
 export interface ChallengeEvent {
   name: ChallengeEventName;

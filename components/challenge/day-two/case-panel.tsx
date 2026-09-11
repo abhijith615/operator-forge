@@ -6,68 +6,90 @@ import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, CheckCircle2, Lock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { isMatched, lossValue, rupees, type LossRow } from "@/lib/challenge/day-two/ledger";
+import {
+  isMatched,
+  lossValue,
+  recordUnits,
+  rupees,
+  skuLines,
+  type LossRow,
+} from "@/lib/challenge/day-two/ledger";
 import { easing } from "@/lib/motion";
 import { cn } from "@/lib/utils";
+
+const CASE_NUMBER: Record<string, string> = {
+  earbuds: "Case 01 · Highest exposure",
+  biscuits: "Case 02 · SKU drift",
+};
 
 /**
  * What a queue selection opens.
  *
- * For the earbuds this is the way in. For the other three it is an honest
- * dead end: their numbers are real and their approach is described, and the
- * panel says the case is not built rather than accepting a click and showing
- * a stub. A learner who is told "coming soon" once trusts the rest of the
- * product; a learner who opens an empty case does not.
+ * Both variance lines are playable cases. A matched line says plainly that it
+ * is clean. Any line added later without a case says it is not built rather
+ * than accepting a click and showing a stub.
  */
 export function CasePanel({
   row,
   completed,
-  summary,
+  summaryLine,
   onOpen,
   onOpenEarbuds,
 }: {
   row: LossRow;
   completed: boolean;
-  summary: { accountedUnits: number; unresolvedValue: number } | null;
+  /** What the finished case established, in one line. */
+  summaryLine: string | null;
   onOpen: () => void;
   onOpenEarbuds: () => void;
 }) {
   const reduced = useReducedMotion();
-  const exposure = lossValue(row);
   const matched = isMatched(row);
-  const system = row.systemStock;
+  const lines = skuLines(row);
+  const split = lines.length > 1;
+  const join = (values: string[]) => values.join(" · ");
 
   const facts: { label: string; value: string; tone?: string }[] = [
-    { label: "System stock", value: system !== undefined ? String(system) : "On file" },
+    {
+      label: "System stock",
+      value:
+        row.skus || row.systemStock !== undefined
+          ? join(lines.map((line) => String(line.systemStock)))
+          : "On file",
+    },
     {
       label: "Physical count",
       value:
-        system !== undefined && (matched || completed)
-          ? String(system + row.qtyVariance)
+        matched || completed
+          ? join(lines.map((line) => String(line.systemStock + line.qtyVariance)))
           : "Pending",
       tone: matched ? "text-ion-400" : completed ? "text-hi" : "text-warn-500",
     },
-    { label: "Unit value", value: rupees(row.unitValue) },
+    { label: "Unit value", value: join(lines.map((line) => rupees(line.unitValue))) },
     matched
       ? { label: "Variance", value: "None", tone: "text-ion-400" }
-      : { label: "Exposure", value: rupees(exposure), tone: "text-alert-500" },
+      : split
+        ? { label: "Exposure", value: `${recordUnits(row)} units`, tone: "text-warn-500" }
+        : { label: "Exposure", value: rupees(lossValue(row)), tone: "text-alert-500" },
   ];
 
   return (
     <motion.section
       key={row.id}
-      initial={reduced ? false : { opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={reduced ? false : { y: 8 }}
+      animate={{ y: 0 }}
       transition={{ duration: 0.3, ease: easing.outExpo }}
       className={cn(
         "overflow-hidden rounded-card border",
         completed
-          ? "border-info-500/35 bg-info-500/[0.05]"
+          ? split
+            ? "border-ion-500/35 bg-ion-500/[0.05]"
+            : "border-info-500/35 bg-info-500/[0.05]"
           : matched
             ? "border-ion-500/30 bg-ion-500/[0.04]"
-            : row.playable
+            : row.severity === "critical"
               ? "border-alert-500/40 bg-alert-500/[0.05]"
-              : "border-line bg-surface",
+              : "border-warn-500/35 bg-warn-500/[0.04]",
       )}
     >
       <div className="flex flex-wrap items-start gap-4 p-5">
@@ -86,29 +108,31 @@ export function CasePanel({
             className={cn(
               "font-mono text-[10px] tracking-[0.2em] uppercase",
               completed
-                ? "text-info-500"
+                ? split
+                  ? "text-ion-400"
+                  : "text-info-500"
                 : matched
                   ? "text-ion-400"
-                  : row.playable
+                  : row.severity === "critical"
                     ? "text-alert-500"
-                    : "text-lo",
+                    : "text-warn-500",
             )}
           >
             {completed
-              ? "Case signed"
+              ? split
+                ? "Reconciled"
+                : "Case signed"
               : matched
                 ? "Counted · Matches system"
                 : row.playable
-                  ? "Case 01 · Highest exposure"
+                  ? (CASE_NUMBER[row.id] ?? row.category)
                   : `${row.category} · Not yet built`}
           </p>
           <h2 className="mt-2 text-[19px] leading-tight font-semibold tracking-[-0.02em] text-hi">
             {row.caseTitle}
           </h2>
           <p className="mt-2 max-w-prose text-[13px] leading-relaxed text-mid">
-            {completed
-              ? `${summary?.accountedUnits ?? 0} of ${Math.abs(row.qtyVariance)} units accounted for. ${rupees(summary?.unresolvedValue ?? 0)} unresolved and escalated to Loss Prevention.`
-              : row.approach}
+            {completed && summaryLine ? summaryLine : row.approach}
           </p>
         </div>
       </div>
@@ -135,11 +159,13 @@ export function CasePanel({
       <div className="border-t border-line p-4">
         {completed ? (
           <p className="text-[12.5px] text-lo">
-            Signed and closed. The remaining lines are still open.
+            {split
+              ? "Reconciled. Both records now match their shelves."
+              : "Signed and closed. The remaining lines are still open."}
           </p>
         ) : row.playable ? (
           <Button variant="primary" size="lg" className="w-full" onClick={onOpen}>
-            Begin count
+            {split ? "Open case" : "Begin count"}
             <ArrowRight />
           </Button>
         ) : matched ? (

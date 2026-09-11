@@ -5,9 +5,10 @@ import { DayTwoSimulation } from "@/components/challenge/day-two/simulation";
 import { getOperator } from "@/lib/auth/session";
 import { readOwnRun } from "@/lib/challenge/runs";
 import { LOGIN_ROUTE, ONBOARDING_ROUTE } from "@/lib/constants/routes";
+import { DAY_TWO_TOTAL_VARIANCE, rupees } from "@/lib/challenge/day-two/ledger";
 
 export const metadata: Metadata = {
-  title: "Day 2 · ₹18,640 Is Missing",
+  title: `Day 2 · ${rupees(DAY_TWO_TOTAL_VARIANCE)} Is Missing`,
   description:
     "A late-night inventory audit. The system says the stock exists; the store says otherwise.",
 };

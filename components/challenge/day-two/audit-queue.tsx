@@ -9,6 +9,7 @@ import {
   VARIANCE_ROWS,
   isMatched,
   lossValue,
+  recordUnits,
   rupees,
   type LossRow,
 } from "@/lib/challenge/day-two/ledger";
@@ -23,9 +24,9 @@ import { cn } from "@/lib/utils";
  * not rank themselves beyond showing the money; the sort is by exposure
  * because that is the honest order for a variance report, not a nudge.
  *
- * Only Case 01 is built. The biscuit drift carries its real numbers and says
- * plainly that it is not playable yet, rather than accepting a click and
- * showing something hollow.
+ * Both variance lines are playable cases, and which to open first is itself a
+ * small prioritisation signal: the secure cage carries the money, the biscuit
+ * bay carries more wrong records.
  */
 export function AuditQueue({
   selectedId,
@@ -100,7 +101,7 @@ function QueueCard({
             {critical ? "Critical" : "Medium"}
           </Chip>
         )}
-        {completed ? <Chip tone="done">Signed</Chip> : null}
+        {completed ? <Chip tone="done">{row.skus ? "Reconciled" : "Signed"}</Chip> : null}
       </span>
 
       {/* Body */}
@@ -142,7 +143,11 @@ function QueueCard({
         <span className="ml-auto flex shrink-0 items-center gap-1.5 text-[11px] text-faint">
           <BarChart3 className="size-3" aria-hidden />
           <span data-readout className="tabular-nums">
-            {matched ? "No variance" : `Est. loss: ${rupees(lossValue(row))}`}
+            {matched
+              ? "No variance"
+              : row.skus
+                ? `${recordUnits(row)} units · ${rupees(lossValue(row))} net`
+                : `Est. loss: ${rupees(lossValue(row))}`}
           </span>
         </span>
       </span>

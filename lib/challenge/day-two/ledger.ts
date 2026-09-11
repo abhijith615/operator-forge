@@ -1,3 +1,4 @@
+import { RECORD_UNITS_AFFECTED, SKU_30, SKU_40, varianceOf } from "./parleg/content";
 import type { MasterLedger } from "./types";
 
 /**
@@ -7,22 +8,38 @@ import type { MasterLedger } from "./types";
  * That sounds like a low bar until you consider what this day assesses: an
  * audit whose own totals do not reconcile teaches the opposite of the lesson.
  * `DAY_TWO_TOTAL_VARIANCE` is derived from the rows rather than typed, so the
- * two cannot drift apart when a line changes.
+ * two cannot drift apart when a line changes — and the Parle-G line takes its
+ * numbers straight from the case content, so the ledger and the case can never
+ * disagree about them either.
  */
 
 /** `clear` is a line that was counted and agreed with the system. */
 export type CaseSeverity = "critical" | "medium" | "clear";
+
+/** One SKU inside a ledger line. Most lines are one SKU; a drift line is two. */
+export interface SkuLine {
+  label: string;
+  /** Physical minus system. Negative: short. Positive: over. */
+  qtyVariance: number;
+  unitValue: number;
+  systemStock: number;
+}
 
 export interface LossRow {
   id: string;
   product: string;
   /** Short name for the audit queue card. */
   caseTitle: string;
-  /** Negative: physical is short of system. Zero: the count matched. */
+  /**
+   * Net unit variance. A two-SKU drift can net to zero units and still lose
+   * value — which is exactly why lines with `skus` are valued per SKU.
+   */
   qtyVariance: number;
   unitValue: number;
   /** Known where the line was counted tonight; absent where it was not. */
   systemStock?: number;
+  /** Set when the line spans more than one SKU. */
+  skus?: SkuLine[];
   group: string;
   /** Left-hand chip on the queue card. */
   category: string;
@@ -31,10 +48,9 @@ export interface LossRow {
   photo: string;
   /** Alt text. Describes the item, not the brand's marketing. */
   photoAlt: string;
-  /** Only the earbuds case is built in this release. */
   playable: boolean;
   note: string;
-  /** Shown on the case panel for the cases that are not built yet. */
+  /** What the case panel says the work will be. */
   approach: string;
 }
 
@@ -58,24 +74,33 @@ export const LOSS_ROWS: LossRow[] = [
   },
   {
     id: "biscuits",
-    product: "Parle-G 30g / 40g",
-    caseTitle: "Parle-G 30g vs 40g mismatch",
-    // A drift measured in hundreds of units is what SKU confusion looks like on
-    // a fast-moving line: cheap per unit, expensive in aggregate. Valued at
-    // landed cost, which is why it is not a round shelf price. With face wash
-    // and milk counting clean, this line and the earbuds carry the whole
-    // ₹18,640 between them: 11,997 + (511 × 13 = 6,643).
-    qtyVariance: -511,
-    unitValue: 13,
+    product: "Parle-G 30 g / 40 g",
+    caseTitle: "Parle-G SKU drift",
+    qtyVariance: varianceOf(SKU_30) + varianceOf(SKU_40),
+    unitValue: SKU_40.unitValue,
+    skus: [
+      {
+        label: SKU_30.weight,
+        qtyVariance: varianceOf(SKU_30),
+        unitValue: SKU_30.unitValue,
+        systemStock: SKU_30.system,
+      },
+      {
+        label: SKU_40.weight,
+        qtyVariance: varianceOf(SKU_40),
+        unitValue: SKU_40.unitValue,
+        systemStock: SKU_40.system,
+      },
+    ],
     group: "Packaged food",
     category: "SKU drift",
     severity: "medium",
     photo: "/products/biscuits.webp",
     photoAlt: "A pack of Parle-G biscuits",
-    playable: false,
-    note: "System and physical counts are diverging across similar SKUs.",
+    playable: true,
+    note: `Potential anomaly: ${RECORD_UNITS_AFFECTED} units across two SKUs.`,
     approach:
-      "Two pack sizes that scan alike. The work is separating a picking error from a master-data error.",
+      "Two pack sizes in adjacent bins, and a count that looks wrong on both. Verify the shelves before deciding what the numbers mean.",
   },
   {
     id: "face-wash",
@@ -115,16 +140,46 @@ export const LOSS_ROWS: LossRow[] = [
   },
 ];
 
+export function skuLines(row: LossRow): SkuLine[] {
+  return (
+    row.skus ?? [
+      {
+        label: row.product,
+        qtyVariance: row.qtyVariance,
+        unitValue: row.unitValue,
+        systemStock: row.systemStock ?? 0,
+      },
+    ]
+  );
+}
+
+/**
+ * Value the store is short on a line, at unit value. A gain on one SKU offsets
+ * a loss on another — the Parle-G line is +₹85 on 30 g against −₹170 on 40 g,
+ * which is ₹85 net, not ₹255.
+ */
+export function lossValue(row: LossRow): number {
+  const net = skuLines(row).reduce((total, line) => total + line.qtyVariance * line.unitValue, 0);
+  return Math.max(0, -net);
+}
+
+/** Record units that disagree with the shelf. A count of records, not money. */
+export function recordUnits(row: LossRow): number {
+  return skuLines(row).reduce((total, line) => total + Math.abs(line.qtyVariance), 0);
+}
+
 export function isMatched(row: LossRow): boolean {
-  return row.qtyVariance === 0;
+  return recordUnits(row) === 0;
+}
+
+export function formatQty(value: number): string {
+  if (value > 0) return `+${value}`;
+  if (value < 0) return `−${Math.abs(value)}`;
+  return "0";
 }
 
 /** Lines that actually carry a variance — the ones that are cases. */
 export const VARIANCE_ROWS = LOSS_ROWS.filter((row) => !isMatched(row));
-
-export function lossValue(row: LossRow): number {
-  return Math.abs(row.qtyVariance) * row.unitValue;
-}
 
 /** Derived, never typed by hand. The headline is the sum of the rows. */
 export const DAY_TWO_TOTAL_VARIANCE = LOSS_ROWS.reduce(
@@ -132,22 +187,12 @@ export const DAY_TWO_TOTAL_VARIANCE = LOSS_ROWS.reduce(
   0,
 );
 
-export const HIGH_VALUE_EXPOSURE = LOSS_ROWS.filter(
-  (row) => row.unitValue >= 1000,
+export const HIGH_VALUE_EXPOSURE = LOSS_ROWS.filter((row) =>
+  skuLines(row).some((line) => line.unitValue >= 1000),
 ).reduce((total, row) => total + lossValue(row), 0);
 
 export const EARBUDS_ROW = LOSS_ROWS.find((row) => row.id === "earbuds")!;
-
-/**
- * Variance on the lines that are not built as cases yet. Derived from the rows
- * rather than subtracted from a running total, so it is right whatever state
- * the earbuds case was left in — including a clock that ran out before the
- * cage was counted.
- */
-export const OTHER_OPEN_VARIANCE = VARIANCE_ROWS.filter((row) => !row.playable).reduce(
-  (total, row) => total + lossValue(row),
-  0,
-);
+export const PARLEG_ROW = LOSS_ROWS.find((row) => row.id === "biscuits")!;
 
 /** Share of the night's variance a line represents, for the contribution bars. */
 export function lossShare(row: LossRow): number {
@@ -176,7 +221,7 @@ export function emptyMaster(): MasterLedger {
 }
 
 /**
- * The master ledger is a projection of the case, never a second source of
+ * The master ledger is a projection of the cases, never a second source of
  * truth kept in step by hand. Unresolved is what is left after the two kinds
  * of accounting, so the three can never sum to anything but the total.
  */
@@ -193,7 +238,7 @@ export function masterFrom(explainedValue: number, recoveredValue: number): Mast
 
 export const DAY_TWO_BRIEF = {
   day: 2,
-  title: "₹18,640 is missing",
+  title: `${rupees(DAY_TWO_TOTAL_VARIANCE)} is missing`,
   subtitle: "The system says the stock exists. The store says otherwise.",
   clock: "01:47 AM",
   context: "Lean night operations · Inventory audit in progress",

@@ -9,6 +9,7 @@ import { Container, Section, SectionHeading } from "@/components/landing/section
 import { Reveal } from "@/components/motion/reveal";
 import { Button } from "@/components/ui/button";
 import { Aurora, GridField, Horizon } from "@/components/visuals/aurora";
+import { DAY_TWO_TOTAL_VARIANCE, rupees } from "@/lib/challenge/day-two/ledger";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -36,7 +37,7 @@ const DAYS: Day[] = [
   },
   {
     day: 2,
-    title: "₹18,640 Is Missing",
+    title: `${rupees(DAY_TWO_TOTAL_VARIANCE)} Is Missing`,
     teaser:
       "01:47 AM. A lean-shift inventory audit turns up a variance nobody can explain. You establish what is actually on the shelf, rebuild the movement trail, and find out how much of it is really loss.",
     href: "/challenge/day-2",

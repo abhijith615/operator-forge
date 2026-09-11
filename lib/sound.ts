@@ -52,6 +52,30 @@ export function playNotificationSound(tone: TimelineTone = "neutral"): void {
   }
 }
 
+/**
+ * A handheld scanner's beep: one short, bright note. Kept quiet and brief —
+ * it fires on every scan and should read as confirmation, not an alert.
+ */
+export function playScanBeep(): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  void ctx.resume().catch(() => undefined);
+
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const now = ctx.currentTime;
+
+  osc.type = "square";
+  osc.frequency.value = 1760;
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(0.018, now + 0.005);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.075);
+
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 0.08);
+}
+
 /** A softer single note for an incoming message. */
 export function playMessageSound(): void {
   const ctx = getContext();

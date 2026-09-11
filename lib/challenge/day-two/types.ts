@@ -13,7 +13,27 @@
 
 /* ── Assessment dimensions ────────────────────────────────────────────── */
 
+/**
+ * Every dimension Day 2 can read, across both cases. Each case assesses its
+ * own subset; a dimension only one case reads is reported only when that case
+ * was reached, so an operator is never scored on work they did not get to.
+ */
 export const DAY_TWO_DIMENSIONS = [
+  "inventoryReasoning",
+  "rootCause",
+  "evidenceDiscipline",
+  "patternRecognition",
+  "processDiscipline",
+  "correctiveAction",
+  "prioritisation",
+  "lossPrevention",
+  "delegation",
+] as const;
+
+export type Day2Dimension = (typeof DAY_TWO_DIMENSIONS)[number];
+
+/** Case 01 — Wireless Earbuds. */
+export const EARBUDS_DIMENSIONS = [
   "inventoryReasoning",
   "rootCause",
   "evidenceDiscipline",
@@ -22,7 +42,20 @@ export const DAY_TWO_DIMENSIONS = [
   "delegation",
 ] as const;
 
-export type Day2Dimension = (typeof DAY_TWO_DIMENSIONS)[number];
+export type EarbudsDimension = (typeof EARBUDS_DIMENSIONS)[number];
+
+/** Case 02 — Parle-G SKU drift. */
+export const PARLEG_DIMENSIONS = [
+  "patternRecognition",
+  "inventoryReasoning",
+  "rootCause",
+  "processDiscipline",
+  "correctiveAction",
+  "prioritisation",
+  "evidenceDiscipline",
+] as const;
+
+export type ParlegDimension = (typeof PARLEG_DIMENSIONS)[number];
 
 export const DAY_TWO_DIMENSION_LABEL: Record<Day2Dimension, string> = {
   inventoryReasoning: "Inventory Reasoning",
@@ -31,6 +64,9 @@ export const DAY_TWO_DIMENSION_LABEL: Record<Day2Dimension, string> = {
   prioritisation: "Prioritisation",
   lossPrevention: "Loss Prevention Judgement",
   delegation: "Delegation",
+  patternRecognition: "Pattern Recognition",
+  processDiscipline: "Process Discipline",
+  correctiveAction: "Corrective Action Quality",
 };
 
 export const DAY_TWO_DIMENSION_BLURB: Record<Day2Dimension, string> = {
@@ -46,10 +82,17 @@ export const DAY_TWO_DIMENSION_BLURB: Record<Day2Dimension, string> = {
     "Whether you tightened the control that failed, escalated what you could not close, and left the store trading.",
   delegation:
     "Whether the follow-up work went to the people who should own it instead of onto your own list.",
+  patternRecognition:
+    "Whether you saw that two separate-looking variances were one event — and how quickly.",
+  processDiscipline:
+    "Whether you found the control that failed and put it back, rather than only fixing its output.",
+  correctiveAction:
+    "Whether your fixes were proportionate: aimed at the mechanism, sized to the problem.",
 };
 
-export type Day2SignalDelta = Partial<Record<Day2Dimension, number>>;
-export type Day2Signals = Record<Day2Dimension, number>;
+/** Case 01's signals. Case 02 keeps its own; the two meet only at scoring. */
+export type Day2SignalDelta = Partial<Record<EarbudsDimension, number>>;
+export type Day2Signals = Record<EarbudsDimension, number>;
 
 export function emptyDay2Signals(): Day2Signals {
   return {

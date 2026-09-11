@@ -47,7 +47,7 @@ export function CountdownPill({ remaining }: { remaining: number }) {
  *
  * The existing CountUp animates once on entering view, which is the wrong
  * trigger here: the whole point of the unexplained figure is that it moves
- * *while you watch it*, from 18,640 to 14,641 to 10,642, because of something
+ * *while you watch it*, falling as each unit is accounted for, because of something
  * you just found. So this keys off the value itself and re-runs on every
  * change, and it groups digits the way the store's own paperwork does.
  */
