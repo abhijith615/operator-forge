@@ -9,6 +9,8 @@ import { DispositionSplit, MoneyCounter, Stat } from "@/components/challenge/day
 import {
   HIGH_VALUE_EXPOSURE,
   LOSS_ROWS,
+  VARIANCE_ROWS,
+  isMatched,
   lossShare,
   lossValue,
   rupees,
@@ -31,16 +33,22 @@ export function LedgerBoard({
   selectedId,
   onSelect,
   completedIds,
+  timedOut = false,
 }: {
   master: MasterLedger;
   selectedId: string | null;
   onSelect: (id: string) => void;
   completedIds: string[];
+  /** The clock closed the audit, so nothing is still under investigation. */
+  timedOut?: boolean;
 }) {
   const reduced = useReducedMotion();
   const sorted = [...LOSS_ROWS].sort((a, b) => lossValue(b) - lossValue(a));
-  const largest = lossValue(sorted[0]!);
-  const openCases = LOSS_ROWS.length - completedIds.length;
+  // Matched lines are in the table — a clean count is a result — but not in
+  // the contribution chart, where a zero-width bar is only noise.
+  const contributing = sorted.filter((row) => !isMatched(row));
+  const largest = lossValue(contributing[0]!);
+  const openCases = VARIANCE_ROWS.length - completedIds.length;
 
   return (
     <div className="space-y-3">
@@ -59,8 +67,9 @@ export function LedgerBoard({
         />
         <Stat
           label="Affected SKUs"
-          value={LOSS_ROWS.length}
+          value={VARIANCE_ROWS.length}
           icon={<Boxes className="size-3.5" aria-hidden />}
+          hint={`Of ${LOSS_ROWS.length} counted`}
         />
         <Stat
           label="High-value exposure"
@@ -98,7 +107,7 @@ export function LedgerBoard({
             Product-wise loss
           </h2>
           <p className="ml-auto text-[11.5px] text-faint">
-            {LOSS_ROWS.length} products · sorted by loss value
+            {LOSS_ROWS.length} counted · {VARIANCE_ROWS.length} with variance
           </p>
         </header>
 
@@ -124,6 +133,7 @@ export function LedgerBoard({
               {sorted.map((row) => {
                 const done = completedIds.includes(row.id);
                 const selected = selectedId === row.id;
+                const matched = isMatched(row);
                 return (
                   <tr
                     key={row.id}
@@ -160,7 +170,10 @@ export function LedgerBoard({
                     </th>
                     <td
                       data-readout
-                      className="px-4 py-2.5 text-right font-mono text-[13px] text-alert-500 tabular-nums"
+                      className={cn(
+                        "px-4 py-2.5 text-right font-mono text-[13px] tabular-nums",
+                        matched ? "text-ion-400" : "text-alert-500",
+                      )}
                     >
                       {row.qtyVariance}
                     </td>
@@ -174,14 +187,22 @@ export function LedgerBoard({
                       data-readout
                       className={cn(
                         "px-4 py-2.5 text-right font-mono text-[13px] font-semibold tabular-nums",
-                        row.playable ? "text-alert-500" : "text-mid",
+                        row.playable ? "text-alert-500" : matched ? "text-faint" : "text-mid",
                       )}
                     >
                       {rupees(lossValue(row))}
                     </td>
                     <td className="px-4 py-2.5 text-right">
                       <StatusChip
-                        state={done ? "escalated" : row.playable ? "investigate" : "open"}
+                        state={
+                          done
+                            ? "escalated"
+                            : matched
+                              ? "matched"
+                              : row.playable && !timedOut
+                                ? "investigate"
+                                : "open"
+                        }
                       />
                     </td>
                   </tr>
@@ -213,7 +234,7 @@ export function LedgerBoard({
           Loss contribution by product
         </h2>
         <ul className="mt-3.5 space-y-2.5">
-          {sorted.map((row) => (
+          {contributing.map((row) => (
             <li key={row.id} className="flex items-center gap-3">
               <span className="w-28 shrink-0 truncate text-[11.5px] text-mid sm:w-36">
                 {row.product}
@@ -248,19 +269,24 @@ export function LedgerBoard({
           <span aria-hidden className="text-info-500">
             ⓘ
           </span>
-          Wireless Earbuds account for {lossShare(sorted[0]!).toFixed(1)}% of the
-          total loss.
+          Wireless Earbuds account for {lossShare(contributing[0]!).toFixed(1)}% of
+          the total loss.
         </p>
       </section>
     </div>
   );
 }
 
-function StatusChip({ state }: { state: "open" | "investigate" | "escalated" }) {
+function StatusChip({
+  state,
+}: {
+  state: "open" | "investigate" | "escalated" | "matched";
+}) {
   const map = {
     open: { label: "Open", cls: "border-alert-500/35 text-alert-500" },
     investigate: { label: "Investigate", cls: "border-warn-500/40 text-warn-500" },
     escalated: { label: "Escalated", cls: "border-info-500/40 text-info-500" },
+    matched: { label: "Matched", cls: "border-ion-500/40 text-ion-400" },
   } as const;
   const { label, cls } = map[state];
   return (

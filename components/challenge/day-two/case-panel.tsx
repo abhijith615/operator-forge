@@ -3,10 +3,10 @@
 import * as React from "react";
 import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Lock } from "lucide-react";
+import { ArrowRight, CheckCircle2, Lock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { lossValue, rupees, type LossRow } from "@/lib/challenge/day-two/ledger";
+import { isMatched, lossValue, rupees, type LossRow } from "@/lib/challenge/day-two/ledger";
 import { easing } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -34,16 +34,23 @@ export function CasePanel({
 }) {
   const reduced = useReducedMotion();
   const exposure = lossValue(row);
+  const matched = isMatched(row);
+  const system = row.systemStock;
 
   const facts: { label: string; value: string; tone?: string }[] = [
-    { label: "System stock", value: row.id === "earbuds" ? "12" : "On file" },
+    { label: "System stock", value: system !== undefined ? String(system) : "On file" },
     {
       label: "Physical count",
-      value: completed ? String(12 - Math.abs(row.qtyVariance)) : "Pending",
-      tone: completed ? "text-hi" : "text-warn-500",
+      value:
+        system !== undefined && (matched || completed)
+          ? String(system + row.qtyVariance)
+          : "Pending",
+      tone: matched ? "text-ion-400" : completed ? "text-hi" : "text-warn-500",
     },
     { label: "Unit value", value: rupees(row.unitValue) },
-    { label: "Exposure", value: rupees(exposure), tone: "text-alert-500" },
+    matched
+      ? { label: "Variance", value: "None", tone: "text-ion-400" }
+      : { label: "Exposure", value: rupees(exposure), tone: "text-alert-500" },
   ];
 
   return (
@@ -56,9 +63,11 @@ export function CasePanel({
         "overflow-hidden rounded-card border",
         completed
           ? "border-info-500/35 bg-info-500/[0.05]"
-          : row.playable
-            ? "border-alert-500/40 bg-alert-500/[0.05]"
-            : "border-line bg-surface",
+          : matched
+            ? "border-ion-500/30 bg-ion-500/[0.04]"
+            : row.playable
+              ? "border-alert-500/40 bg-alert-500/[0.05]"
+              : "border-line bg-surface",
       )}
     >
       <div className="flex flex-wrap items-start gap-4 p-5">
@@ -78,16 +87,20 @@ export function CasePanel({
               "font-mono text-[10px] tracking-[0.2em] uppercase",
               completed
                 ? "text-info-500"
-                : row.playable
-                  ? "text-alert-500"
-                  : "text-lo",
+                : matched
+                  ? "text-ion-400"
+                  : row.playable
+                    ? "text-alert-500"
+                    : "text-lo",
             )}
           >
             {completed
               ? "Case signed"
-              : row.playable
-                ? "Case 01 · Highest exposure"
-                : `${row.category} · Not yet built`}
+              : matched
+                ? "Counted · Matches system"
+                : row.playable
+                  ? "Case 01 · Highest exposure"
+                  : `${row.category} · Not yet built`}
           </p>
           <h2 className="mt-2 text-[19px] leading-tight font-semibold tracking-[-0.02em] text-hi">
             {row.caseTitle}
@@ -129,6 +142,17 @@ export function CasePanel({
             Begin count
             <ArrowRight />
           </Button>
+        ) : matched ? (
+          <div className="space-y-3">
+            <p className="flex gap-2 text-[12.5px] leading-relaxed text-mid">
+              <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-ion-400" aria-hidden />
+              Physical and system counts agree. This line is clean and carries
+              none of tonight&apos;s variance.
+            </p>
+            <Button variant="secondary" size="md" className="w-full" onClick={onOpenEarbuds}>
+              Open the Wireless Earbuds case
+            </Button>
+          </div>
         ) : (
           <div className="space-y-3">
             <p className="flex gap-2 text-[12.5px] leading-relaxed text-mid">

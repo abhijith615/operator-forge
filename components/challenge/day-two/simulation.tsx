@@ -31,7 +31,7 @@ import {
   OrdersTool,
   ScanLogTool,
 } from "@/components/challenge/day-two/tools";
-import { MoneyCounter, Reveal } from "@/components/challenge/day-two/ui";
+import { CountdownPill, MoneyCounter, Reveal } from "@/components/challenge/day-two/ui";
 import { Button } from "@/components/ui/button";
 import {
   addEvidence,
@@ -39,6 +39,7 @@ import {
   canRecoverUnit,
   caseLedger,
   classifyProcessVariance,
+  closeOnTimeout,
   commitActions,
   confirmCount,
   createCase,
@@ -60,9 +61,11 @@ import {
   DAY_TWO_BRIEF,
   EARBUDS_ROW,
   LOSS_ROWS,
+  OTHER_OPEN_VARIANCE,
   auditClock,
   rupees,
 } from "@/lib/challenge/day-two/ledger";
+import { SHIFT_SECONDS, timeScale } from "@/lib/challenge/clock";
 import { MANAGER_BRIEF, TOOL_META } from "@/lib/challenge/day-two/earbuds";
 import type { CaseState, Day2Tool, FindingId } from "@/lib/challenge/day-two/types";
 import { logEvent } from "@/lib/challenge/telemetry";
@@ -104,8 +107,13 @@ export function DayTwoSimulation({ operatorName }: { operatorName: string }) {
 
   const ledger = caseLedger(state);
   const master = masterLedger(state);
-  /** Signed cases. Only the earbuds case is playable in this release. */
-  const completedIds = state.stage === "complete" ? ["earbuds"] : [];
+  const timedOut = state.tags.includes("audit_timed_out");
+  /**
+   * Signed cases. Only the earbuds case is playable in this release, and a
+   * case the clock closed was never signed — it stays open on the ledger.
+   */
+  const completedIds = state.stage === "complete" && !timedOut ? ["earbuds"] : [];
+  const remaining = Math.max(0, SHIFT_SECONDS - elapsed);
 
   /**
    * Every transition goes through here.
@@ -133,12 +141,14 @@ export function DayTwoSimulation({ operatorName }: { operatorName: string }) {
     logEvent("day2_started", { operator: operatorName }, 2);
   }, [operatorName]);
 
-  /* The audit clock counts up. Nothing on Day 2 is on a countdown — a forensic
-     exercise that punishes you for reading carefully is measuring the wrong
-     thing entirely. */
+  /* Fifteen minutes, like every day of the challenge. One tick drives both the
+     countdown and the in-world audit clock, so they cannot disagree. */
   React.useEffect(() => {
     if (state.stage === "complete") return;
-    const timer = window.setInterval(() => setElapsed((v) => v + 1), 1000);
+    const timer = window.setInterval(
+      () => setElapsed((v) => v + 1),
+      1000 / timeScale(),
+    );
     return () => window.clearInterval(timer);
   }, [state.stage]);
 
@@ -255,19 +265,37 @@ export function DayTwoSimulation({ operatorName }: { operatorName: string }) {
       logEvent("action_board_completed", { actions: prev.actions }, 2);
     });
 
+  /** Both endings — signed or timed out — build and store the result the same way. */
+  const finish = React.useCallback((next: CaseState) => {
+    const built = buildDay2Result(next);
+    setResult(built);
+    logEvent("earbuds_case_completed", { score: built.score, band: built.band }, 2);
+    void saveChallengeRun(
+      built,
+      next.findings.map((f) => ({ scene: "earbuds", action: f.id })),
+      2,
+    );
+  }, []);
+
   const doSign = () =>
     apply(signReconciliation, (_prev, next) => {
-      const built = buildDay2Result(next);
-      setResult(built);
       logEvent("earbuds_reconciliation_signed", { ledger: caseLedger(next) }, 2);
-      logEvent("earbuds_case_completed", { score: built.score, band: built.band }, 2);
-      void saveChallengeRun(
-        built,
-        next.findings.map((f) => ({ scene: "earbuds", action: f.id })),
-        2,
-      );
+      finish(next);
       playNotificationSound("neutral");
     });
+
+  /* The clock ran out. The audit closes exactly where it stands — whatever
+     stage the operator was on — and is stored like any other finished day. */
+  React.useEffect(() => {
+    if (remaining > 0 || stateRef.current.stage === "complete") return;
+    apply(closeOnTimeout, (prev, next) => {
+      if (next === prev) return;
+      logEvent("day2_timed_out", { stage: prev.stage, ledger: caseLedger(next) }, 2);
+      setTrayOpen(false);
+      finish(next);
+      playNotificationSound("critical");
+    });
+  }, [remaining, apply, finish]);
 
   /* ── Views ── */
 
@@ -279,8 +307,10 @@ export function DayTwoSimulation({ operatorName }: { operatorName: string }) {
     <div className="flex min-h-dvh flex-col bg-obsidian">
       <Header
         elapsed={elapsed}
+        remaining={remaining}
         unresolved={master.unresolvedValue}
         stage={state.stage}
+        timedOut={timedOut}
       />
 
       <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-3 p-3 lg:flex-row lg:p-4">
@@ -357,21 +387,21 @@ export function DayTwoSimulation({ operatorName }: { operatorName: string }) {
                     selectedId="earbuds"
                     onSelect={() => undefined}
                     completedIds={completedIds}
+                    timedOut={timedOut}
                   />
 
                   <section className="rounded-card border border-line border-dashed bg-surface p-5">
                     <p className="font-mono text-[10px] tracking-[0.2em] text-lo uppercase">
-                      Remaining cases
+                      Remaining case
                     </p>
                     <p className="mt-2.5 text-[13px] leading-relaxed text-mid">
-                      Three SKUs and {rupees(master.unresolvedValue - ledger.unresolvedValue)}{" "}
-                      are still unreconciled: a pack-size drift, an open-shelf
-                      shrinkage and a short-life dump posting. Each is its own
-                      investigation.
+                      The biscuit pack-size drift — {rupees(OTHER_OPEN_VARIANCE)} — is
+                      still unreconciled and is its own investigation. Face wash
+                      and fresh milk counted clean.
                     </p>
                     <p className="mt-3 text-[12px] leading-relaxed text-faint">
-                      Those cases are not built yet. The earbuds case is complete
-                      and is the one that carries the method.
+                      That case is not built yet. The earbuds case is the one
+                      that carries the method.
                     </p>
                   </section>
 
@@ -434,31 +464,37 @@ export function DayTwoSimulation({ operatorName }: { operatorName: string }) {
 
 function Header({
   elapsed,
+  remaining,
   unresolved,
   stage,
+  timedOut,
 }: {
   elapsed: number;
+  remaining: number;
   unresolved: number;
   stage: CaseState["stage"];
+  timedOut: boolean;
 }) {
+  const signed = stage === "complete" && !timedOut;
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-obsidian/92 backdrop-blur-md">
       <div className="mx-auto flex max-w-[1500px] items-center gap-3 px-4 py-2.5">
         <span data-readout className="font-mono text-[13px] leading-none text-lo tabular-nums">
           {auditClock(elapsed)}
         </span>
-        <span className="hidden text-[11.5px] text-faint sm:inline">
+        <CountdownPill remaining={remaining} />
+        <span className="hidden text-[11.5px] text-faint lg:inline">
           {DAY_TWO_BRIEF.context}
         </span>
 
         <span className="ml-auto flex items-center gap-2.5">
-          <span className="font-mono text-[9.5px] tracking-[0.14em] text-faint uppercase">
-            {stage === "complete" ? "Signed" : "Unreconciled"}
+          <span className="hidden font-mono text-[9.5px] tracking-[0.14em] text-faint uppercase sm:inline">
+            {signed ? "Signed" : timedOut ? "Closed" : "Unreconciled"}
           </span>
           <span
             className={cn(
               "rounded-full border px-2.5 py-1 font-mono text-[13px] font-semibold tabular-nums",
-              stage === "complete"
+              signed
                 ? "border-info-500/40 text-info-500"
                 : "border-alert-500/45 text-alert-500",
             )}

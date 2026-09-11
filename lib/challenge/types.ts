@@ -274,4 +274,6 @@ export interface ForensicSummary {
   usefulActions: number;
   totalActions: number;
   unsupportedFindings: number;
+  /** The fifteen minutes ran out before the audit entry was signed. */
+  timedOut?: boolean;
 }

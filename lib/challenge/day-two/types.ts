@@ -88,7 +88,8 @@ export type Day2Tag =
   | "manager_overinvolved"
   | "evidence_before_conclusion"
   | "concluded_without_evidence"
-  | "unresolved_left_open";
+  | "unresolved_left_open"
+  | "audit_timed_out";
 
 /* ── Investigation surface ────────────────────────────────────────────── */
 

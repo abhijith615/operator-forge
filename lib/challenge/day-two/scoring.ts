@@ -238,6 +238,12 @@ const SIGNATURES: SignatureRule[] = [
     test: (c) => c.has("premature_writeoff"),
   },
   {
+    name: "Out of Time · Trail Unfinished",
+    blurb:
+      "The clock closed the audit before you did. Two of the three units were accountable from records already on the screen — the gap was pace through the trail, not the ability to read it.",
+    test: (c) => c.has("audit_timed_out") && c.settled < 2,
+  },
+  {
     name: "Counted, Not Investigated",
     blurb:
       "You established the physical count and stopped there. A count tells you how big the hole is; only the movement trail tells you what made it.",

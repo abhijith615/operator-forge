@@ -10,16 +10,19 @@ import type { MasterLedger } from "./types";
  * two cannot drift apart when a line changes.
  */
 
-export type CaseSeverity = "critical" | "medium";
+/** `clear` is a line that was counted and agreed with the system. */
+export type CaseSeverity = "critical" | "medium" | "clear";
 
 export interface LossRow {
   id: string;
   product: string;
   /** Short name for the audit queue card. */
   caseTitle: string;
-  /** Negative: physical is short of system. */
+  /** Negative: physical is short of system. Zero: the count matched. */
   qtyVariance: number;
   unitValue: number;
+  /** Known where the line was counted tonight; absent where it was not. */
+  systemStock?: number;
   group: string;
   /** Left-hand chip on the queue card. */
   category: string;
@@ -42,6 +45,7 @@ export const LOSS_ROWS: LossRow[] = [
     caseTitle: "Wireless Earbuds variance",
     qtyVariance: -3,
     unitValue: 3999,
+    systemStock: 12,
     group: "Electronics",
     category: "High value",
     severity: "critical",
@@ -57,9 +61,12 @@ export const LOSS_ROWS: LossRow[] = [
     product: "Parle-G 30g / 40g",
     caseTitle: "Parle-G 30g vs 40g mismatch",
     // A drift measured in hundreds of units is what SKU confusion looks like on
-    // a fast-moving line: cheap per unit, expensive in aggregate.
-    qtyVariance: -303,
-    unitValue: 12,
+    // a fast-moving line: cheap per unit, expensive in aggregate. Valued at
+    // landed cost, which is why it is not a round shelf price. With face wash
+    // and milk counting clean, this line and the earbuds carry the whole
+    // ₹18,640 between them: 11,997 + (511 × 13 = 6,643).
+    qtyVariance: -511,
+    unitValue: 13,
     group: "Packaged food",
     category: "SKU drift",
     severity: "medium",
@@ -73,36 +80,47 @@ export const LOSS_ROWS: LossRow[] = [
   {
     id: "face-wash",
     product: "Face Wash 100ml",
-    caseTitle: "Face wash shelf variance",
-    qtyVariance: -9,
+    caseTitle: "Face wash shelf count",
+    // Counted clean. A variance report that only ever lists problems teaches
+    // that every line is one; a matched line is a result too.
+    qtyVariance: 0,
     unitValue: 215,
+    systemStock: 24,
     group: "Personal care",
-    category: "Shrinkage",
-    severity: "medium",
+    category: "Matched",
+    severity: "clear",
     photo: "/products/face-wash.webp",
     photoAlt: "A 100ml tube of neem face wash",
     playable: false,
-    note: "Small, high-margin units missing from an open shelf.",
+    note: "Counted. Physical stock matches the system.",
     approach:
-      "Open-shelf units with no cage and no scan trail. Returns, damages and shelf recovery all have to be ruled out first.",
+      "24 on the shelf, 24 in the system. Nothing to investigate — and knowing which lines are clean is how you know where to spend the night.",
   },
   {
     id: "milk",
     product: "Fresh Milk 1L",
-    caseTitle: "Fresh milk short-life loss",
-    qtyVariance: -16,
+    caseTitle: "Fresh milk chiller count",
+    qtyVariance: 0,
     unitValue: 67,
+    systemStock: 40,
     group: "Fresh food",
-    category: "Perishables",
-    severity: "medium",
+    category: "Matched",
+    severity: "clear",
     photo: "/products/fresh-milk.webp",
     photoAlt: "A one litre carton of fresh milk",
     playable: false,
-    note: "Short-life stock with no recorded dump against expiry.",
+    note: "Counted. Physical stock matches the system.",
     approach:
-      "Perishable variance is usually a posting failure rather than a missing carton. The dump log is where this one starts.",
+      "40 cartons in the chiller, 40 in the system, and tonight's dump postings agree. Nothing to investigate.",
   },
 ];
+
+export function isMatched(row: LossRow): boolean {
+  return row.qtyVariance === 0;
+}
+
+/** Lines that actually carry a variance — the ones that are cases. */
+export const VARIANCE_ROWS = LOSS_ROWS.filter((row) => !isMatched(row));
 
 export function lossValue(row: LossRow): number {
   return Math.abs(row.qtyVariance) * row.unitValue;
@@ -119,6 +137,17 @@ export const HIGH_VALUE_EXPOSURE = LOSS_ROWS.filter(
 ).reduce((total, row) => total + lossValue(row), 0);
 
 export const EARBUDS_ROW = LOSS_ROWS.find((row) => row.id === "earbuds")!;
+
+/**
+ * Variance on the lines that are not built as cases yet. Derived from the rows
+ * rather than subtracted from a running total, so it is right whatever state
+ * the earbuds case was left in — including a clock that ran out before the
+ * cage was counted.
+ */
+export const OTHER_OPEN_VARIANCE = VARIANCE_ROWS.filter((row) => !row.playable).reduce(
+  (total, row) => total + lossValue(row),
+  0,
+);
 
 /** Share of the night's variance a line represents, for the contribution bars. */
 export function lossShare(row: LossRow): number {
@@ -171,7 +200,10 @@ export const DAY_TWO_BRIEF = {
   store: "Dark Store 114 · Indiranagar",
 } as const;
 
-/** Audit clock, counting up from 01:47. Nothing here is on a countdown. */
+/**
+ * The in-world clock, counting up from 01:47. The fifteen-minute countdown is
+ * the challenge's; this is the store's, the same split Day 1 makes.
+ */
 export function auditClock(elapsedSeconds: number): string {
   const total = 1 * 60 + 47 + Math.floor(elapsedSeconds / 60);
   const hours = Math.floor(total / 60) % 24;

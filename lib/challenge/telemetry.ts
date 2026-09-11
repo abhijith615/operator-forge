@@ -46,7 +46,8 @@ export type ChallengeEventName =
   | "premature_theft_assumption"
   | "action_board_completed"
   | "earbuds_reconciliation_signed"
-  | "earbuds_case_completed";
+  | "earbuds_case_completed"
+  | "day2_timed_out";
 
 export interface ChallengeEvent {
   name: ChallengeEventName;

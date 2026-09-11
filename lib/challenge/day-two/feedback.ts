@@ -1,5 +1,5 @@
 import { day2Metrics, efficiencyTags } from "./engine";
-import { rupees } from "./ledger";
+import { EARBUDS_ROW, lossShare, rupees } from "./ledger";
 import {
   breachesIn,
   DAY_TWO_BAND_RANGE,
@@ -101,6 +101,13 @@ const GAPS: Gated[] = [
     },
   },
   {
+    when: (has) => has("audit_timed_out"),
+    item: {
+      title: "The clock closed the audit before you did",
+      body: "Fifteen minutes was the window. What you had settled by then was recorded; the units you had not reached and the entry you had not signed stay exactly as they were, which on a real night means they go into the morning report unexplained.",
+    },
+  },
+  {
     when: (has, state) => !has("process_variance_identified") && state.settled.length < 2,
     item: {
       title: "Two of the three units were accountable",
@@ -156,6 +163,10 @@ export function caseInsight(state: CaseState): { headline: string; lines: string
   const accounted = ledger.explainedValue + ledger.recoveredValue;
   const lines: string[] = [];
 
+  if (state.tags.includes("audit_timed_out")) {
+    lines.push("The fifteen minutes ran out before the audit entry was signed.");
+  }
+
   if (accounted > 0 && !state.tags.includes("premature_theft_assumption")) {
     lines.push(
       `You accounted for ${rupees(accounted)} without treating every discrepancy as theft.`,
@@ -163,6 +174,10 @@ export function caseInsight(state: CaseState): { headline: string; lines: string
   } else if (accounted > 0) {
     lines.push(
       `You accounted for ${rupees(accounted)}, but you reached a conclusion before the movement trail was complete.`,
+    );
+  } else if (state.physicalCount === null) {
+    lines.push(
+      "The cage was never counted, so the variance was never verified. The report's three missing units stand exactly as it stated them.",
     );
   } else {
     lines.push(
@@ -180,11 +195,16 @@ export function caseInsight(state: CaseState): { headline: string; lines: string
     const one = ledger.unresolvedUnits === 1;
     // Only say "escalated" if they actually escalated it. A run that reached
     // for a write-off has not handed anything to anybody.
+    const them = one ? "it" : "them";
     const ending = state.tags.includes("loss_prevention_escalated")
-      ? "and has been escalated."
+      ? one
+        ? "and has been escalated."
+        : "and have been escalated."
       : state.tags.includes("premature_writeoff")
-        ? "and you moved to write it off rather than pass it on."
-        : "and stays open.";
+        ? `and you moved to write ${them} off rather than pass ${them} on.`
+        : one
+          ? "and stays open."
+          : "and stay open.";
     lines.push(
       `${ledger.unresolvedUnits} ${one ? "unit remains" : "units remain"} unresolved at ${rupees(ledger.unresolvedValue)} ${ending}`,
     );
@@ -237,7 +257,7 @@ export function buildDay2Result(state: CaseState): ChallengeResult {
   }
   if (replay.length < 3) {
     replay.push(
-      "Work the highest-value line first. Earbuds were sixty-four per cent of the night's variance; the other six SKUs together were less than half of what one secure cage was hiding.",
+      `Work the highest-value line first. Twelve units in one secure cage carried ${Math.round(lossShare(EARBUDS_ROW))}% of the night's variance — more than every other line combined.`,
     );
   }
 
@@ -269,6 +289,7 @@ export function buildDay2Result(state: CaseState): ChallengeResult {
       usefulActions: metrics.usefulActions,
       totalActions: metrics.totalActions,
       unsupportedFindings: metrics.unsupportedFindings,
+      timedOut: state.tags.includes("audit_timed_out"),
     },
     durationMs: (state.completedAt ?? Date.now()) - state.startedAt,
   };

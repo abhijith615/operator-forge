@@ -32,10 +32,12 @@ export function Day2Scorecard({ result }: { result: ChallengeResult }) {
       <main id="main" className="mx-auto max-w-3xl space-y-8 px-4 py-10">
         <section>
           <p className="font-mono text-[10px] tracking-[0.2em] text-ember-500 uppercase">
-            Day 2 · Audit signed
+            {f?.timedOut ? "Day 2 · Audit closed at time" : "Day 2 · Audit signed"}
           </p>
           <h1 className="mt-2 text-[26px] leading-tight font-semibold tracking-[-0.03em] text-hi">
-            You reconciled a high-value variance.
+            {f?.timedOut
+              ? "The clock closed the audit."
+              : "You reconciled a high-value variance."}
           </h1>
           <ul className="mt-4 space-y-1.5 text-[13px] leading-relaxed text-mid">
             {[
@@ -63,8 +65,9 @@ export function Day2Scorecard({ result }: { result: ChallengeResult }) {
               Value accounted for
             </h2>
             <p className="mt-2 mb-3.5 text-[12.5px] leading-relaxed text-mid">
-              Opened at {rupees(f.originalVariance)} across seven SKUs. These
-              three are different outcomes and are never added together.
+              Opened at {rupees(f.originalVariance)} across the lines that did
+              not match. These three are different outcomes and are never added
+              together.
             </p>
             <DispositionSplit
               explained={f.explainedValue}

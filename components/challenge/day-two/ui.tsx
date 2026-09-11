@@ -3,9 +3,42 @@
 import * as React from "react";
 import { animate, motion, useReducedMotion } from "framer-motion";
 
+import { URGENT_SECONDS, countdown } from "@/lib/challenge/clock";
 import { rupees } from "@/lib/challenge/day-two/ledger";
 import { easing } from "@/lib/motion";
 import { cn } from "@/lib/utils";
+
+/* ── Clock ────────────────────────────────────────────────────────────── */
+
+/** The fifteen-minute countdown, styled exactly as Day 1's. */
+export function CountdownPill({ remaining }: { remaining: number }) {
+  const urgent = remaining <= URGENT_SECONDS;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-2 rounded-full border px-3 py-1",
+        urgent ? "border-alert-500/50 bg-alert-500/10" : "border-line-strong",
+      )}
+      role="timer"
+      aria-live="off"
+    >
+      <span
+        className={cn("size-1.5 rounded-full", urgent ? "bg-alert-500" : "bg-ion-500")}
+        aria-hidden
+      />
+      <span
+        data-readout
+        className={cn(
+          "font-mono text-[14px] leading-none font-semibold tabular-nums",
+          urgent ? "text-alert-500" : "text-hi",
+        )}
+      >
+        {countdown(remaining)}
+      </span>
+      <span className="sr-only">remaining in the audit</span>
+    </span>
+  );
+}
 
 /* ── Money ────────────────────────────────────────────────────────────── */
 

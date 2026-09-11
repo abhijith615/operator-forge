@@ -4,21 +4,27 @@ import * as React from "react";
 import Image from "next/image";
 import { BarChart3, ChevronRight, Package } from "lucide-react";
 
-import { LOSS_ROWS, lossValue, rupees, type LossRow } from "@/lib/challenge/day-two/ledger";
+import {
+  LOSS_ROWS,
+  VARIANCE_ROWS,
+  isMatched,
+  lossValue,
+  rupees,
+  type LossRow,
+} from "@/lib/challenge/day-two/ledger";
 import { cn } from "@/lib/utils";
 
 /**
  * The audit queue.
  *
- * Four lines came out of tonight's variance report and the operator picks
- * which one to open. That choice is itself assessed — going at the ₹11,997
- * secure cage before the ₹1,072 of milk is the whole of prioritisation — so
- * the cards deliberately do not rank themselves beyond showing the money.
- * The sort is by exposure because that is the honest order for a variance
- * report, not because the interface is nudging.
+ * Four lines were counted tonight and the operator picks which to open. Two
+ * carry a variance and two matched — a clean line is a result, and seeing it
+ * next to the problems is part of reading a report. The cards deliberately do
+ * not rank themselves beyond showing the money; the sort is by exposure
+ * because that is the honest order for a variance report, not a nudge.
  *
- * Only Case 01 is built. The other three carry their real numbers and say
- * plainly that they are not playable yet, rather than accepting a click and
+ * Only Case 01 is built. The biscuit drift carries its real numbers and says
+ * plainly that it is not playable yet, rather than accepting a click and
  * showing something hollow.
  */
 export function AuditQueue({
@@ -39,7 +45,7 @@ export function AuditQueue({
           Audit queue
         </h2>
         <p className="mt-1.5 text-[11.5px] text-lo">
-          {LOSS_ROWS.length} items · Prioritise and investigate
+          {LOSS_ROWS.length} counted · {VARIANCE_ROWS.length} with variance
         </p>
       </header>
 
@@ -71,6 +77,7 @@ function QueueCard({
   onSelect: () => void;
 }) {
   const critical = row.severity === "critical";
+  const matched = isMatched(row);
 
   return (
     <button
@@ -87,10 +94,12 @@ function QueueCard({
     >
       {/* Chips */}
       <span className="flex flex-wrap items-center gap-1.5 px-3.5 pt-3">
-        <Chip tone={critical ? "high" : "neutral"}>{row.category}</Chip>
-        <Chip tone={critical ? "critical" : "medium"}>
-          {critical ? "Critical" : "Medium"}
-        </Chip>
+        <Chip tone={matched ? "done" : critical ? "high" : "neutral"}>{row.category}</Chip>
+        {matched ? null : (
+          <Chip tone={critical ? "critical" : "medium"}>
+            {critical ? "Critical" : "Medium"}
+          </Chip>
+        )}
         {completed ? <Chip tone="done">Signed</Chip> : null}
       </span>
 
@@ -133,7 +142,7 @@ function QueueCard({
         <span className="ml-auto flex shrink-0 items-center gap-1.5 text-[11px] text-faint">
           <BarChart3 className="size-3" aria-hidden />
           <span data-readout className="tabular-nums">
-            Est. loss: {rupees(lossValue(row))}
+            {matched ? "No variance" : `Est. loss: ${rupees(lossValue(row))}`}
           </span>
         </span>
       </span>

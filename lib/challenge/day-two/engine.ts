@@ -319,7 +319,7 @@ export function placeAction(
  * prioritisation exercise you can feel your way through by watching a number
  * react is a different exercise.
  */
-export function commitActions(state: CaseState): CaseState {
+function scorePlacedCards(state: CaseState): CaseState {
   let next = state;
   const lanes: ActionLane[] = ["now", "delegate", "followUp"];
 
@@ -332,6 +332,11 @@ export function commitActions(state: CaseState): CaseState {
       if (card.tagsWhenPlaced) next = tag(next, ...card.tagsWhenPlaced);
     }
   }
+  return next;
+}
+
+export function commitActions(state: CaseState): CaseState {
+  let next = scorePlacedCards(state);
 
   // Delegation is about the shape of the board, not any single card: work
   // handed to someone, and a "do now" list short enough to actually be done.
@@ -356,6 +361,29 @@ export function signReconciliation(state: CaseState): CaseState {
   if (ledger.unresolvedUnits > 0 && !state.tags.includes("premature_writeoff")) {
     next = tag(applySignals(next, { lossPrevention: 3 }), "unresolved_left_open");
   }
+
+  return { ...next, stage: "complete", completedAt: Date.now() };
+}
+
+/**
+ * The fifteen minutes ran out.
+ *
+ * The audit closes exactly where it stood. Units already settled stay settled;
+ * anything not reached stays unexplained. Cards already on the action board
+ * were real decisions and are scored — including the bad ones — but the
+ * board's *shape* is not assessed, because a plan interrupted mid-placement
+ * says nothing about whether its author delegates.
+ *
+ * What is deliberately withheld is the credit for leaving the gap open and
+ * escalated. That is earned by signing an honest entry, and nobody signed.
+ */
+export function closeOnTimeout(state: CaseState): CaseState {
+  if (state.stage === "complete") return state;
+
+  // The board is scored on commit, which moves the stage to "reconcile".
+  // Scoring it again here would count every card twice.
+  let next = state.stage === "actions" ? scorePlacedCards(state) : state;
+  next = tag(applySignals(next, { prioritisation: -2 }), "audit_timed_out");
 
   return { ...next, stage: "complete", completedAt: Date.now() };
 }
