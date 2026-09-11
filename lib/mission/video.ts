@@ -42,12 +42,21 @@ function youtubeIdFrom(raw: string): string | null {
   return match?.[1] ?? null;
 }
 
-export function resolveHandoverVideo(raw?: string): HandoverVideo {
-  const source = (raw ?? "").trim() || DEFAULT_HANDOVER_VIDEO;
+/**
+ * Resolves any configured video, falling back to `fallback` when the setting
+ * is blank. Shared by the mission's briefing and the challenge's explainers,
+ * so every video in the product accepts the same three forms.
+ */
+export function resolveVideo(raw: string | undefined, fallback: string): HandoverVideo {
+  const source = (raw ?? "").trim() || fallback;
   if (!source) return { kind: "none" };
 
   const youtubeId = youtubeIdFrom(source);
   if (youtubeId) return { kind: "youtube", id: youtubeId };
 
   return { kind: "file", src: source };
+}
+
+export function resolveHandoverVideo(raw?: string): HandoverVideo {
+  return resolveVideo(raw, DEFAULT_HANDOVER_VIDEO);
 }

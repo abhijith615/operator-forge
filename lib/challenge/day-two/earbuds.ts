@@ -26,6 +26,8 @@ export const EARBUDS = {
   name: "Wireless Earbuds",
   variant: "True wireless · charging case",
   location: "Secure cage · Bay H1",
+  /** The boxed unit as it sits in the cage — what the count cards show. */
+  countPhoto: "/products/earbud-box.webp",
   systemStock: 12,
   unitValue: 3999,
   /** What is physically in the cage. The learner has to establish this. */

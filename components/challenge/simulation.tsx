@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { ControlRoom, type OpenTask } from "@/components/challenge/control-room";
+import { DayOneBrief } from "@/components/challenge/day-one-brief";
 import { Scorecard } from "@/components/challenge/scorecard";
 import { PEAK_METRICS, type RecoveryAction } from "@/lib/challenge/day-one";
 import {
@@ -48,6 +49,10 @@ type Flash = { headline: string; body: string; tone: "healthy" | "warning" | "cr
  * only the delivery changed.
  */
 export function DayOneSimulation({ operatorName }: { operatorName: string }) {
+  // The brief sits outside the shift so the fifteen minutes start when the
+  // operator says so, not when the page happens to finish loading.
+  const [started, setStarted] = React.useState(false);
+  if (!started) return <DayOneBrief onStart={() => setStarted(true)} />;
   return <Shift operatorName={operatorName} />;
 }
 

@@ -228,6 +228,7 @@ variable on its own.
 | `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Real accounts, durable run records, cohort ranking | Simulator Mode: a local cookie identity per browser, and no leaderboard cohort. |
 | `OPENAI_MODEL` | Overriding the model | Defaults to `gpt-4o-mini`. |
 | `NEXT_PUBLIC_HANDOVER_VIDEO_URL` | A different briefing video | Defaults to the hosted YouTube clip, which works on a deployment as-is. |
+| `NEXT_PUBLIC_DAY1_INTRO_VIDEO_URL`, `NEXT_PUBLIC_DAY2_INTRO_VIDEO_URL`, `NEXT_PUBLIC_DAY2_INSPECTION_VIDEO_URL` | The 7-Day Challenge explainer videos on a deployment | Default to local files in `public/videos/`, which are gitignored — so a deployment's players say the video is unavailable until these point at hosted copies. The screens work either way. |
 
 To check what a running deployment actually has, sign in and open `/api/chat`:
 

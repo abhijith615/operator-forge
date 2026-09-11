@@ -8,7 +8,7 @@ import { Check, ScanLine } from "lucide-react";
 import { MoneyCounter, Reveal } from "@/components/challenge/day-two/ui";
 import { Button } from "@/components/ui/button";
 import { CAGE_UNITS, EARBUDS } from "@/lib/challenge/day-two/earbuds";
-import { EARBUDS_ROW, rupees } from "@/lib/challenge/day-two/ledger";
+import { rupees } from "@/lib/challenge/day-two/ledger";
 import { easing } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -106,17 +106,17 @@ export function CountCage({
                   <span
                     aria-hidden
                     className={cn(
-                      "relative size-11 overflow-hidden rounded-[6px] border transition-all duration-200",
+                      "relative aspect-square w-[70%] overflow-hidden rounded-[8px] border transition-all duration-200",
                       isScanned
                         ? "border-ion-500/50"
                         : "border-line-bright opacity-45 saturate-[0.35]",
                     )}
                   >
                     <Image
-                      src={EARBUDS_ROW.photo}
+                      src={EARBUDS.countPhoto}
                       alt=""
-                      width={88}
-                      height={88}
+                      width={160}
+                      height={160}
                       className="size-full object-cover"
                     />
                   </span>

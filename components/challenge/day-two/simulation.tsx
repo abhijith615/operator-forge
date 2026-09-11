@@ -17,6 +17,7 @@ import {
 
 import { ActionBoard } from "@/components/challenge/day-two/action-board";
 import { CountCage } from "@/components/challenge/day-two/count-cage";
+import { DayTwoIntro, InspectionBriefing } from "@/components/challenge/day-two/intro";
 import { EvidenceTray } from "@/components/challenge/day-two/evidence-tray";
 import { AuditQueue } from "@/components/challenge/day-two/audit-queue";
 import { CasePanel } from "@/components/challenge/day-two/case-panel";
@@ -95,6 +96,14 @@ const TOOL_ICON: Record<Day2Tool, LucideIcon> = {
  * learner is never parked waiting for the simulation to let them continue.
  */
 export function DayTwoSimulation({ operatorName }: { operatorName: string }) {
+  // The brief sits outside the audit so the fifteen minutes start when the
+  // operator says so, not when the page happens to finish loading.
+  const [started, setStarted] = React.useState(false);
+  if (!started) return <DayTwoIntro onStart={() => setStarted(true)} />;
+  return <Audit operatorName={operatorName} />;
+}
+
+function Audit({ operatorName }: { operatorName: string }) {
   const [state, setState] = React.useState<CaseState>(() => createCase());
   const [tool, setTool] = React.useState<Day2Tool | null>(null);
   const [elapsed, setElapsed] = React.useState(0);
@@ -103,6 +112,8 @@ export function DayTwoSimulation({ operatorName }: { operatorName: string }) {
   const [showScorecard, setShowScorecard] = React.useState(false);
   /** Which line of the variance report is open in the queue. */
   const [selectedCase, setSelectedCase] = React.useState<string>("earbuds");
+  /** Whether the inspection video has been passed on the way into the count. */
+  const [inspectionDone, setInspectionDone] = React.useState(false);
   const reduced = useReducedMotion();
 
   const ledger = caseLedger(state);
@@ -332,6 +343,8 @@ export function DayTwoSimulation({ operatorName }: { operatorName: string }) {
                   completedIds={completedIds}
                   onOpenCase={openCase}
                 />
+              ) : state.stage === "count" && !inspectionDone ? (
+                <InspectionBriefing onContinue={() => setInspectionDone(true)} />
               ) : state.stage === "count" ? (
                 <CountCage
                   scanned={state.scannedUnits}
