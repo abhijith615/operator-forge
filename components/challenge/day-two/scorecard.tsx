@@ -8,6 +8,7 @@ import { ArrowRight } from "lucide-react";
 import { DispositionSplit } from "@/components/challenge/day-two/ui";
 import { CountUp } from "@/components/motion/count-up";
 import { Button } from "@/components/ui/button";
+import { DAY_THREE_TEASER } from "@/lib/challenge/day-three/workforce";
 import { rupees } from "@/lib/challenge/day-two/ledger";
 import type { ChallengeResult } from "@/lib/challenge/types";
 import { easing } from "@/lib/motion";
@@ -320,6 +321,23 @@ export function Day2Scorecard({ result }: { result: ChallengeResult }) {
               </li>
             ))}
           </ul>
+        </section>
+
+        {/* ── Day 3 ── */}
+        <section className="rounded-card border border-ember-500/30 bg-elevated p-6">
+          <p className="font-mono text-[10px] tracking-[0.2em] text-ember-500 uppercase">
+            {DAY_THREE_TEASER.eyebrow}
+          </p>
+          <p className="mt-3 text-[22px] leading-tight font-semibold tracking-[-0.03em] text-hi">
+            {DAY_THREE_TEASER.headline}
+          </p>
+          <p className="mt-2 text-[13.5px] leading-relaxed text-mid">{DAY_THREE_TEASER.body}</p>
+          <Button asChild variant="secondary" size="md" className="mt-4">
+            <Link href="/challenge/day-3">
+              Open Day 3
+              <ArrowRight />
+            </Link>
+          </Button>
         </section>
 
         <div className="space-y-2.5">

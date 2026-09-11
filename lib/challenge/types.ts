@@ -257,7 +257,58 @@ export interface ChallengeResult {
   finalMetrics?: Metrics;
   /** Day 2 only — the value reconciliation and investigation quality. */
   forensics?: ForensicSummary;
+  /** Day 3 only — the peak plan, what it did, and how it was built. */
+  workforce?: WorkforceSummary;
   durationMs: number;
+}
+
+/** The Day 3 numbers a scorecard needs, flattened for storage. */
+export interface WorkforceSummary {
+  outcome: {
+    title: "PEAK CLEARED" | "PEAK SURVIVED";
+    ordersHandled: number;
+    ordersForecast: number;
+    peakCoverage: number;
+    avgPackingQueue: number;
+    riderCoverage: number;
+    riderShortageMinutes: number;
+    tempSpend: number;
+    riderSpend: number;
+    abandonedStation: string | null;
+  };
+  metrics: {
+    capacityAnticipation: number;
+    skillUtilisation: number;
+    peakCoverage: number;
+    /** Share of booked flex hours that landed where a station was short. Null with no flex. */
+    flexEfficiency: number | null;
+    flexUsefulHours: number;
+    flexHours: number;
+    flexBudget: number;
+  };
+  risks: {
+    fatigue: "Low" | "Moderate" | "High";
+    untrainedAssignments: number;
+    expertDependency: boolean;
+    unnecessaryRemoval: boolean;
+  };
+  plan: {
+    picking: number;
+    packing: number;
+    dispatch: number;
+    flex: number;
+    riders: number;
+    receiving: string;
+    audit: string;
+    flexCost: number;
+    riderCost: number;
+  };
+  timeline: { time: string; tone: "good" | "warn"; text: string }[];
+  bestCall: FeedbackItem | null;
+  developmentArea: { area: string; body: string };
+  /** Day 3 mapped onto the five competencies every day reports into. */
+  operatorCompetencies: Record<string, number>;
+  lockedByClock: boolean;
 }
 
 /** The Day 2 numbers a scorecard needs, flattened for storage. */

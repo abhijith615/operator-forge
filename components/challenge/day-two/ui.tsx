@@ -11,7 +11,14 @@ import { cn } from "@/lib/utils";
 /* ── Clock ────────────────────────────────────────────────────────────── */
 
 /** The fifteen-minute countdown, styled exactly as Day 1's. */
-export function CountdownPill({ remaining }: { remaining: number }) {
+export function CountdownPill({
+  remaining,
+  label = "remaining in the audit",
+}: {
+  remaining: number;
+  /** What the time is left of, for screen readers. */
+  label?: string;
+}) {
   const urgent = remaining <= URGENT_SECONDS;
   return (
     <span
@@ -35,7 +42,7 @@ export function CountdownPill({ remaining }: { remaining: number }) {
       >
         {countdown(remaining)}
       </span>
-      <span className="sr-only">remaining in the audit</span>
+      <span className="sr-only">{label}</span>
     </span>
   );
 }

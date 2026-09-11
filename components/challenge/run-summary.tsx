@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { BAND_RANGE } from "@/lib/challenge/scoring";
+import { DAY_THREE_DIMENSION_LABEL } from "@/lib/challenge/day-three/types";
 import { DAY_TWO_DIMENSION_LABEL } from "@/lib/challenge/day-two/types";
 import { DIMENSION_LABEL, type Band } from "@/lib/challenge/types";
 import type { StoredRun } from "@/lib/challenge/runs";
@@ -14,6 +15,7 @@ import type { StoredRun } from "@/lib/challenge/runs";
 const LABELS: Record<string, string> = {
   ...DIMENSION_LABEL,
   ...DAY_TWO_DIMENSION_LABEL,
+  ...DAY_THREE_DIMENSION_LABEL,
 };
 
 /**

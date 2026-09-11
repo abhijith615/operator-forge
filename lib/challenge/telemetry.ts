@@ -65,7 +65,29 @@ export type ChallengeEventName =
   | "corrective_action_assigned"
   | "reconciliation_started"
   | "reconciliation_completed"
-  | "parleg_case_completed";
+  | "parleg_case_completed"
+  /* ── Day 3 · Onam Eve ── */
+  | "day3_started"
+  | "employee_inspected"
+  | "employee_assigned"
+  | "employee_reassigned"
+  | "core_plan_created"
+  | "forecast_update_seen"
+  | "forecast_plan_changed"
+  | "flex_market_opened"
+  | "flex_worker_booked"
+  | "flex_worker_hours_changed"
+  | "rider_source_selected"
+  | "rider_plan_confirmed"
+  | "late_worker_alert_received"
+  | "late_worker_replaced"
+  | "high_value_task_assigned"
+  | "faisal_profile_opened"
+  | "performance_intervention_selected"
+  | "audit_rescheduled"
+  | "shift_plan_locked"
+  | "peak_simulation_started"
+  | "day3_completed";
 
 export interface ChallengeEvent {
   name: ChallengeEventName;

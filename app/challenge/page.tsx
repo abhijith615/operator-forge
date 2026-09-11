@@ -45,9 +45,11 @@ const DAYS: Day[] = [
   },
   {
     day: 3,
-    title: "The Shift Nobody Wants",
-    teaser: "Two absences, a new joiner and a delivery window that will not move.",
-    state: "locked",
+    title: "Onam Eve · Build the Shift",
+    teaser:
+      "4:30 PM. Five people are out and the festival peak begins in ninety minutes. You build the team — then keep it standing while the evening changes it.",
+    href: "/challenge/day-3",
+    state: "live",
   },
   {
     day: 4,
@@ -247,7 +249,7 @@ export default function ChallengePage() {
 
             <Reveal delay={0.3}>
               <p className="mt-8 text-[12.5px] leading-relaxed text-faint">
-                Days 3–6 and the AMA are not built yet. Days 1 and 2 are complete
+                Days 4–6 and the AMA are not built yet. Days 1 to 3 are complete
                 and playable now — finishing them is how you find out whether
                 the rest is worth your week.
               </p>
