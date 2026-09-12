@@ -148,9 +148,9 @@ export type Phase =
   | "riders"
   | "late"
   | "arjun"
-  | "riya"
+  /** Both slow pickers, reviewed side by side. */
+  | "pickers"
   | "receiving"
-  | "faisal"
   | "audit"
   | "review"
   | "peak"
@@ -165,9 +165,8 @@ export const PHASES: Phase[] = [
   "riders",
   "late",
   "arjun",
-  "riya",
+  "pickers",
   "receiving",
-  "faisal",
   "audit",
   "review",
   "peak",

@@ -25,7 +25,7 @@ import {
   riyaDevelopment,
   type ResponseOption,
 } from "@/lib/challenge/day-three/people";
-import { ARJUN, FLEX, REGULARS, RIYA } from "@/lib/challenge/day-three/workforce";
+import { ARJUN, FAISAL, FLEX, PICKER_REVIEW, REGULARS, RIYA } from "@/lib/challenge/day-three/workforce";
 import type {
   AcknowledgeId,
   ArjunLocation,
@@ -33,6 +33,7 @@ import type {
   Day3State,
   RequestId,
   RiyaAction,
+  Worker,
 } from "@/lib/challenge/day-three/types";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +48,9 @@ import { cn } from "@/lib/utils";
 
 const ARJUN_WORKER = REGULARS.find((worker) => worker.id === ARJUN.id)!;
 const RIYA_WORKER = FLEX.find((worker) => worker.id === RIYA.id)!;
+const FAISAL_WORKER = REGULARS.find((worker) => worker.id === FAISAL.id)!;
+
+export type Picker = "faisal" | "riya";
 
 /* ── The two alerts, on the board ─────────────────────────────────────── */
 
@@ -85,30 +89,147 @@ export function ArjunAlert({
   );
 }
 
-export function RiyaAlert({
+/**
+ * Both slow pickers, raised together.
+ *
+ * The same complaint twice is the point: Faisal is a three-year picker whose
+ * pace has been climbing all week, Riya is eleven days in and nine seconds
+ * faster than she started. One number, two entirely different problems — and
+ * the operator has to tell them apart before the peak.
+ */
+export function PickerReviewAlert({
   state,
   time,
-  onOpen,
+  onReview,
 }: {
   state: Day3State;
   time: string;
-  onOpen: () => void;
+  onReview: (who: Picker) => void;
 }) {
-  const started = state.people.riya.opened;
+  const faisalDone = Boolean(state.milestones.faisal);
+  const riyaDone = state.people.riya.applied;
   return (
-    <section aria-label="The floor lead about Riya" className="space-y-3">
+    <section aria-label="Picker performance review" className="space-y-3">
       <MomentHeading
         time={time}
         eyebrow="Floor lead"
-        title="“She's too slow.”"
-        sub="Riya has been on picking since the afternoon booking. The floor lead wants a decision before the peak."
+        title="“They're both too slow.”"
+        sub="Two pickers, the same complaint, an hour before the peak. Neither number tells you why on its own."
       />
-      <StaffMessage from="Floor lead" role="Shift supervisor" time={time} lines={RIYA.lead} tone="ember" />
-      <Button variant="primary" size="lg" className="w-full sm:w-auto" onClick={onOpen}>
-        {started ? "Back to Riya's review" : "Review Riya"}
-        <ArrowRight />
-      </Button>
+      <StaffMessage from="Floor lead" role="Shift supervisor" time={time} lines={PICKER_REVIEW.lead} tone="ember" />
+      <ul className="grid gap-2 sm:grid-cols-2">
+        <li>
+          <PickerCard
+            worker={FAISAL_WORKER}
+            ppi={FAISAL.today}
+            detail={`${FAISAL_WORKER.level} · ${FAISAL_WORKER.tenure}`}
+            done={faisalDone}
+            summary={state.faisal.join(" + ")}
+            onOpen={() => onReview("faisal")}
+          />
+        </li>
+        <li>
+          <PickerCard
+            worker={RIYA_WORKER}
+            ppi={RIYA.today}
+            detail={`On-demand picker · ${RIYA.tenure}`}
+            done={riyaDone}
+            summary={state.people.riya.interventions.join(" + ")}
+            onOpen={() => onReview("riya")}
+          />
+        </li>
+      </ul>
     </section>
+  );
+}
+
+function PickerCard({
+  worker,
+  ppi,
+  detail,
+  done,
+  summary,
+  onOpen,
+}: {
+  worker: Worker;
+  ppi: number;
+  detail: string;
+  done: boolean;
+  summary: string;
+  onOpen: () => void;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex h-full flex-col rounded-card border p-3.5",
+        done ? "border-ion-500/40 bg-ion-500/[0.04]" : "border-ember-500/35 bg-ember-500/[0.05]",
+      )}
+    >
+      <div className="flex items-start gap-2.5">
+        <Avatar worker={worker} />
+        <div className="min-w-0 flex-1">
+          <p className="text-[14px] leading-tight font-semibold text-hi">{worker.name}</p>
+          <p className="mt-0.5 text-[11.5px] text-lo">{detail}</p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p data-readout className="text-[17px] leading-none font-semibold text-alert-500 tabular-nums">
+            {ppi}s
+          </p>
+          <p className="mt-0.5 font-mono text-[9.5px] text-faint">PPI today</p>
+        </div>
+      </div>
+      <p className="mt-2 text-[11.5px] text-ion-400">{worker.accuracy}% accurate</p>
+      {done && summary ? <p className="mt-1 text-[11px] text-info-500">{summary}</p> : null}
+      <Button
+        variant={done ? "secondary" : "primary"}
+        size="md"
+        className="mt-3 w-full"
+        onClick={onOpen}
+      >
+        {done ? `Reopen ${worker.name}` : `Review ${worker.name}`}
+        {done ? null : <ArrowRight />}
+      </Button>
+    </div>
+  );
+}
+
+/** Flip between the two reviews without leaving the drawer. */
+export function PickerSwitch({
+  who,
+  faisalDone,
+  riyaDone,
+  onSwitch,
+}: {
+  who: Picker;
+  faisalDone: boolean;
+  riyaDone: boolean;
+  onSwitch: (who: Picker) => void;
+}) {
+  const tabs: { id: Picker; label: string; done: boolean }[] = [
+    { id: "faisal", label: FAISAL_WORKER.name, done: faisalDone },
+    { id: "riya", label: RIYA_WORKER.name, done: riyaDone },
+  ];
+  return (
+    <div className="mb-3 grid grid-cols-2 gap-1" role="group" aria-label="Which picker">
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          aria-pressed={who === tab.id}
+          onClick={() => onSwitch(tab.id)}
+          className={cn(
+            "flex items-center justify-center gap-1.5 rounded-md border py-1.5 text-[12.5px] font-medium transition-colors",
+            "focus-visible:ring-2 focus-visible:ring-ember-500 focus-visible:outline-none",
+            who === tab.id
+              ? "border-ember-500/70 bg-ember-500/15 text-hi"
+              : "border-line bg-surface text-lo hover:text-mid",
+          )}
+        >
+          {tab.label}
+          {tab.done ? <Check className="size-3 text-ion-400" aria-label="reviewed" /> : null}
+        </button>
+      ))}
+    </div>
   );
 }
 

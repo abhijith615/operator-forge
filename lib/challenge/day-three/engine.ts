@@ -75,9 +75,8 @@ const EDITABLE: Phase[] = [
   "riders",
   "late",
   "arjun",
-  "riya",
+  "pickers",
   "receiving",
-  "faisal",
   "audit",
   "review",
 ];
@@ -101,7 +100,7 @@ export function worldOf(state: Day3State): World {
     late: reached(state, "late"),
     receiving: reached(state, "receiving"),
     people: reached(state, "arjun"),
-    faisalReal: reached(state, "faisal"),
+    faisalReal: reached(state, "pickers"),
     audit: reached(state, "audit"),
   };
 }
@@ -125,11 +124,10 @@ export const PHASE_CLOCK: Record<Phase, number> = {
   riders: 35,
   late: 72,
   arjun: 76,
-  riya: 82,
+  pickers: 82,
   receiving: 95,
-  faisal: 115,
-  audit: 135,
-  review: 142,
+  audit: 118,
+  review: 135,
   peak: 150,
   done: 150,
 };
@@ -143,10 +141,9 @@ const NEXT_CLOCK: Record<Phase, number> = {
   riders: 72,
   late: 76,
   arjun: 82,
-  riya: 95,
-  receiving: 115,
-  faisal: 135,
-  audit: 142,
+  pickers: 95,
+  receiving: 118,
+  audit: 135,
   review: 150,
   peak: 150,
   done: 150,
@@ -550,28 +547,37 @@ export function answerArjun(state: Day3State, now: number): Day3State {
 
 export function finishArjun(state: Day3State, now: number): Day3State {
   if (state.phase !== "arjun" || !state.people.arjun.outcome) return state;
-  return enter(state, "riya", now);
+  return enter(state, "pickers", now);
+}
+
+/**
+ * The floor is only handed back when both pickers have been dealt with — the
+ * moment is one review of two people, not two reviews that happen to share a
+ * drawer.
+ */
+function bothPickersDone(state: Day3State): boolean {
+  return Boolean(state.milestones.faisal) && state.people.riya.applied;
 }
 
 export function openRiya(state: Day3State): Day3State {
-  if (state.phase !== "riya" || state.people.riya.opened) return state;
+  if (state.phase !== "pickers" || state.people.riya.opened) return state;
   return withRiya(state, { opened: true });
 }
 
 export function viewRiyaTrend(state: Day3State): Day3State {
-  if (state.phase !== "riya" || state.people.riya.trendViewed) return state;
+  if (state.phase !== "pickers" || state.people.riya.trendViewed) return state;
   return withRiya(state, { trendViewed: true });
 }
 
 export function viewRiyaZones(state: Day3State): Day3State {
-  if (state.phase !== "riya" || state.people.riya.zonesViewed) return state;
+  if (state.phase !== "pickers" || state.people.riya.zonesViewed) return state;
   return withRiya(state, { zonesViewed: true });
 }
 
 /** Opening the zone she is slow in is where the diagnosis actually happens. */
 export function openRiyaZone(state: Day3State, zoneId: string, now: number): Day3State {
   const riya = state.people.riya;
-  if (state.phase !== "riya" || riya.zoneOpen === zoneId) return state;
+  if (state.phase !== "pickers" || riya.zoneOpen === zoneId) return state;
   const foundNow = zoneId === "C" && !riya.zoneCFound;
   return withRiya(state, {
     zoneOpen: zoneId,
@@ -594,7 +600,7 @@ const RIYA_EXCLUDES: Record<RiyaAction, RiyaAction[]> = {
 
 /** Two at a time: a manager on Onam Eve does not get to do everything. */
 export function toggleRiya(state: Day3State, action: RiyaAction): Day3State {
-  if (state.phase !== "riya" || state.people.riya.applied) return state;
+  if (state.phase !== "pickers" || state.people.riya.applied) return state;
   const current = state.people.riya.interventions;
   if (current.includes(action)) {
     return withRiya(state, { interventions: current.filter((entry) => entry !== action) });
@@ -605,8 +611,10 @@ export function toggleRiya(state: Day3State, action: RiyaAction): Day3State {
 }
 
 export function applyRiya(state: Day3State, now: number): Day3State {
-  if (state.phase !== "riya" || state.people.riya.interventions.length === 0) return state;
-  return enter(mark(withRiya(state, { applied: true }), "riya", now), "receiving", now);
+  const riya = state.people.riya;
+  if (state.phase !== "pickers" || riya.applied || riya.interventions.length === 0) return state;
+  const next = mark(withRiya(state, { applied: true }), "riya", now);
+  return bothPickersDone(next) ? enter(next, "receiving", now) : next;
 }
 
 /* ── Phase 3 · high-value receiving ───────────────────────────────────── */
@@ -746,12 +754,12 @@ export function confirmReceiving(state: Day3State, now: number): Day3State {
   if (!receivingTransfer(state) && !state.receivingSkipped) return state;
   return enter(
     { ...mark(state, "receiving", now), receiving: receivingOutcome(state) },
-    "faisal",
+    "audit",
     now,
   );
 }
 
-/* ── Phase 4 · Faisal ─────────────────────────────────────────────────── */
+/* ── Phase 3c · Faisal, beside Riya ───────────────────────────────────── */
 
 export function openFaisal(state: Day3State): Day3State {
   return state.faisalOpened ? state : { ...state, faisalOpened: true };
@@ -768,7 +776,7 @@ const EXCLUDES: Record<FaisalAction, FaisalAction[]> = {
 };
 
 export function toggleFaisal(state: Day3State, action: FaisalAction): Day3State {
-  if (state.phase !== "faisal") return state;
+  if (state.phase !== "pickers" || state.milestones.faisal) return state;
   if (state.faisal.includes(action)) {
     return { ...state, faisal: state.faisal.filter((current) => current !== action) };
   }
@@ -779,8 +787,9 @@ export function toggleFaisal(state: Day3State, action: FaisalAction): Day3State 
 }
 
 export function applyFaisal(state: Day3State, now: number): Day3State {
-  if (state.phase !== "faisal" || state.faisal.length === 0) return state;
-  return enter(mark(state, "faisal", now), "audit", now);
+  if (state.phase !== "pickers" || state.milestones.faisal || state.faisal.length === 0) return state;
+  const next = mark(state, "faisal", now);
+  return bothPickersDone(next) ? enter(next, "receiving", now) : next;
 }
 
 /* ── Phase 5 · the audit ──────────────────────────────────────────────── */

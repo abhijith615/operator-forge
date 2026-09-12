@@ -21,8 +21,10 @@ import {
   ArjunAlert,
   ArjunIssuePanel,
   PeopleDrawer,
-  RiyaAlert,
+  PickerReviewAlert,
+  PickerSwitch,
   RiyaReviewPanel,
+  type Picker,
 } from "@/components/challenge/day-three/people";
 import { PeakSimulation } from "@/components/challenge/day-three/peak-simulation";
 import { EmployeeSheet, PeoplePool, type SheetAction } from "@/components/challenge/day-three/people-pool";
@@ -83,9 +85,8 @@ const PHASE_LABEL: Partial<Record<Day3State["phase"], string>> = {
   riders: "Rider gap",
   late: "The plan breaks",
   arjun: "People · Arjun",
-  riya: "People · Riya",
+  pickers: "Picker performance",
   receiving: "High-value arrival",
-  faisal: "Performance",
   audit: "Move the work",
   review: "Lock-in",
 };
@@ -124,6 +125,7 @@ function Evening({ initial }: { initial: Day3State }) {
   const [openId, setOpenId] = React.useState<string | null>(null);
   const [marketOpen, setMarketOpen] = React.useState(false);
   const [peopleOpen, setPeopleOpen] = React.useState(false);
+  const [picker, setPicker] = React.useState<Picker>("faisal");
   const [result, setResult] = React.useState<ChallengeResult | null>(null);
   const [showScorecard, setShowScorecard] = React.useState(false);
   const soundEnabled = useShellStore((s) => s.soundEnabled);
@@ -400,16 +402,21 @@ function Evening({ initial }: { initial: Day3State }) {
       (s) => E.finishArjun(s, Date.now()),
       (prev, next) => {
         setPeopleOpen(false);
-        log("people_issue_triggered", prev, next, { employeeId: "riya", issue: "pace" });
+        log("people_issue_triggered", prev, next, { employeeId: "riya", issue: "pace", with: "faisal" });
         chime("warning");
       },
     );
 
-  const openRiya = () => {
+  /** One review, two people: opening either one opens the same drawer. */
+  const openPicker = (who: Picker) => {
+    setPicker(who);
     setPeopleOpen(true);
     apply(
-      (s) => E.openRiya(s),
-      (prev, next) => log("riya_issue_opened", prev, next, { employeeId: "riya" }),
+      (s) => (who === "faisal" ? E.openFaisal(s) : E.openRiya(s)),
+      (prev, next) =>
+        who === "faisal"
+          ? log("faisal_profile_opened", prev, next, { employeeId: "faisal" })
+          : log("riya_issue_opened", prev, next, { employeeId: "riya" }),
     );
   };
 
@@ -453,14 +460,28 @@ function Evening({ initial }: { initial: Day3State }) {
     apply(
       (s) => E.applyRiya(s, Date.now()),
       (prev, next) => {
-        setPeopleOpen(false);
-        log("people_module_completed", prev, next, {
-          arjun: next.people.arjun.outcome,
-          riya: next.people.riya.interventions,
-        });
-        chime("warning");
+        log("riya_intervention_selected", prev, next, { employeeId: "riya", applied: next.people.riya.interventions });
+        finishPicker(prev, next, "riya");
       },
     );
+
+  /**
+   * Applying one picker hands the drawer to the other; applying the second
+   * closes it and gives the floor back.
+   */
+  const finishPicker = (prev: Day3State, next: Day3State, who: Picker) => {
+    if (next.phase === "receiving") {
+      setPeopleOpen(false);
+      log("people_module_completed", prev, next, {
+        arjun: next.people.arjun.outcome,
+        faisal: next.faisal,
+        riya: next.people.riya.interventions,
+      });
+      chime("warning");
+      return;
+    }
+    setPicker(who === "faisal" ? "riya" : "faisal");
+  };
 
   const receive = (workerId: string) =>
     apply(
@@ -498,7 +519,10 @@ function Evening({ initial }: { initial: Day3State }) {
   const applyFaisal = () =>
     apply(
       (s) => E.applyFaisal(s, Date.now()),
-      (prev, next) => log("performance_intervention_selected", prev, next, { applied: prev.faisal }),
+      (prev, next) => {
+        log("performance_intervention_selected", prev, next, { applied: prev.faisal });
+        finishPicker(prev, next, "faisal");
+      },
     );
 
   const moveAudit = (start: number) =>
@@ -622,7 +646,7 @@ function Evening({ initial }: { initial: Day3State }) {
         : authorised.map((worker) => worker.id)
       : state.phase === "late"
         ? lateCandidates.map((worker) => worker.id)
-        : state.phase === "faisal"
+        : state.phase === "pickers"
           ? ["faisal"]
           : state.phase === "arjun"
             ? ["arjun"]
@@ -635,7 +659,7 @@ function Evening({ initial }: { initial: Day3State }) {
         ? "special"
         : state.phase === "late"
           ? late?.station ?? null
-          : state.phase === "riya"
+          : state.phase === "pickers"
             ? "picking"
             : null;
 
@@ -728,8 +752,8 @@ function Evening({ initial }: { initial: Day3State }) {
     case "arjun":
       moment = <ArjunAlert state={state} time={time} onOpen={openArjun} />;
       break;
-    case "riya":
-      moment = <RiyaAlert state={state} time={time} onOpen={openRiya} />;
+    case "pickers":
+      moment = <PickerReviewAlert state={state} time={time} onReview={openPicker} />;
       break;
     case "receiving":
       moment = (
@@ -747,9 +771,6 @@ function Evening({ initial }: { initial: Day3State }) {
           skipped={state.receivingSkipped}
         />
       );
-      break;
-    case "faisal":
-      moment = <FaisalReview state={state} world={world} time={time} onToggle={toggleFaisal} onApply={applyFaisal} />;
       break;
     case "audit":
       moment = (
@@ -860,8 +881,14 @@ function Evening({ initial }: { initial: Day3State }) {
       </div>
 
       <PeopleDrawer
-        open={peopleOpen && (state.phase === "arjun" || state.phase === "riya")}
-        label={state.phase === "arjun" ? "Arjun's overtime" : "Riya's performance review"}
+        open={peopleOpen && (state.phase === "arjun" || state.phase === "pickers")}
+        label={
+          state.phase === "arjun"
+            ? "Arjun's overtime"
+            : picker === "faisal"
+              ? "Faisal's performance review"
+              : "Riya's performance review"
+        }
         onClose={() => setPeopleOpen(false)}
       >
         {state.phase === "arjun" ? (
@@ -878,16 +905,34 @@ function Evening({ initial }: { initial: Day3State }) {
             onFinish={finishArjun}
           />
         ) : (
-          <RiyaReviewPanel
-            state={state}
-            world={world}
-            time={time}
-            onViewTrend={viewRiyaTrend}
-            onViewZones={viewRiyaZones}
-            onOpenZone={openRiyaZone}
-            onToggle={toggleRiya}
-            onApply={applyRiya}
-          />
+          <>
+            <PickerSwitch
+              who={picker}
+              faisalDone={Boolean(state.milestones.faisal)}
+              riyaDone={state.people.riya.applied}
+              onSwitch={setPicker}
+            />
+            {picker === "faisal" ? (
+              <FaisalReview
+                state={state}
+                world={world}
+                time={time}
+                onToggle={toggleFaisal}
+                onApply={applyFaisal}
+              />
+            ) : (
+              <RiyaReviewPanel
+                state={state}
+                world={world}
+                time={time}
+                onViewTrend={viewRiyaTrend}
+                onViewZones={viewRiyaZones}
+                onOpenZone={openRiyaZone}
+                onToggle={toggleRiya}
+                onApply={applyRiya}
+              />
+            )}
+          </>
         )}
       </PeopleDrawer>
 

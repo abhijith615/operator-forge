@@ -469,9 +469,24 @@ export const FAISAL = {
   zonePair: 16.2,
   paired: 19.0,
   afterPair: 17.9,
-  alertAt: at(18, 25),
+  // Raised with Riya at 5:52, so anything decided takes effect from 6.
+  alertAt: at(18),
   pairFrom: at(18, 30),
   pairTo: at(19),
+};
+
+/**
+ * The floor lead's 5:52 PM message. Two pickers, the same complaint, and two
+ * completely different reasons behind it — which is the whole point of hearing
+ * them together rather than an hour apart.
+ */
+export const PICKER_REVIEW = {
+  alertAt: at(17, 52),
+  lead: [
+    "Faisal's at 21.4 seconds and Riya's at 22.4.",
+    "Others are covering for both of them.",
+    "Do you want me to pull them off picking?",
+  ],
 };
 
 /* ── The two people problems ──────────────────────────────────────────── */
@@ -548,11 +563,6 @@ export const RIYA = {
   quote: [
     "I know I'm slower there.",
     "I keep double-checking similar products because I don't want to pick the wrong one.",
-  ],
-  lead: [
-    "Riya is at 22.4 sec PPI again.",
-    "Others are covering for her.",
-    "Do you want me to pull her from picking?",
   ],
   /** Projected pace, by what the manager does. */
   zone: 17.8,
