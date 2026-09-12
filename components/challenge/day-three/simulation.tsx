@@ -17,6 +17,13 @@ import {
   type PlanView,
 } from "@/components/challenge/day-three/moments";
 import { DayThreeOpening } from "@/components/challenge/day-three/opening";
+import {
+  ArjunAlert,
+  ArjunIssuePanel,
+  PeopleDrawer,
+  RiyaAlert,
+  RiyaReviewPanel,
+} from "@/components/challenge/day-three/people";
 import { PeakSimulation } from "@/components/challenge/day-three/peak-simulation";
 import { EmployeeSheet, PeoplePool, type SheetAction } from "@/components/challenge/day-three/people-pool";
 import { FaisalReview } from "@/components/challenge/day-three/performance";
@@ -47,10 +54,12 @@ import { AUDIT, REGULARS } from "@/lib/challenge/day-three/workforce";
 import { EVENING_END, PEAK_FROM, PEAK_TO, clockLabel } from "@/lib/challenge/day-three/forecast";
 import {
   COVER_LABEL,
+  type ArjunLocation,
   type CoverLane,
   type Day3State,
   type FaisalAction,
   type RiderSourceId,
+  type RiyaAction,
   type Station,
   type Worker,
 } from "@/lib/challenge/day-three/types";
@@ -63,6 +72,9 @@ import { useShellStore } from "@/stores/shell-store";
 
 const LANES: CoverLane[] = ["picking", "packing", "dispatch", "riders"];
 
+/** Day 3 runs three minutes longer than the other days: it has two more people in it. */
+const DAY_THREE_SECONDS = SHIFT_SECONDS + 3 * 60;
+
 const PHASE_LABEL: Partial<Record<Day3State["phase"], string>> = {
   core: "Build the core team",
   forecast: "Forecast update",
@@ -70,6 +82,8 @@ const PHASE_LABEL: Partial<Record<Day3State["phase"], string>> = {
   flex: "Fill the gap",
   riders: "Rider gap",
   late: "The plan breaks",
+  arjun: "People · Arjun",
+  riya: "People · Riya",
   receiving: "High-value arrival",
   faisal: "Performance",
   audit: "Move the work",
@@ -79,7 +93,7 @@ const PHASE_LABEL: Partial<Record<Day3State["phase"], string>> = {
 /**
  * Day 3 — Onam Eve. Build the shift.
  *
- * This component owns the evening's state and the fifteen-minute clock, and is
+ * This component owns the evening's state and the eighteen-minute clock, and is
  * the only place telemetry is emitted. Every decision goes through `apply`,
  * which computes the next state before setting it — the engine is pure, so the
  * event fires exactly once with the state on either side of it.
@@ -109,6 +123,7 @@ function Evening({ initial }: { initial: Day3State }) {
   const [elapsed, setElapsed] = React.useState(0);
   const [openId, setOpenId] = React.useState<string | null>(null);
   const [marketOpen, setMarketOpen] = React.useState(false);
+  const [peopleOpen, setPeopleOpen] = React.useState(false);
   const [result, setResult] = React.useState<ChallengeResult | null>(null);
   const [showScorecard, setShowScorecard] = React.useState(false);
   const soundEnabled = useShellStore((s) => s.soundEnabled);
@@ -172,7 +187,7 @@ function Evening({ initial }: { initial: Day3State }) {
     }, 1000 / timeScale());
     return () => window.clearInterval(timer);
   }, [playing]);
-  const remaining = Math.max(0, SHIFT_SECONDS - elapsed);
+  const remaining = Math.max(0, DAY_THREE_SECONDS - elapsed);
 
   /* ── Lock: by the operator, or by the clock ── */
   const lock = React.useCallback(
@@ -191,6 +206,11 @@ function Evening({ initial }: { initial: Day3State }) {
             ...REGULARS.map((worker) => ({ scene: "core", action: `${worker.id}:${next.assignments[worker.id] ?? "none"}` })),
             ...Object.entries(next.flex).map(([id, booking]) => ({ scene: "flex", action: `${id}:${booking.windowId}:${booking.station}` })),
             ...Object.entries(next.riders).map(([id, count]) => ({ scene: "riders", action: `${id}:${count}` })),
+            {
+              scene: "arjun",
+              action: `${next.people.arjun.outcome ?? "unaddressed"}:${next.people.arjun.incentiveChecked ? "checked" : "unchecked"}:${next.people.arjun.location ?? "unspoken"}`,
+            },
+            { scene: "riya", action: next.people.riya.interventions.join("+") || "none" },
             { scene: "receiving", action: next.receiving?.workerId ?? "skipped" },
             { scene: "faisal", action: next.faisal.join("+") || "none" },
             { scene: "audit", action: String(next.auditStart) },
@@ -310,7 +330,134 @@ function Evening({ initial }: { initial: Day3State }) {
       (s) => E.confirmLateRepair(s, Date.now()),
       (prev, next) => {
         log("late_worker_replaced", prev, next, { confirmed: true, after: next.late?.after });
+        log("people_issue_triggered", prev, next, { employeeId: "arjun", issue: "incentive_overtime" });
         setMarketOpen(false);
+        chime("warning");
+      },
+    );
+
+  /* ── The two people ── */
+  const openArjun = () => {
+    setPeopleOpen(true);
+    apply(
+      (s) => E.openArjun(s),
+      (prev, next) => log("arjun_issue_opened", prev, next, { employeeId: "arjun" }),
+    );
+  };
+
+  const arjunLocation = (location: ArjunLocation) =>
+    apply(
+      (s) => E.setArjunLocation(s, location),
+      (prev, next) => log("arjun_conversation_moved_private", prev, next, { employeeId: "arjun", location }),
+    );
+
+  const checkIncentive = () =>
+    apply(
+      (s) => E.checkArjunIncentive(s, Date.now()),
+      (prev, next) => log("arjun_incentive_checked", prev, next, { employeeId: "arjun", status: "approved · pending" }),
+    );
+
+  const checkArjunPerformance = () =>
+    apply(
+      (s) => E.checkArjunPerformance(s),
+      (prev, next) => log("arjun_performance_checked", prev, next, { employeeId: "arjun" }),
+    );
+
+  const respondToArjun = () =>
+    apply(
+      (s) => E.respondToArjun(s),
+      (prev, next) =>
+        log("arjun_response_selected", prev, next, {
+          employeeId: "arjun",
+          step: "opened",
+          verified: next.people.arjun.incentiveChecked,
+        }),
+    );
+
+  const selectArjunLine = (slot: "acknowledge" | "clarify" | "request", id: string) =>
+    apply(
+      (s) => E.selectArjunLine(s, { slot, id } as unknown as E.ArjunLine),
+      (prev, next) => log("arjun_response_selected", prev, next, { employeeId: "arjun", slot, id }),
+    );
+
+  const answerArjun = () =>
+    apply(
+      (s) => E.answerArjun(s, Date.now()),
+      (prev, next) => {
+        const arjun = next.people.arjun;
+        log("arjun_overtime_requested", prev, next, {
+          employeeId: "arjun",
+          request: arjun.response.request,
+          verified: arjun.incentiveChecked,
+        });
+        log("arjun_overtime_result", prev, next, { employeeId: "arjun", outcome: arjun.outcome });
+        chime(arjun.outcome === "extended" ? "positive" : "warning");
+      },
+    );
+
+  const finishArjun = () =>
+    apply(
+      (s) => E.finishArjun(s, Date.now()),
+      (prev, next) => {
+        setPeopleOpen(false);
+        log("people_issue_triggered", prev, next, { employeeId: "riya", issue: "pace" });
+        chime("warning");
+      },
+    );
+
+  const openRiya = () => {
+    setPeopleOpen(true);
+    apply(
+      (s) => E.openRiya(s),
+      (prev, next) => log("riya_issue_opened", prev, next, { employeeId: "riya" }),
+    );
+  };
+
+  const viewRiyaTrend = () =>
+    apply(
+      (s) => E.viewRiyaTrend(s),
+      (prev, next) => log("riya_trend_viewed", prev, next, { employeeId: "riya" }),
+    );
+
+  const viewRiyaZones = () =>
+    apply(
+      (s) => E.viewRiyaZones(s),
+      (prev, next) => log("riya_zone_performance_viewed", prev, next, { employeeId: "riya" }),
+    );
+
+  const openRiyaZone = (zoneId: string) =>
+    apply(
+      (s) => E.openRiyaZone(s, zoneId, Date.now()),
+      (prev, next) =>
+        log("riya_zone_performance_viewed", prev, next, {
+          employeeId: "riya",
+          zone: zoneId,
+          patternFound: next.people.riya.zoneCFound,
+        }),
+    );
+
+  const toggleRiya = (action: RiyaAction) =>
+    apply(
+      (s) => E.toggleRiya(s, action),
+      (prev, next) => {
+        log("riya_intervention_selected", prev, next, {
+          employeeId: "riya",
+          action,
+          selected: next.people.riya.interventions,
+        });
+        log("riya_projection_updated", prev, next, { employeeId: "riya" });
+      },
+    );
+
+  const applyRiya = () =>
+    apply(
+      (s) => E.applyRiya(s, Date.now()),
+      (prev, next) => {
+        setPeopleOpen(false);
+        log("people_module_completed", prev, next, {
+          arjun: next.people.arjun.outcome,
+          riya: next.people.riya.interventions,
+        });
         chime("warning");
       },
     );
@@ -477,7 +624,9 @@ function Evening({ initial }: { initial: Day3State }) {
         ? lateCandidates.map((worker) => worker.id)
         : state.phase === "faisal"
           ? ["faisal"]
-          : [];
+          : state.phase === "arjun"
+            ? ["arjun"]
+            : [];
 
   const focus =
     state.phase === "riders"
@@ -486,7 +635,9 @@ function Evening({ initial }: { initial: Day3State }) {
         ? "special"
         : state.phase === "late"
           ? late?.station ?? null
-          : null;
+          : state.phase === "riya"
+            ? "picking"
+            : null;
 
   const market = (
     <FlexMarket state={state} editable={E.canBookFlex(state)} lateId={late?.workerId ?? null} onBook={book} onCancel={cancel} />
@@ -573,6 +724,12 @@ function Evening({ initial }: { initial: Day3State }) {
             market={market}
           />
         ) : null;
+      break;
+    case "arjun":
+      moment = <ArjunAlert state={state} time={time} onOpen={openArjun} />;
+      break;
+    case "riya":
+      moment = <RiyaAlert state={state} time={time} onOpen={openRiya} />;
       break;
     case "receiving":
       moment = (
@@ -701,6 +858,38 @@ function Evening({ initial }: { initial: Day3State }) {
           ) : null}
         </main>
       </div>
+
+      <PeopleDrawer
+        open={peopleOpen && (state.phase === "arjun" || state.phase === "riya")}
+        label={state.phase === "arjun" ? "Arjun's overtime" : "Riya's performance review"}
+        onClose={() => setPeopleOpen(false)}
+      >
+        {state.phase === "arjun" ? (
+          <ArjunIssuePanel
+            state={state}
+            world={world}
+            time={time}
+            onLocation={arjunLocation}
+            onCheckIncentive={checkIncentive}
+            onCheckPerformance={checkArjunPerformance}
+            onRespond={respondToArjun}
+            onSelect={selectArjunLine}
+            onAnswer={answerArjun}
+            onFinish={finishArjun}
+          />
+        ) : (
+          <RiyaReviewPanel
+            state={state}
+            world={world}
+            time={time}
+            onViewTrend={viewRiyaTrend}
+            onViewZones={viewRiyaZones}
+            onOpenZone={openRiyaZone}
+            onToggle={toggleRiya}
+            onApply={applyRiya}
+          />
+        )}
+      </PeopleDrawer>
 
       <EmployeeSheet
         worker={openWorker}

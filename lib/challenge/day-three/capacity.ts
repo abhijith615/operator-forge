@@ -8,11 +8,13 @@ import {
   riderNeedAt,
 } from "./forecast";
 import {
+  ARJUN,
   AUDIT,
   FAISAL,
   FLEX,
   REGULARS,
   RIDER_SOURCES,
+  RIYA,
   YOU,
   flexWindow,
   scheduledRidersAt,
@@ -46,6 +48,8 @@ export interface World {
   revised: boolean;
   late: boolean;
   receiving: boolean;
+  /** Arjun's overtime and Riya's review have happened. */
+  people: boolean;
   faisalReal: boolean;
   audit: boolean;
 }
@@ -54,6 +58,7 @@ export const PLANNED: World = {
   revised: true,
   late: false,
   receiving: false,
+  people: false,
   faisalReal: false,
   audit: false,
 };
@@ -62,6 +67,7 @@ export const ACTUAL: World = {
   revised: true,
   late: true,
   receiving: true,
+  people: true,
   faisalReal: true,
   audit: true,
 };
@@ -128,6 +134,33 @@ export function faisalPpi(state: Day3State, world: World, t: number): number {
   return t >= PEAK_FROM ? FAISAL.peakIfIgnored : FAISAL.today;
 }
 
+/**
+ * Arjun's last two hours. They are on the board from 4:30 because the floor
+ * lead pencilled them in; they are only his once he has agreed to them.
+ */
+export function arjunOvertime(state: Day3State): "pending" | "accepted" | "declined" {
+  const outcome = state.people.arjun.outcome;
+  if (!outcome) return "pending";
+  return outcome === "extended" ? "accepted" : "declined";
+}
+
+/**
+ * Riya's pace. Her average is a mix of four zones, one of which is three
+ * times the others; moving her out of it, or standing an expert beside her in
+ * it, changes the average without touching her accuracy.
+ */
+export function riyaPpi(state: Day3State, world: World, t: number): number {
+  const actions = world.people ? state.people.riya.interventions : [];
+  if (!world.people || t < RIYA.applyAt || actions.length === 0) return RIYA.today;
+  const pairing = t >= RIYA.pairFrom && t < RIYA.pairTo;
+  const zone = actions.includes("zone");
+  const pair = actions.includes("pair");
+  if (zone && pair) return pairing ? RIYA.zonePair : RIYA.afterZonePair;
+  if (zone) return RIYA.zone;
+  if (pair) return pairing ? RIYA.paired : RIYA.afterPair;
+  return RIYA.today;
+}
+
 /** When someone is actually in the building tonight, lateness included. */
 export function windowOf(
   state: Day3State,
@@ -149,6 +182,9 @@ export function windowOf(
   }
   if (world.late && state.late?.workerId === worker.id) {
     start = Math.max(start, state.late.arrives);
+  }
+  if (worker.id === ARJUN.id && world.people && arjunOvertime(state) === "declined") {
+    end = Math.min(end, ARJUN.rotaEnd);
   }
   return start < end ? { start, end } : null;
 }
@@ -187,7 +223,30 @@ export function placeAt(
     if (state.faisal.includes("remove")) return null;
     if (state.faisal.includes("packing")) return "packing";
   }
+  if (worker.id === RIYA.id && world.people && t >= RIYA.applyAt) {
+    const actions = state.people.riya.interventions;
+    if (actions.includes("remove")) return null;
+    if (actions.includes("packing")) return "packing";
+  }
   return baseStation(state, worker);
+}
+
+/**
+ * Who stands with Riya for her half hour: the fastest expert picker who is on
+ * picking for the whole window — so the vehicle, the audit and a late arrival
+ * all take people out of the running, exactly as they would on the floor.
+ */
+export function riyaExpert(state: Day3State, world: World): string | null {
+  if (!world.people || !state.people.riya.interventions.includes("pair")) return null;
+  const candidates = [...REGULARS, ...FLEX].filter((worker) => {
+    if (worker.id === RIYA.id || worker.id === FAISAL.id || worker.skills.picking !== 3) return false;
+    for (let t = RIYA.pairFrom; t < RIYA.pairTo; t += 1) {
+      if (placeAt(state, world, worker, t) !== "picking") return false;
+    }
+    return true;
+  });
+  candidates.sort((a, b) => baseRate(b, "picking") - baseRate(a, "picking"));
+  return candidates[0]?.id ?? null;
 }
 
 /** Who Faisal is paired with, if he is: the fastest expert picking at 6:30. */
@@ -236,6 +295,7 @@ export interface Series {
 
 export function evaluate(state: Day3State, world: World, until = EVENING_END): Series {
   const expert = pairingExpert(state, world);
+  const riyaMate = riyaExpert(state, world);
   const managerActive = state.transfers.some((transfer) => transfer.workerId === YOU.id);
   const people = [
     ...REGULARS,
@@ -266,10 +326,10 @@ export function evaluate(state: Day3State, world: World, until = EVENING_END): S
       const place = placeAt(state, world, worker, t);
       if (place === null || place === "receiving") continue;
 
-      let rate =
-        worker.id === FAISAL.id && place === "picking"
-          ? pickRate(faisalPpi(state, world, t))
-          : baseRate(worker, place);
+      let rate: number;
+      if (worker.id === FAISAL.id && place === "picking") rate = pickRate(faisalPpi(state, world, t));
+      else if (worker.id === RIYA.id && place === "picking") rate = pickRate(riyaPpi(state, world, t));
+      else rate = baseRate(worker, place);
 
       if (worker.kind === "flex" && (worker as FlexWorker).newJoiner) {
         const window = windows.get(worker.id);
@@ -277,6 +337,9 @@ export function evaluate(state: Day3State, world: World, until = EVENING_END): S
       }
       // Pairing costs the expert a quarter of their pace for half an hour.
       if (expert === worker.id && place === "picking" && t >= FAISAL.pairFrom && t < FAISAL.pairTo) {
+        rate *= 0.75;
+      }
+      if (riyaMate === worker.id && place === "picking" && t >= RIYA.pairFrom && t < RIYA.pairTo) {
         rate *= 0.75;
       }
       if (worker.kind === "manager") managerOnStation = true;

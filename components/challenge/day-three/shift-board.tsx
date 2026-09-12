@@ -6,6 +6,7 @@ import { GripVertical, ShieldCheck } from "lucide-react";
 
 import { AnimatedPercent, TONE_TEXT, coverTone } from "@/components/challenge/day-three/ui";
 import {
+  arjunOvertime,
   baseStation,
   coverageAt,
   peakCoverage,
@@ -23,7 +24,7 @@ import {
   PEAK_TO,
   shortClock,
 } from "@/lib/challenge/day-three/forecast";
-import { AUDIT, FLEX, RECEIVING, REGULARS } from "@/lib/challenge/day-three/workforce";
+import { ARJUN, AUDIT, FLEX, RECEIVING, REGULARS, RIYA } from "@/lib/challenge/day-three/workforce";
 import {
   COVER_LABEL,
   type Day3State,
@@ -65,7 +66,8 @@ const DEMAND_MAX = 420;
 interface Segment {
   start: number;
   end: number;
-  kind: "on" | "away" | "late";
+  /** `pending` is overtime on the board that the person has not agreed to. */
+  kind: "on" | "away" | "late" | "pending";
   label?: string;
 }
 
@@ -73,6 +75,16 @@ interface Row {
   worker: Worker;
   segments: Segment[];
   temporary: boolean;
+  note?: "cover" | "moved";
+}
+
+/** What a block says about itself once someone's work has been changed. */
+function onLabel(state: Day3State, worker: Worker, t: number): string | undefined {
+  if (worker.id !== RIYA.id || t < RIYA.applyAt) return undefined;
+  const actions = state.people.riya.interventions;
+  if (actions.includes("zone")) return "A/B";
+  if (actions.includes("pair") && t >= RIYA.pairFrom && t < RIYA.pairTo) return "paired";
+  return undefined;
 }
 
 function segmentsFor(
@@ -94,8 +106,12 @@ function segmentsFor(
     const inWindow = actual ? t >= actual.start && t < actual.end : false;
     let kind: Segment["kind"] | null = null;
     let label: string | undefined;
-    if (place === station) kind = "on";
-    else if (!asTransfer && inWindow) {
+    if (place === station) {
+      const pencilled =
+        worker.id === ARJUN.id && t >= ARJUN.rotaEnd && arjunOvertime(state) === "pending";
+      kind = pencilled ? "pending" : "on";
+      label = pencilled ? undefined : onLabel(state, worker, t);
+    } else if (!asTransfer && inWindow) {
       kind = "away";
       label = place === "receiving" ? "HV" : place ? place.slice(0, 4) : "off";
     }
@@ -124,7 +140,14 @@ function rowsFor(state: Day3State, world: World, station: Station): Row[] {
     const worker = workerById(transfer.workerId);
     if (!worker || rows.some((row) => row.worker.id === worker.id)) continue;
     const segments = segmentsFor(state, world, worker, station, true);
-    if (segments.length > 0) rows.push({ worker, segments, temporary: true });
+    if (segments.length > 0) rows.push({ worker, segments, temporary: true, note: "cover" });
+  }
+  // And anyone whose work was moved here for the evening — Faisal to packing,
+  // Riya to packing — who has no transfer and no base role on this lane.
+  for (const worker of people) {
+    if (rows.some((row) => row.worker.id === worker.id)) continue;
+    const segments = segmentsFor(state, world, worker, station, true);
+    if (segments.length > 0) rows.push({ worker, segments, temporary: true, note: "moved" });
   }
   return rows;
 }
@@ -553,9 +576,11 @@ function WorkerRow({ row, top, onSelect }: { row: Row; top: number; onSelect: (i
               "focus-visible:ring-2 focus-visible:ring-ember-500 focus-visible:outline-none",
               segment.kind === "late"
                 ? "border border-dashed border-alert-500/70 bg-alert-500/[0.08]"
-                : segment.kind === "away"
-                  ? "border border-dashed border-white/15 bg-transparent"
-                  : manager
+                : segment.kind === "pending"
+                  ? "border border-dashed border-ember-500/70 bg-ember-500/[0.1]"
+                  : segment.kind === "away"
+                    ? "border border-dashed border-white/15 bg-transparent"
+                    : manager
                     ? "bg-ember-500/70"
                     : row.temporary
                       ? "bg-info-500/60"
@@ -567,16 +592,24 @@ function WorkerRow({ row, top, onSelect }: { row: Row; top: number; onSelect: (i
             <span
               className={cn(
                 "truncate font-mono text-[9.5px] leading-none font-semibold",
-                segment.kind === "late" ? "text-alert-500" : segment.kind === "away" ? "text-faint" : "text-hi",
+                segment.kind === "late"
+                  ? "text-alert-500"
+                  : segment.kind === "pending"
+                    ? "text-ember-400"
+                    : segment.kind === "away"
+                      ? "text-faint"
+                      : "text-hi",
               )}
             >
               {segment.kind === "late"
                 ? "late"
-                : segment.kind === "away"
-                  ? segment.label
-                  : segment === firstOn
-                    ? `${row.worker.name}${row.temporary ? " · cover" : ""}`
-                    : ""}
+                : segment.kind === "pending"
+                  ? "OT?"
+                  : segment.kind === "away"
+                    ? segment.label
+                    : segment === firstOn
+                      ? `${row.worker.name}${row.note === "cover" ? " · cover" : row.note === "moved" ? " · moved" : ""}`
+                      : (segment.label ?? "")}
             </span>
           </motion.button>
         );

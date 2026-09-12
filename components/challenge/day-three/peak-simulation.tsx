@@ -12,8 +12,9 @@ import {
   evaluate,
   simulateFlow,
 } from "@/lib/challenge/day-three/capacity";
+import { paidBookings } from "@/lib/challenge/day-three/engine";
 import { EVENING_END, OUTCOME_FROM, at, clockLabel } from "@/lib/challenge/day-three/forecast";
-import { FLEX } from "@/lib/challenge/day-three/workforce";
+import { ARJUN, FLEX, RIYA } from "@/lib/challenge/day-three/workforce";
 import { COVER_LABEL, type CoverLane, type Day3State, type Station } from "@/lib/challenge/day-three/types";
 import type { ChallengeResult } from "@/lib/challenge/types";
 import { rupees } from "@/lib/challenge/day-two/ledger";
@@ -213,7 +214,8 @@ function buildEvents(state: Day3State, series: ReturnType<typeof evaluate>): Pea
     },
   ];
 
-  const booked = FLEX.filter((worker) => state.flex[worker.id]).map((worker) => worker.name);
+  const paid = paidBookings(state);
+  const booked = FLEX.filter((worker) => paid.includes(worker.id)).map((worker) => worker.name);
   events.push(
     booked.length > 0
       ? {
@@ -222,6 +224,26 @@ function buildEvents(state: Day3State, series: ReturnType<typeof evaluate>): Pea
           tone: "good",
         }
       : { t: at(19, 52), text: "No flex on the floor. The regulars carry the queue alone.", tone: "warn" },
+  );
+
+  // The two people decisions, landing where they actually land.
+  const riyaActions = state.people.riya.interventions;
+  if (riyaActions.includes("remove")) {
+    events.push({ t: at(18, 10), text: "Riya is off picking. Her zone goes to whoever is nearest.", tone: "warn" });
+  } else if (riyaActions.includes("packing")) {
+    events.push({ t: at(18, 10), text: "Riya is on packing, a station she has never worked.", tone: "warn" });
+  } else if (riyaActions.includes("zone")) {
+    events.push({ t: at(18, 10), text: `Riya works her fastest zone at ${RIYA.zone} seconds a pick.`, tone: "good" });
+  } else if (riyaActions.includes("pair")) {
+    events.push({ t: at(18, 10), text: "Riya spends half an hour picking beside an expert.", tone: "good" });
+  } else {
+    events.push({ t: at(18, 10), text: `Riya holds ${RIYA.today} seconds a pick in Zone C.`, tone: "neutral" });
+  }
+
+  events.push(
+    state.people.arjun.outcome === "extended"
+      ? { t: ARJUN.rotaEnd, text: "Arjun's rota ends — and he stays on picking to 10.", tone: "good" }
+      : { t: ARJUN.rotaEnd, text: "Arjun clocks out at 8. Picking loses its fastest hands.", tone: "warn" },
   );
 
   if (state.auditStart < EVENING_END) {

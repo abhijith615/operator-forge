@@ -8,7 +8,7 @@ import { Avatar, SkillLine } from "@/components/challenge/day-three/ui";
 import { bestStation } from "@/lib/challenge/day-three/capacity";
 import { flexCost } from "@/lib/challenge/day-three/engine";
 import { EVENING_END } from "@/lib/challenge/day-three/forecast";
-import { FLEX, FLEX_BUDGET, windowCost } from "@/lib/challenge/day-three/workforce";
+import { FLEX, FLEX_BUDGET, paidMinutes, windowCost } from "@/lib/challenge/day-three/workforce";
 import {
   COVER_LABEL,
   type Day3State,
@@ -244,10 +244,18 @@ function FlexCard({
         </p>
       )}
 
+      {worker.prepaidUntil ? (
+        <p className="mt-2 text-[11px] leading-relaxed text-flux-400">
+          Already on the floor — her hours to {hourLabel(worker.prepaidUntil)} PM are booked and paid.
+        </p>
+      ) : null}
+
       <div className="mt-2 flex flex-wrap gap-1.5">
         {worker.windows.map((window) => {
           const chosen = booking?.windowId === window.id;
-          const hours = (window.end - window.start) / 60;
+          const paid = paidMinutes(worker, window);
+          const hours = paid / 60;
+          const base = paid === 0;
           return (
             <button
               key={window.id}
@@ -264,25 +272,30 @@ function FlexCard({
               )}
             >
               <span className="text-[12px] font-semibold text-hi">
-                {chosen ? "Booked · " : "Book "}
-                {windowLabel(window)}
+                {base
+                  ? chosen
+                    ? `On shift · to ${hourLabel(window.end)} PM`
+                    : "Her booking only"
+                  : worker.prepaidUntil
+                    ? `${chosen ? "Extended · " : "Extend "}to ${hourLabel(window.end)} PM`
+                    : `${chosen ? "Booked · " : "Book "}${windowLabel(window)}`}
               </span>
               <span className="font-mono text-[10px] text-lo tabular-nums">
-                {hours} h · {rupees(windowCost(worker, window))}
+                {base ? "already paid" : `${hours} h · ${rupees(windowCost(worker, window))}`}
               </span>
             </button>
           );
         })}
       </div>
 
-      {booking ? (
+      {booking && paidMinutes(worker, worker.windows.find((w) => w.id === booking.windowId) ?? worker.windows[0]!) > 0 ? (
         <button
           type="button"
           disabled={!editable}
           onClick={onCancel}
           className="mt-2 self-start rounded px-1 text-[11.5px] text-lo underline-offset-4 hover:text-mid hover:underline focus-visible:ring-2 focus-visible:ring-ember-500 focus-visible:outline-none"
         >
-          Cancel booking
+          {worker.prepaidUntil ? "Remove extension" : "Cancel booking"}
         </button>
       ) : null}
     </div>

@@ -39,6 +39,7 @@ export const DAY_THREE_DIMENSIONS = [
   "skillMatching",
   "adaptability",
   "peopleJudgement",
+  "communicationTrust",
   "prioritisation",
   "resourceDiscipline",
 ] as const;
@@ -50,6 +51,7 @@ export const DAY_THREE_DIMENSION_LABEL: Record<Day3Dimension, string> = {
   skillMatching: "Skill-to-Role Matching",
   adaptability: "Adaptability",
   peopleJudgement: "People Judgement",
+  communicationTrust: "Communication & Trust",
   prioritisation: "Prioritisation",
   resourceDiscipline: "Resource Discipline",
 };
@@ -62,7 +64,9 @@ export const DAY_THREE_DIMENSION_BLURB: Record<Day3Dimension, string> = {
   adaptability:
     "What you did when the forecast moved, a temp was late and a vehicle needed authorised hands.",
   peopleJudgement:
-    "How you treated a slow but accurate picker, and whose second shift you spent.",
+    "How you treated two slow but accurate pickers, and whose second shift you spent.",
+  communicationTrust:
+    "Whether you checked the facts before you answered Arjun, said what was true, and asked for overtime rather than demanding it.",
   prioritisation: "Whether the peak came first, and work that could wait was moved to where it could.",
   resourceDiscipline: "Whether the money bought capacity the store actually needed.",
 };
@@ -108,6 +112,8 @@ export interface FlexWorker extends Worker {
   windows: FlexWindow[];
   /** Ramps up over the first half hour of a booking. */
   newJoiner: boolean;
+  /** Already paid for up to this minute — only hours beyond it cost anything. */
+  prepaidUntil?: number;
 }
 
 export interface FlexBooking {
@@ -141,6 +147,8 @@ export type Phase =
   | "flex"
   | "riders"
   | "late"
+  | "arjun"
+  | "riya"
   | "receiving"
   | "faisal"
   | "audit"
@@ -156,6 +164,8 @@ export const PHASES: Phase[] = [
   "flex",
   "riders",
   "late",
+  "arjun",
+  "riya",
   "receiving",
   "faisal",
   "audit",
@@ -224,10 +234,69 @@ export type Milestone =
   | "flex"
   | "riders"
   | "late"
+  | "arjun"
+  | "riya"
   | "receiving"
   | "faisal"
   | "audit"
   | "lock";
+
+/* ── People management ────────────────────────────────────────────────── */
+
+/** Where Arjun's complaint is heard: on the floor, or away from the team. */
+export type ArjunLocation = "here" | "aside";
+
+export type AcknowledgeId = "achievement" | "understand" | "takes-time" | "everyone";
+export type ClarifyId = "approved-pending" | "tomorrow" | "cant-confirm" | "guarantee";
+export type RequestId = "able-to" | "extend" | "must-stay" | "replace" | "no-ask";
+
+export interface ArjunResponse {
+  acknowledge: AcknowledgeId | null;
+  clarify: ClarifyId | null;
+  request: RequestId | null;
+}
+
+/**
+ * What Arjun does with the rest of his evening. `unaddressed` is the clock
+ * running out before anyone spoke to him.
+ */
+export type ArjunOutcome = "extended" | "held" | "refused" | "not-asked" | "unaddressed";
+
+export interface ArjunState {
+  opened: boolean;
+  location: ArjunLocation | null;
+  incentiveChecked: boolean;
+  performanceChecked: boolean;
+  /** The response builder is open; the manager tools have closed. */
+  responding: boolean;
+  /** Went to the response before checking the incentive status. */
+  actedBeforeVerifying: boolean;
+  response: ArjunResponse;
+  outcome: ArjunOutcome | null;
+  checkedSim: number | null;
+  answeredSim: number | null;
+}
+
+export type RiyaAction = "zone" | "pair" | "coach" | "keep" | "remove" | "packing" | "warn";
+
+export interface RiyaState {
+  opened: boolean;
+  trendViewed: boolean;
+  zonesViewed: boolean;
+  /** Opened Zone C and heard why she is slow there. */
+  zoneCFound: boolean;
+  zoneOpen: string | null;
+  interventions: RiyaAction[];
+  applied: boolean;
+  /** The clock ran out and the floor lead pulled her himself. */
+  defaulted: boolean;
+  foundSim: number | null;
+}
+
+export interface PeopleState {
+  arjun: ArjunState;
+  riya: RiyaState;
+}
 
 export interface Day3State {
   phase: Phase;
@@ -245,6 +314,7 @@ export interface Day3State {
   receiving: ReceivingOutcome | null;
   receivingSkipped: boolean;
   faisal: FaisalAction[];
+  people: PeopleState;
   auditStart: number;
   core: CoreSnapshot | null;
   forecastResponse: "kept" | "adjusted" | null;
@@ -292,4 +362,32 @@ export type Day3Tag =
   | "strong_delegation"
   | "manager_overinvolved"
   | "used_temporary_transfer"
-  | "shift_locked_by_clock";
+  | "shift_locked_by_clock"
+  /* ── People management ── */
+  | "arjun_issue_opened"
+  | "arjun_conversation_private"
+  | "arjun_issue_handled_publicly"
+  | "arjun_status_checked"
+  | "arjun_performance_checked"
+  | "acted_before_verifying"
+  | "arjun_achievement_acknowledged"
+  | "arjun_payment_status_explained"
+  | "arjun_unverified_promise"
+  | "arjun_overtime_requested_respectfully"
+  | "arjun_overtime_pressured"
+  | "arjun_overtime_extended"
+  | "arjun_overtime_declined"
+  | "arjun_overtime_not_requested"
+  | "arjun_issue_unaddressed"
+  | "riya_profile_opened"
+  | "riya_trend_reviewed"
+  | "riya_zone_data_checked"
+  | "riya_zone_c_pattern_found"
+  | "riya_accuracy_considered"
+  | "riya_moved_to_familiar_zone"
+  | "riya_paired_with_expert"
+  | "riya_coaching_scheduled"
+  | "riya_removed_unnecessarily"
+  | "riya_warned_without_diagnosis"
+  | "riya_untrained_role_assigned"
+  | "riya_left_unchanged";

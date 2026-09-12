@@ -4,11 +4,12 @@ import * as React from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowLeftRight, Clock, ShieldCheck, X } from "lucide-react";
 
+import { PeoplePulse } from "@/components/challenge/day-three/people";
 import { Avatar, SkillLine, SkillStars, STATION_LETTER } from "@/components/challenge/day-three/ui";
 import { Button } from "@/components/ui/button";
-import { isCrossTrained } from "@/lib/challenge/day-three/capacity";
+import { arjunOvertime, isCrossTrained } from "@/lib/challenge/day-three/capacity";
 import { clockLabel } from "@/lib/challenge/day-three/forecast";
-import { REGULARS } from "@/lib/challenge/day-three/workforce";
+import { ARJUN, REGULARS } from "@/lib/challenge/day-three/workforce";
 import {
   COVER_LABEL,
   type Day3State,
@@ -44,6 +45,13 @@ export function PeoplePool({
   highlight?: string[];
 }) {
   const unassigned = REGULARS.filter((worker) => !state.assignments[worker.id]).length;
+  const overtime = arjunOvertime(state);
+  const badgeFor = (id: string) => {
+    if (id !== ARJUN.id) return null;
+    if (overtime === "accepted") return { text: "Overtime agreed · to 10 PM", tone: "ion" as const };
+    if (overtime === "declined") return { text: `Leaves ${clockLabel(ARJUN.rotaEnd)}`, tone: "warn" as const };
+    return { text: "OT 8–10 PM · unconfirmed", tone: "faint" as const };
+  };
 
   return (
     <div className="flex min-h-0 flex-col">
@@ -64,6 +72,8 @@ export function PeoplePool({
               station={state.assignments[worker.id] ?? null}
               editable={editable}
               highlighted={highlight?.includes(worker.id) ?? false}
+              pulse={state.phase === "arjun" && worker.id === ARJUN.id}
+              badge={badgeFor(worker.id)}
               faisalNote={worker.id === "faisal" && state.faisal.length > 0 ? state.faisal : null}
               onAssign={(station) => onAssign(worker.id, station)}
               onOpen={() => onOpen(worker.id)}
@@ -91,6 +101,8 @@ export function EmployeeCard({
   station,
   editable,
   highlighted,
+  pulse = false,
+  badge = null,
   faisalNote,
   onAssign,
   onOpen,
@@ -99,6 +111,9 @@ export function EmployeeCard({
   station: Station | null;
   editable: boolean;
   highlighted: boolean;
+  /** Their moment is live right now. */
+  pulse?: boolean;
+  badge?: { text: string; tone: "ion" | "warn" | "faint" } | null;
   faisalNote: string[] | null;
   onAssign: (station: Station | null) => void;
   onOpen: () => void;
@@ -134,6 +149,7 @@ export function EmployeeCard({
             {isCrossTrained(worker) ? (
               <ArrowLeftRight className="size-3 text-info-500" aria-label="Cross-trained" />
             ) : null}
+            {pulse ? <PeoplePulse /> : null}
           </span>
           <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-lo">
             <span>{worker.level}</span>
@@ -151,6 +167,17 @@ export function EmployeeCard({
           </span>
         ) : null}
       </div>
+
+      {badge ? (
+        <p
+          className={cn(
+            "mt-1.5 font-mono text-[10px] tracking-[0.08em]",
+            badge.tone === "ion" ? "text-ion-400" : badge.tone === "warn" ? "text-warn-500" : "text-faint",
+          )}
+        >
+          {badge.text}
+        </p>
+      ) : null}
 
       {faisalNote ? (
         <p className="mt-1.5 text-[10.5px] text-info-500">Intervention: {faisalNote.join(" + ")}</p>

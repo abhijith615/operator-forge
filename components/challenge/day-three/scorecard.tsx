@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { AlertTriangle, ArrowRight, Check } from "lucide-react";
 
+import { PeopleManagementInsight } from "@/components/challenge/day-three/people";
 import { CountUp } from "@/components/motion/count-up";
 import { Button } from "@/components/ui/button";
 import { DAY_FOUR_TEASER } from "@/lib/challenge/day-four/scenario";
@@ -164,6 +165,41 @@ export function Day3Scorecard({ result }: { result: ChallengeResult }) {
           </section>
         ) : null}
 
+        {w?.people ? (
+          <section>
+            <h2 className="font-mono text-[10px] tracking-[0.18em] text-lo uppercase">The two people</h2>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <Tile
+                label="Arjun · overtime"
+                value={w.people.arjun.label}
+                body={`${
+                  w.people.arjun.checked
+                    ? "You checked the incentive status before answering."
+                    : "You answered before checking the incentive status."
+                } ${w.people.arjun.inPrivate ? "Handled away from the floor." : "Handled in front of the floor."}`}
+                tone={w.people.arjun.extended ? "ion" : "warn"}
+              />
+              <Tile
+                label="Riya · pace at peak"
+                value={
+                  w.people.riya.ppiTo === null
+                    ? "Off picking"
+                    : `${w.people.riya.ppiFrom}s → ${w.people.riya.ppiTo}s`
+                }
+                body={`${
+                  w.people.riya.diagnosed
+                    ? "You found the Zone C pattern behind her average."
+                    : "The zone breakdown was never opened."
+                } Development likelihood: ${w.people.riya.development.toLowerCase()}.`}
+                tone={w.people.riya.ppiTo !== null && w.people.riya.ppiTo < 22 ? "ion" : "warn"}
+              />
+            </div>
+            <div className="mt-2">
+              <PeopleManagementInsight balance={w.people.balance} />
+            </div>
+          </section>
+        ) : null}
+
         <section>
           <h2 className="font-mono text-[10px] tracking-[0.18em] text-lo uppercase">Management style</h2>
           <p className="mt-2 text-[20px] leading-tight font-semibold tracking-[-0.02em] text-hi">{result.signature.name}</p>
@@ -193,6 +229,13 @@ export function Day3Scorecard({ result }: { result: ChallengeResult }) {
           <section className="rounded-card border border-ion-500/35 bg-ion-500/[0.05] p-5">
             <p className="font-mono text-[10px] tracking-[0.2em] text-ion-400 uppercase">Best call</p>
             <p className="mt-2 text-[15px] leading-relaxed text-hi">{w.bestCall.body}</p>
+          </section>
+        ) : null}
+
+        {w?.bestPeopleCall ? (
+          <section className="rounded-card border border-ion-500/35 bg-ion-500/[0.05] p-5">
+            <p className="font-mono text-[10px] tracking-[0.2em] text-ion-400 uppercase">Best people call</p>
+            <p className="mt-2 text-[15px] leading-relaxed text-hi">{w.bestPeopleCall.body}</p>
           </section>
         ) : null}
 

@@ -336,6 +336,25 @@ export interface WorkforceSummary {
   timeline: { time: string; tone: "good" | "warn"; text: string }[];
   bestCall: FeedbackItem | null;
   developmentArea: { area: string; body: string };
+  /** The two people moments. Optional: runs saved before the module lack it. */
+  people?: {
+    arjun: {
+      outcome: string;
+      label: string;
+      checked: boolean;
+      inPrivate: boolean;
+      extended: boolean;
+    };
+    riya: {
+      interventions: string[];
+      diagnosed: boolean;
+      development: "High" | "Medium" | "Low";
+      ppiFrom: number;
+      ppiTo: number | null;
+    };
+    balance: { trust: number; standards: number; label: string; name: string; body: string };
+  };
+  bestPeopleCall?: FeedbackItem | null;
   /** Day 3 mapped onto the five competencies every day reports into. */
   operatorCompetencies: Record<string, number>;
   lockedByClock: boolean;

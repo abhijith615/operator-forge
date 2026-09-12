@@ -278,25 +278,33 @@ export const FLEX: FlexWorker[] = [
     ],
   },
   {
+    // On today's afternoon booking already, which is why the floor lead can
+    // raise her at 5:52. Her hours to 7 PM are paid for; anything past that is
+    // an extension the operator chooses and pays for.
     id: "riya",
     name: "Riya",
     initials: "RY",
-    level: "On-demand · New",
+    level: "On-demand · 11 days",
     kind: "flex",
     skills: { picking: 1, packing: 0, dispatch: 0 },
-    ppi: 19.5,
-    accuracy: 97.5,
-    accuracyLabel: "Pick accuracy · training",
+    ppi: 22.4,
+    accuracy: 99.7,
+    accuracyLabel: "Pick accuracy",
+    attendance: 100,
     highValue: false,
-    start: at(19),
+    start: 0,
     end: at(22),
+    tenure: "11 days",
+    note: "On the afternoon booking until 7 PM",
     rate: 95,
     rating: null,
-    experience: "New · basic picking training",
-    newJoiner: true,
+    experience: "11 days · picking",
+    newJoiner: false,
+    prepaidUntil: at(19),
     windows: [
-      { id: "riya-peak", start: at(19), end: at(21) },
-      { id: "riya-late", start: at(19), end: at(22) },
+      { id: "riya-day", start: 0, end: at(19) },
+      { id: "riya-peak", start: 0, end: at(21) },
+      { id: "riya-late", start: 0, end: at(22) },
     ],
   },
   {
@@ -368,8 +376,13 @@ export function flexWindow(worker: FlexWorker, id: string): FlexWindow | undefin
   return worker.windows.find((window) => window.id === id);
 }
 
+/** Minutes of a window the store actually pays for tonight. */
+export function paidMinutes(worker: FlexWorker, window: FlexWindow): number {
+  return Math.max(0, window.end - Math.max(window.start, worker.prepaidUntil ?? 0));
+}
+
 export function windowCost(worker: FlexWorker, window: FlexWindow): number {
-  return Math.round(((window.end - window.start) / 60) * worker.rate);
+  return Math.round((paidMinutes(worker, window) / 60) * worker.rate);
 }
 
 /* ── Riders ───────────────────────────────────────────────────────────── */
@@ -461,6 +474,94 @@ export const FAISAL = {
   pairTo: at(19),
 };
 
+/* ── The two people problems ──────────────────────────────────────────── */
+
+/**
+ * Arjun's overtime.
+ *
+ * His rota ends at 8. The 8–10 PM block was pencilled in by the floor lead
+ * last week and never confirmed with him, which is why the board shows it and
+ * he does not consider it agreed. The incentive he is owed is real, approved,
+ * and sitting in tomorrow's payout — the gap is that nobody told him.
+ */
+export const ARJUN = {
+  id: "arjun",
+  /** 8:00 PM — the end of his rostered shift. */
+  rotaEnd: at(20),
+  /** 10:00 PM — the end of the pencilled-in overtime. */
+  otEnd: at(22),
+  alertAt: at(17, 46),
+  incentive: 600,
+  lines: [
+    "Last Sunday we were told we'd get ₹600 for hitting the target.",
+    "I still haven't got mine.",
+    "Now you're asking me to stay two more hours?",
+    "Why should I?",
+  ],
+  status: {
+    period: "Last Sunday · store target",
+    target: "Achieved · 1,240 picks against 1,100",
+    submission: "Completed · Monday 9:12 AM",
+    approval: "Approved · Area Manager, Wednesday",
+    payment: "Pending",
+    expected: "Tomorrow's payout run",
+  },
+  performance: {
+    targetsHit: "4 of the last 4 weekly targets",
+    lateDays: "No unplanned absence in 90 days",
+  },
+};
+
+/**
+ * Riya. Eleven days in, slow on the store's average and improving every shift.
+ * Her whole problem sits in one zone: the aisle where the packs look alike,
+ * where she double-checks rather than risk a wrong pick. Slow is not bad.
+ */
+export const RIYA = {
+  id: "riya",
+  dayWindow: "riya-day",
+  prepaidUntil: at(19),
+  alertAt: at(17, 52),
+  /** Interventions take effect from 6 PM. */
+  applyAt: at(18),
+  pairFrom: at(18),
+  pairTo: at(18, 30),
+  tenure: "11 days",
+  today: 22.4,
+  benchmark: "10–15 sec",
+  accuracy: 99.7,
+  scanCompliance: 100,
+  attendance: 100,
+  /** Her last five shifts, oldest first. */
+  trend: [31.2, 28.1, 25.7, 23.8, 22.4],
+  zones: [
+    { id: "A", ppi: 15.8, label: "Festival essentials", note: "Fast-moving, large packs, one face per shelf." },
+    { id: "B", ppi: 17.1, label: "Dairy & bakery", note: "Short aisle, few lookalikes." },
+    {
+      id: "C",
+      ppi: 29.6,
+      label: "Personal care",
+      note: "High concentration of visually similar SKUs — same brand, four sizes, one shelf.",
+    },
+    { id: "D", ppi: 18.4, label: "Snacks & beverages", note: "Busy, but the packs are distinct." },
+  ],
+  quote: [
+    "I know I'm slower there.",
+    "I keep double-checking similar products because I don't want to pick the wrong one.",
+  ],
+  lead: [
+    "Riya is at 22.4 sec PPI again.",
+    "Others are covering for her.",
+    "Do you want me to pull her from picking?",
+  ],
+  /** Projected pace, by what the manager does. */
+  zone: 17.8,
+  paired: 20.2,
+  afterPair: 19.2,
+  zonePair: 17.4,
+  afterZonePair: 16.9,
+};
+
 export const MANAGER_LINES = ["Peak begins at 6.", "Build me a team that can handle it."];
 
 export const DAY_THREE_BRIEF = {
@@ -475,5 +576,5 @@ export const DAY_THREE_TEASER = {
   eyebrow: "Day 3 · Onam Eve",
   headline: "Five people are out. Peak begins in 90 minutes.",
   body: "A festival evening, a rota with holes in it, a flex market and a rider gap. You build the shift — then the evening starts changing it.",
-  hook: "Unlocks when you're ready. Fifteen minutes.",
+  hook: "Unlocks when you're ready. Eighteen minutes.",
 };

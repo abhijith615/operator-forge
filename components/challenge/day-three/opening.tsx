@@ -111,7 +111,7 @@ export function DayThreeOpening({ onStart }: { onStart: () => void }) {
                 <ArrowRight />
               </Button>
               <p className="text-[12px] leading-relaxed text-faint">
-                Fifteen minutes on the clock, starting now. Nothing here is multiple choice.
+                Eighteen minutes on the clock, starting now. Nothing here is multiple choice.
               </p>
             </motion.div>
           ) : (

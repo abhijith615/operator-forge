@@ -8,18 +8,30 @@ import {
   evaluate,
   minStation,
   peakStats,
+  placeAt,
   relativeSkill,
   riderHeadcount,
   simulateFlow,
   type PeakStats,
 } from "./capacity";
-import { flexCost, reached, riderCost, ridersSourced } from "./engine";
+import { flexCost, paidBookings, reached, riderCost, ridersSourced, withoutFlexBooking } from "./engine";
 import { EVENING_END, PEAK_FROM, PEAK_TO, riderNeedAt } from "./forecast";
-import { AUDIT, FLEX, FLEX_BUDGET, REGULARS, flexWindow } from "./workforce";
+import {
+  accurateStatus,
+  arjunCommunication,
+  peopleBalance,
+  riyaHas,
+  riyaJudgement,
+  riyaTrust,
+  statedStatus,
+  type PeopleBalance,
+} from "./people";
+import { AUDIT, FLEX, FLEX_BUDGET, REGULARS, RIYA, flexWindow } from "./workforce";
 import {
   DAY_THREE_DIMENSIONS,
   DAY_THREE_DIMENSION_BLURB,
   DAY_THREE_DIMENSION_LABEL,
+  type ArjunOutcome,
   type Day3Dimension,
   type Day3State,
   type Day3Tag,
@@ -41,10 +53,11 @@ import type { CompetencyScore } from "../types";
  */
 
 export const DAY_THREE_WEIGHTS: Record<Day3Dimension, number> = {
-  workforcePlanning: 0.25,
-  skillMatching: 0.2,
-  adaptability: 0.2,
-  peopleJudgement: 0.15,
+  workforcePlanning: 0.22,
+  skillMatching: 0.17,
+  adaptability: 0.17,
+  peopleJudgement: 0.14,
+  communicationTrust: 0.1,
   prioritisation: 0.1,
   resourceDiscipline: 0.1,
 };
@@ -124,13 +137,16 @@ export function placements(state: Day3State): Placement[] {
   }
   for (const worker of FLEX) {
     const booking = state.flex[worker.id];
-    if (booking) result.push({ worker, station: booking.station });
+    if (!booking) continue;
+    let station: Station | null = booking.station;
+    if (worker.id === RIYA.id) {
+      const actions = state.people.riya.interventions;
+      if (actions.includes("remove")) station = null;
+      else if (actions.includes("packing")) station = "packing";
+    }
+    if (station) result.push({ worker, station });
   }
   return result;
-}
-
-function omit<T>(record: Record<string, T>, key: string): Record<string, T> {
-  return Object.fromEntries(Object.entries(record).filter(([id]) => id !== key));
 }
 
 /**
@@ -177,6 +193,12 @@ export interface Day3Assessment {
     untrained: number;
     expertDependency: boolean;
     unnecessaryRemoval: boolean;
+  };
+  people: {
+    arjunOutcome: ArjunOutcome;
+    arjunCommunication: number;
+    riya: number;
+    balance: PeopleBalance;
   };
   parts: {
     forecastWeak: boolean;
@@ -261,23 +283,25 @@ export function assessDay3(state: Day3State): Day3Assessment {
   let flexUseful = 0;
   let flexInPeak = 0;
   let matched = 0;
-  const bookings = Object.keys(state.flex).length;
+  // Riya's afternoon is already paid for and already worked; only hours the
+  // operator chose to buy tonight are judged as flex spend.
+  const paid = paidBookings(state);
+  const bookings = paid.length;
   for (const worker of FLEX) {
     const booking = state.flex[worker.id];
     const window = booking ? flexWindow(worker, booking.windowId) : undefined;
-    if (!booking || !window) continue;
-    const without: Day3State = {
-      ...state,
-      flex: omit(state.flex, worker.id),
-      transfers: state.transfers.filter((transfer) => transfer.workerId !== worker.id),
-    };
+    if (!booking || !window || !paid.includes(worker.id)) continue;
+    const without = withoutFlexBooking(state, worker.id);
     const bare = evaluate(without, ACTUAL);
-    for (let t = window.start; t < Math.min(window.end, EVENING_END); t += 1) {
+    const from = Math.max(window.start, worker.prepaidUntil ?? 0);
+    for (let t = from; t < Math.min(window.end, EVENING_END); t += 1) {
       flexMinutes += 1;
-      if (coverageAt(bare, booking.station, t) < 1.05) flexUseful += 1;
+      // Extending someone you then pull off the station buys nothing.
+      const off = worker.id === RIYA.id && placeAt(state, ACTUAL, worker, t) !== booking.station;
+      if (!off && coverageAt(bare, booking.station, t) < 1.05) flexUseful += 1;
       if (t >= PEAK_FROM && t < PEAK_TO) flexInPeak += 1;
     }
-    const plannedBare = coverageOver(evaluate(without, PLANNED), window.start, window.end);
+    const plannedBare = coverageOver(evaluate(without, PLANNED), from, window.end);
     if (worker.skills[booking.station] >= 2 && plannedBare[booking.station] < 1) matched += 1;
   }
   const flexMatch = bookings > 0 ? matched / bookings : null;
@@ -332,6 +356,7 @@ export function assessDay3(state: Day3State): Day3Assessment {
 
   /* ── People judgement ── */
   const faisal = faisalScore(state.faisal);
+  const riya = riyaJudgement(state.people.riya);
   const morning = state.riders.morning;
   const fatigueComp = [100, 95, 85, 55, 35, 20][morning] ?? 20;
   // The plan leaned on Arjun: he left for the vehicle and picking fell with him.
@@ -340,10 +365,16 @@ export function assessDay3(state: Day3State): Day3Assessment {
     !receiving.backfillId &&
     receiving.before - receiving.after >= 0.1;
   const peopleJudgement = Math.round(
-    0.55 * faisal +
-      0.25 * fatigueComp +
-      0.2 * Math.max(0, 100 - 30 * untrainedRegular - (expertDependency ? 25 : 0)),
+    0.34 * faisal +
+      0.3 * riya +
+      0.18 * fatigueComp +
+      0.18 * Math.max(0, 100 - 30 * untrainedRegular - (expertDependency ? 25 : 0)),
   );
+
+  /* ── Communication and trust ── */
+  const arjunComm = arjunCommunication(state.people.arjun);
+  const communicationTrust = Math.round(0.7 * arjunComm + 0.3 * riyaTrust(state.people.riya));
+  const peopleInsight = peopleBalance(state.people);
 
   /* ── Prioritisation ── */
   const auditEnd = state.auditStart + AUDIT.duration;
@@ -385,6 +416,7 @@ export function assessDay3(state: Day3State): Day3Assessment {
     skillMatching,
     adaptability,
     peopleJudgement,
+    communicationTrust,
     prioritisation,
     resourceDiscipline,
   };
@@ -422,7 +454,7 @@ export function assessDay3(state: Day3State): Day3Assessment {
     fatigue: (morning >= 3 ? "High" : morning >= 1 ? "Moderate" : "Low") as "Low" | "Moderate" | "High",
     untrained,
     expertDependency,
-    unnecessaryRemoval: state.faisal.includes("remove"),
+    unnecessaryRemoval: state.faisal.includes("remove") || riyaHas(state.people.riya, "remove"),
   };
 
   const assessment: Day3Assessment = {
@@ -445,6 +477,12 @@ export function assessDay3(state: Day3State): Day3Assessment {
       inPeakShare,
     },
     riders: { cost: ridersSpend, sourced, morning },
+    people: {
+      arjunOutcome: state.people.arjun.outcome ?? "unaddressed",
+      arjunCommunication: arjunComm,
+      riya,
+      balance: peopleInsight,
+    },
     risks,
     parts: {
       forecastWeak,
@@ -551,6 +589,49 @@ function deriveTags(state: Day3State, a: Day3Assessment): Day3Tag[] {
       state.transfers.some((transfer) => transfer.reason === "late-cover" && transfer.workerId !== "you"),
   );
   add("shift_locked_by_clock", state.lockedBy === "clock");
+
+  const arjun = state.people.arjun;
+  const riya = state.people.riya;
+  add("arjun_issue_opened", arjun.opened);
+  add("arjun_conversation_private", arjun.location === "aside");
+  add("arjun_issue_handled_publicly", arjun.location === "here");
+  add("arjun_status_checked", arjun.incentiveChecked);
+  add("arjun_performance_checked", arjun.performanceChecked);
+  add("acted_before_verifying", arjun.actedBeforeVerifying);
+  add("arjun_achievement_acknowledged", arjun.response.acknowledge === "achievement");
+  add("arjun_payment_status_explained", accurateStatus(arjun));
+  add(
+    "arjun_unverified_promise",
+    arjun.response.clarify === "guarantee" || (statedStatus(arjun) && !arjun.incentiveChecked),
+  );
+  add(
+    "arjun_overtime_requested_respectfully",
+    arjun.response.request === "able-to" || arjun.response.request === "extend",
+  );
+  add(
+    "arjun_overtime_pressured",
+    arjun.response.request === "must-stay" || arjun.response.request === "replace",
+  );
+  add("arjun_overtime_extended", arjun.outcome === "extended");
+  add("arjun_overtime_declined", arjun.outcome === "held" || arjun.outcome === "refused");
+  add("arjun_overtime_not_requested", arjun.outcome === "not-asked");
+  add("arjun_issue_unaddressed", arjun.outcome === "unaddressed");
+
+  add("riya_profile_opened", riya.opened);
+  add("riya_trend_reviewed", riya.trendViewed);
+  add("riya_zone_data_checked", riya.zonesViewed);
+  add("riya_zone_c_pattern_found", riya.zoneCFound);
+  add(
+    "riya_accuracy_considered",
+    riya.zoneCFound && !riyaHas(riya, "remove") && !riyaHas(riya, "packing"),
+  );
+  add("riya_moved_to_familiar_zone", riyaHas(riya, "zone"));
+  add("riya_paired_with_expert", riyaHas(riya, "pair"));
+  add("riya_coaching_scheduled", riyaHas(riya, "coach"));
+  add("riya_removed_unnecessarily", riyaHas(riya, "remove"));
+  add("riya_warned_without_diagnosis", riyaHas(riya, "warn") && !riya.zoneCFound);
+  add("riya_untrained_role_assigned", riyaHas(riya, "packing"));
+  add("riya_left_unchanged", riya.applied && riyaHas(riya, "keep") && riya.interventions.length === 1);
   return tags;
 }
 
@@ -569,6 +650,33 @@ const TAG_PHASE: Partial<Record<Day3Tag, Phase>> = {
   borrowed_nearby_riders: "riders",
   excessive_morning_rider_recall: "riders",
   fatigue_risk_created: "riders",
+  arjun_issue_opened: "arjun",
+  arjun_conversation_private: "arjun",
+  arjun_issue_handled_publicly: "arjun",
+  arjun_status_checked: "arjun",
+  arjun_performance_checked: "arjun",
+  acted_before_verifying: "arjun",
+  arjun_achievement_acknowledged: "arjun",
+  arjun_payment_status_explained: "arjun",
+  arjun_unverified_promise: "arjun",
+  arjun_overtime_requested_respectfully: "arjun",
+  arjun_overtime_pressured: "arjun",
+  arjun_overtime_extended: "arjun",
+  arjun_overtime_declined: "arjun",
+  arjun_overtime_not_requested: "arjun",
+  arjun_issue_unaddressed: "peak",
+  riya_profile_opened: "riya",
+  riya_trend_reviewed: "riya",
+  riya_zone_data_checked: "riya",
+  riya_zone_c_pattern_found: "riya",
+  riya_accuracy_considered: "riya",
+  riya_moved_to_familiar_zone: "riya",
+  riya_paired_with_expert: "riya",
+  riya_coaching_scheduled: "riya",
+  riya_removed_unnecessarily: "riya",
+  riya_warned_without_diagnosis: "riya",
+  riya_untrained_role_assigned: "riya",
+  riya_left_unchanged: "receiving",
   adapted_to_late_worker: "receiving",
   failed_to_replace_late_worker: "receiving",
   manager_overinvolved: "receiving",
@@ -623,6 +731,12 @@ const STYLES: StyleRule[] = [
     test: (_state, a) => a.flex.cost > FLEX_BUDGET && a.dims.workforcePlanning >= 65,
   },
   {
+    name: "High-Capacity · Low-Trust Manager",
+    blurb:
+      "The stations had the capacity they needed. The two people who asked you for something got an answer that was not checked, not true, or not a request — and capacity built that way does not come back next festival.",
+    test: (_state, a) => a.dims.workforcePlanning >= 70 && a.dims.communicationTrust < 45,
+  },
+  {
     name: "Headcount Manager · Skills Second",
     blurb:
       "The stations had people. They did not always have the right people — experts sat where their skill added little, and the coverage was thinner than the headcount suggested.",
@@ -648,6 +762,15 @@ const STYLES: StyleRule[] = [
     test: (_state, a) => a.anticipation < 0.5 && a.peak.criticalCoverage >= 0.86,
   },
   {
+    name: "Reactive People Manager",
+    blurb:
+      "Both people decisions were made before the evidence was in — an incentive status unchecked, a zone breakdown unopened. Deciding quickly about a person is not the same as deciding well.",
+    test: (state, a) =>
+      state.people.arjun.actedBeforeVerifying &&
+      !state.people.riya.zoneCFound &&
+      a.dims.communicationTrust < 75,
+  },
+  {
     name: "Expert-Dependent Manager",
     blurb:
       "Your plan leaned on Arjun. It held while he was on the floor, and sagged the moment the evening needed him at the vehicle with nobody moved in behind him.",
@@ -656,8 +779,17 @@ const STYLES: StyleRule[] = [
   {
     name: "People-First · Capacity Light",
     blurb:
-      "You treated people well — Faisal, the morning riders, the new joiners. The peak needed more capacity than the plan gave it.",
-    test: (_state, a) => a.dims.peopleJudgement >= 80 && a.dims.workforcePlanning < 62,
+      "You treated people well — Arjun, Faisal, Riya, the morning riders. Nobody was pushed, and nothing much changed either: the peak needed more capacity than the plan gave it.",
+    test: (_state, a) =>
+      (a.dims.peopleJudgement >= 80 || a.people.balance.label === "HIGH TRUST / LOW ACCOUNTABILITY") &&
+      a.dims.workforcePlanning < 62,
+  },
+  {
+    name: "Calm Coach · Clear Operator",
+    blurb:
+      "You checked before you answered, asked instead of ordering, and moved a slow picker's work rather than the picker. The peak was covered by a team that knew exactly where it stood.",
+    test: (_state, a) =>
+      a.dims.communicationTrust >= 80 && a.dims.peopleJudgement >= 80 && a.dims.workforcePlanning >= 72,
   },
   {
     name: "Adaptive Floor Leader",
@@ -686,7 +818,12 @@ function managementStyle(state: Day3State, a: Day3Assessment): { name: string; b
 export function operatorCompetencies(a: Day3Assessment): Record<string, number> {
   const mean = (...values: number[]) => Math.round(values.reduce((s, v) => s + v, 0) / values.length);
   return {
-    team: mean(a.dims.workforcePlanning, a.dims.skillMatching, a.dims.peopleJudgement),
+    team: mean(
+      a.dims.workforcePlanning,
+      a.dims.skillMatching,
+      a.dims.peopleJudgement,
+      a.dims.communicationTrust,
+    ),
     priority: mean(a.dims.prioritisation, a.dims.adaptability),
     customer: lin(a.peak.serviceRate, 0.82, 0.995),
     inventory: mean(a.parts.auditComp, a.parts.receivingComp),

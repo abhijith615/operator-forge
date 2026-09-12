@@ -1,13 +1,22 @@
-import { ACTUAL, coverageOver, deficitOf, evaluate, placeAt, riderHeadcount, workerById } from "./capacity";
+import { ACTUAL, coverageOver, deficitOf, evaluate, placeAt, riderHeadcount, riyaPpi, workerById } from "./capacity";
+import { paidBookings } from "./engine";
 import { EVENING_END, PEAK_FROM, PEAK_TO, clockLabel, riderNeedAt } from "./forecast";
-import { AUDIT, FLEX, FLEX_BUDGET, REGULARS } from "./workforce";
+import { ARJUN_OUTCOME_LABEL, riyaDevelopment, riyaHas } from "./people";
+import { ARJUN, AUDIT, FLEX, FLEX_BUDGET, REGULARS, RIYA } from "./workforce";
 import {
   DAY_THREE_BAND_RANGE,
   assessDay3,
   operatorCompetencies,
   type Day3Assessment,
 } from "./scoring";
-import { COVER_LABEL, DAY_THREE_DIMENSIONS, type Day3Dimension, type Day3State, type Station } from "./types";
+import {
+  COVER_LABEL,
+  DAY_THREE_DIMENSIONS,
+  type Day3Dimension,
+  type Day3State,
+  type RiyaAction,
+  type Station,
+} from "./types";
 import type { ChallengeResult, FeedbackItem, WorkforceSummary } from "../types";
 
 /**
@@ -145,6 +154,71 @@ function buildTimeline(state: Day3State, a: Day3Assessment): WorkforceSummary["t
     }
   }
 
+  /* ── The two people ── */
+  const arjun = state.people.arjun;
+  if (m.arjun) {
+    if (arjun.actedBeforeVerifying) {
+      push(m.arjun.sim, "warn", "Answered Arjun without checking whether the incentive existed", 4);
+    } else if (arjun.incentiveChecked) {
+      push(
+        arjun.checkedSim ?? m.arjun.sim,
+        "good",
+        "Checked Arjun's incentive status before answering him",
+        3,
+      );
+    }
+    // When he walked away, the refusal is the story; the venue is a footnote.
+    if (arjun.location === "here" && arjun.outcome !== "refused") {
+      push(m.arjun.sim, "warn", "Took a pay complaint in front of the rest of the floor", 2);
+    }
+    if (arjun.outcome === "extended") {
+      push(m.arjun.sim, "good", "Held 8–10 PM without making a promise you could not control", 4);
+    } else if (arjun.outcome === "refused") {
+      push(
+        m.arjun.sim,
+        "warn",
+        arjun.response.clarify === "guarantee"
+          ? "Guaranteed Arjun a payment you don't control — he declined the overtime"
+          : "Ordered Arjun to stay — he finished at 8 instead",
+        5,
+      );
+    } else if (arjun.outcome === "not-asked") {
+      push(m.arjun.sim, "warn", "Never asked Arjun to extend — 8–10 PM ran without your fastest picker", 4);
+    } else if (arjun.outcome === "held") {
+      push(m.arjun.sim, "warn", "Arjun finished at 8 — the pencilled-in overtime never became his", 3);
+    }
+  } else if (arjun.outcome === "unaddressed") {
+    push(ARJUN.alertAt, "warn", "Arjun's incentive question was never answered — he left at 8", 4);
+  }
+
+  const riya = state.people.riya;
+  const did = (action: RiyaAction) => riya.interventions.includes(action);
+  if (m.riya) {
+    if (riya.zoneCFound) {
+      push(riya.foundSim ?? m.riya.sim, "good", "Found that Riya's whole pace problem sat in Zone C", 3);
+    } else if (!did("keep")) {
+      // Leaving her alone gets its own line below; it is not two mistakes.
+      push(m.riya.sim, "warn", "Decided about Riya without looking at where she was slow", 4);
+    }
+    if (did("remove")) {
+      push(m.riya.sim, "warn", "Pulled a 99.7%-accurate picker off the floor before the peak", 5);
+    } else if (did("packing")) {
+      push(m.riya.sim, "warn", "Moved Riya to packing, which she has never been trained on", 5);
+    } else if ((did("zone") || did("pair")) && did("coach")) {
+      push(m.riya.sim, "good", "Protected peak output and booked Riya's Zone C coaching", 4);
+    } else if (did("zone") || did("pair")) {
+      push(m.riya.sim, "good", "Changed Riya's work for the peak, with no plan behind the pattern", 2);
+    } else if (did("warn") && !did("coach")) {
+      push(m.riya.sim, "warn", "Warned an improving picker without a plan to improve her", 4);
+    } else if (did("coach")) {
+      push(m.riya.sim, "good", "Booked Riya's coaching and left tonight's pace where it was", 2);
+    } else {
+      push(m.riya.sim, "warn", "Left Riya in Zone C through the peak", 3);
+    }
+  } else if (riya.defaulted) {
+    push(RIYA.alertAt, "warn", "The floor lead pulled Riya from picking — nobody answered him", 4);
+  }
+
   const receiving = state.receiving;
   if (m.receiving && receiving) {
     if (receiving.skipped) {
@@ -191,8 +265,8 @@ function buildTimeline(state: Day3State, a: Day3Assessment): WorkforceSummary["t
     else push(m.audit.sim, "warn", "Left the inventory audit inside the peak", 4);
   }
 
-  // Five to seven entries: drop the least consequential good ones first.
-  while (entries.length > 7) {
+  // Five to nine entries: drop the least consequential good ones first.
+  while (entries.length > 9) {
     const candidates = entries.filter((entry) => entry.tone === "good");
     const pool = candidates.length > 0 ? candidates : entries;
     const drop = pool.reduce((low, entry) => (entry.weight < low.weight ? entry : low));
@@ -210,7 +284,9 @@ function withoutFlex(state: Day3State): Day3State {
   const flexIds = new Set(FLEX.map((worker) => worker.id));
   return {
     ...state,
-    flex: {},
+    // Riya's afternoon was booked before the evening started; it is not one of
+    // the operator's calls, so it stays in the comparison.
+    flex: { [RIYA.id]: { windowId: RIYA.dayWindow, station: "picking" } },
     transfers: state.transfers.filter((transfer) => !flexIds.has(transfer.workerId)),
   };
 }
@@ -235,7 +311,8 @@ function bestCall(state: Day3State, a: Day3Assessment): FeedbackItem | null {
     });
   }
 
-  const booked = FLEX.filter((worker) => state.flex[worker.id]);
+  const paid = paidBookings(state);
+  const booked = FLEX.filter((worker) => paid.includes(worker.id));
   if (booked.length > 0 && a.flex.cost <= FLEX_BUDGET) {
     const names = booked.map((worker) => worker.name);
     const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names[0];
@@ -313,6 +390,55 @@ function bestCall(state: Day3State, a: Day3Assessment): FeedbackItem | null {
   return top && top.gain > 3 ? top.item : null;
 }
 
+/**
+ * The people equivalent: the conversation or the review that changed the
+ * evening most, measured the same way — in lane-minutes the plan would have
+ * been short without it. Only a decision that was both strong and evidenced
+ * can be one, so a lucky guess never becomes the best call.
+ */
+function bestPeopleCall(state: Day3State): FeedbackItem | null {
+  const arjun = state.people.arjun;
+  const riya = state.people.riya;
+  const base = deficitOf(evaluate(state, ACTUAL));
+  const candidates: { gain: number; item: FeedbackItem }[] = [];
+
+  if (arjun.outcome === "extended" && arjun.incentiveChecked) {
+    const declined: Day3State = {
+      ...state,
+      people: { ...state.people, arjun: { ...arjun, outcome: "held" } },
+    };
+    candidates.push({
+      gain: deficitOf(evaluate(declined, ACTUAL)) - base,
+      item: {
+        title: "Checked the fact before you asked for the favour",
+        body: "You verified Arjun's incentive status before asking for overtime, so what he heard was true and checkable — and the two hours you needed were given rather than ordered.",
+      },
+    });
+  }
+
+  if (riya.zoneCFound && (riyaHas(riya, "zone") || riyaHas(riya, "pair"))) {
+    const untouched: Day3State = {
+      ...state,
+      people: { ...state.people, riya: { ...riya, interventions: [] } },
+    };
+    candidates.push({
+      gain: deficitOf(evaluate(untouched, ACTUAL)) - base,
+      item: {
+        title: "Found the aisle, not the excuse",
+        body: riyaHas(riya, "coach")
+          ? "You recognised that Riya's slowness was concentrated in one zone of lookalike packs, moved her work without lowering the accuracy standard, and still booked the coaching that fixes the zone."
+          : "You recognised that Riya's slowness was concentrated in one zone of lookalike packs and changed her work rather than her place on the team.",
+      },
+    });
+  }
+
+  const top = candidates.reduce<{ gain: number; item: FeedbackItem } | null>(
+    (best, candidate) => (!best || candidate.gain > best.gain ? candidate : best),
+    null,
+  );
+  return top && top.gain > 0.5 ? top.item : null;
+}
+
 /* ── Development area ─────────────────────────────────────────────────── */
 
 const ORDER: Day3Dimension[] = [...DAY_THREE_DIMENSIONS];
@@ -336,6 +462,24 @@ function developmentArea(state: Day3State, a: Day3Assessment): { area: string; b
           body: "Faisal isn't trained on packing. Moving him there traded a slow picker for an untrained packer at the busiest hour.",
         };
       }
+      if (riyaHas(state.people.riya, "remove")) {
+        return {
+          area: "Slow is not the same as bad",
+          body: "Riya is eleven days in, 99.7% accurate, and has taken nine seconds off her pace in five shifts. Pulling her from picking solved a problem she was already solving, and picking carried the hole she was filling.",
+        };
+      }
+      if (riyaHas(state.people.riya, "packing")) {
+        return {
+          area: "People judgement",
+          body: "Riya has never packed. Moving her there traded a slow, accurate picker for an untrained packer an hour before the peak — and her accuracy, the one thing that was strong, stopped counting for anything.",
+        };
+      }
+      if (riyaHas(state.people.riya, "warn") && !state.people.riya.zoneCFound) {
+        return {
+          area: "Diagnose before acting",
+          body: "Riya was warned before anyone looked at where she was slow. She picks Zone A at 15.8 seconds and Zone C at 29.6: the pace problem is one aisle of lookalike packs, and a warning does not change an aisle.",
+        };
+      }
       if (state.riders.morning >= 3) {
         return {
           area: "Rider fatigue",
@@ -352,6 +496,43 @@ function developmentArea(state: Day3State, a: Day3Assessment): { area: string; b
         area: "People coaching",
         body: "You recognised Faisal's high PPI but treated it as a staffing issue rather than a performance-development issue.",
       };
+    case "communicationTrust": {
+      const arjun = state.people.arjun;
+      if (arjun.outcome === "unaddressed") {
+        return {
+          area: "Answering the floor",
+          body: "Arjun asked you a direct question about money he was owed, and the shift locked before he got an answer. It was approved and due in tomorrow's run — one check and one sentence was the entire fix.",
+        };
+      }
+      if (arjun.response.clarify === "guarantee") {
+        return {
+          area: "Expectation management",
+          body: "You guaranteed a payment you do not control. It was already approved and due tomorrow, so the true answer was the stronger one — and it was the promise, not the money, that he had heard before.",
+        };
+      }
+      if (arjun.response.request === "must-stay" || arjun.response.request === "replace") {
+        return {
+          area: "Asking, not telling",
+          body: "Overtime nobody has agreed to is a request. Told rather than asked, Arjun worked exactly the rota he signed, and the 8–10 PM block left the plan with him.",
+        };
+      }
+      if (arjun.actedBeforeVerifying) {
+        return {
+          area: "Diagnose before acting",
+          body: "You answered Arjun before checking the incentive status. It happened to be approved and pending — you were right by luck, and he could tell you had not looked.",
+        };
+      }
+      if (arjun.location === "here") {
+        return {
+          area: "Where the conversation happens",
+          body: "A pay complaint answered in front of the floor becomes everyone's pay complaint. Two steps aside costs nothing and keeps it his.",
+        };
+      }
+      return {
+        area: "Communication and trust",
+        body: "The conversation was civil and the request was fair. What was thin was the evidence behind it: people believe a manager who has already looked.",
+      };
+    }
     case "workforcePlanning":
       if (a.anticipation < 0.05) {
         return {
@@ -465,6 +646,22 @@ function recommendations(state: Day3State, a: Day3Assessment): string[] {
   const receiving = state.receiving;
 
   add(
+    a.tags.includes("acted_before_verifying") || a.tags.includes("arjun_unverified_promise"),
+    "Check the fact before you answer the person. Arjun's ₹600 was approved and sitting in tomorrow's payout — the only thing wrong was that nobody had looked and told him.",
+  );
+  add(
+    a.tags.includes("arjun_overtime_pressured"),
+    "Overtime that was never agreed is a request, not an instruction. Ask, and you get the two hours; tell, and you get the rota.",
+  );
+  add(
+    a.tags.includes("riya_removed_unnecessarily") || a.tags.includes("riya_warned_without_diagnosis"),
+    "Look at where someone is slow before deciding they are slow. Riya picks Zone A at 15.8 seconds and Zone C at 29.6 — that is an aisle problem wearing a person's name.",
+  );
+  add(
+    a.tags.includes("riya_left_unchanged"),
+    "An improving new picker is worth ten minutes of your evening: a zone change tonight and a coaching slot after the peak cost nothing and compound all week.",
+  );
+  add(
     a.tags.includes("audit_left_during_peak"),
     "Move non-urgent work out of the peak before you staff around it — the 45-minute audit belonged after 10 PM, not at 7:30.",
   );
@@ -540,6 +737,18 @@ function strengths(state: Day3State, a: Day3Assessment, best: FeedbackItem | nul
       body: "You moved a cross-trained associate to the station that needed them, rather than leaving everyone in their usual role.",
     });
   }
+  if (a.tags.includes("arjun_payment_status_explained") && a.tags.includes("arjun_overtime_extended")) {
+    items.push({
+      title: "Said what was true, and asked",
+      body: "Arjun's incentive was real, approved and late. You checked it, told him exactly that, and asked for the two hours instead of claiming them — which is why you got them.",
+    });
+  }
+  if (a.tags.includes("riya_zone_c_pattern_found") && !a.tags.includes("riya_removed_unnecessarily")) {
+    items.push({
+      title: "Read the pattern, not the average",
+      body: "Riya's 22.4 seconds was four zones averaged together, one of them three times the others. You found the aisle behind the number and dealt with the aisle.",
+    });
+  }
   if (a.tags.includes("faisal_coached") && a.tags.includes("faisal_role_adjusted")) {
     items.push({
       title: "Treated a slow picker as a person, not a problem",
@@ -574,6 +783,14 @@ const LEARNED: FeedbackItem[] = [
     title: "Not everything important is urgent now",
     body: "The audit, the coaching conversation, the development plan — all important, none of them at 7:30 PM on Onam Eve. Moving work in time is as powerful as moving people.",
   },
+  {
+    title: "Slow is not the same as bad",
+    body: "Faisal is slow and 99.7% accurate. Riya is slow, 99.7% accurate and nine seconds faster than she was five shifts ago, in three zones out of four. A pace number is an average of situations — the manager's job is to find which situation it is really describing.",
+  },
+  {
+    title: "Trust depends on accurate expectation management",
+    body: "Arjun's incentive was approved and due tomorrow. He did not need it paid tonight; he needed someone to look and tell him the truth. The promise you cannot keep costs more than the answer you did not want to give.",
+  },
 ];
 
 /* ── The result ───────────────────────────────────────────────────────── */
@@ -590,7 +807,7 @@ function planSummary(state: Day3State, a: Day3Assessment): WorkforceSummary["pla
     picking: count.picking,
     packing: count.packing,
     dispatch: count.dispatch,
-    flex: Object.keys(state.flex).length,
+    flex: paidBookings(state).length,
     riders: riderHeadcount(state, t).count,
     receiving: !receiving || receiving.skipped
       ? "Not received"
@@ -606,6 +823,7 @@ function planSummary(state: Day3State, a: Day3Assessment): WorkforceSummary["pla
 export function buildDay3Result(state: Day3State): ChallengeResult {
   const a = assessDay3(state);
   const best = bestCall(state, a);
+  const people = bestPeopleCall(state);
   const area = developmentArea(state, a);
   const peak = a.peak;
   const riderCoverage = coverageOver(evaluate(state, ACTUAL), PEAK_FROM, PEAK_TO).riders;
@@ -645,6 +863,27 @@ export function buildDay3Result(state: Day3State): ChallengeResult {
     timeline: buildTimeline(state, a),
     bestCall: best,
     developmentArea: area,
+    people: {
+      arjun: {
+        outcome: a.people.arjunOutcome,
+        label: ARJUN_OUTCOME_LABEL[a.people.arjunOutcome],
+        checked: state.people.arjun.incentiveChecked,
+        inPrivate: state.people.arjun.location === "aside",
+        extended: a.people.arjunOutcome === "extended",
+      },
+      riya: {
+        interventions: [...state.people.riya.interventions],
+        diagnosed: state.people.riya.zoneCFound,
+        development: riyaDevelopment(state.people.riya),
+        ppiFrom: RIYA.today,
+        ppiTo:
+          riyaHas(state.people.riya, "remove") || riyaHas(state.people.riya, "packing")
+            ? null
+            : Math.round(riyaPpi(state, ACTUAL, PEAK_FROM) * 10) / 10,
+      },
+      balance: a.people.balance,
+    },
+    bestPeopleCall: people,
     operatorCompetencies: operatorCompetencies(a),
     lockedByClock: state.lockedBy === "clock",
   };

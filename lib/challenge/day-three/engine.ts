@@ -11,6 +11,7 @@ import {
   workerById,
   type World,
 } from "./capacity";
+import { arjunComplete, arjunOutcomeOf } from "./people";
 import {
   AUDIT,
   FLEX,
@@ -18,20 +19,30 @@ import {
   RECEIVING,
   REGULARS,
   RIDER_SOURCES,
+  RIYA,
   YOU,
   flexWindow,
+  paidMinutes,
   windowCost,
 } from "./workforce";
 import {
   PHASES,
+  type AcknowledgeId,
+  type ArjunLocation,
+  type ArjunState,
+  type ClarifyId,
   type CoreSnapshot,
   type Day3State,
   type FaisalAction,
   type LateEvent,
   type Milestone,
+  type PeopleState,
   type Phase,
   type ReceivingOutcome,
+  type RequestId,
   type RiderSourceId,
+  type RiyaAction,
+  type RiyaState,
   type Station,
   type Worker,
 } from "./types";
@@ -63,6 +74,8 @@ const EDITABLE: Phase[] = [
   "flex",
   "riders",
   "late",
+  "arjun",
+  "riya",
   "receiving",
   "faisal",
   "audit",
@@ -87,6 +100,7 @@ export function worldOf(state: Day3State): World {
     revised: state.revised,
     late: reached(state, "late"),
     receiving: reached(state, "receiving"),
+    people: reached(state, "arjun"),
     faisalReal: reached(state, "faisal"),
     audit: reached(state, "audit"),
   };
@@ -110,6 +124,8 @@ export const PHASE_CLOCK: Record<Phase, number> = {
   flex: 22,
   riders: 35,
   late: 72,
+  arjun: 76,
+  riya: 82,
   receiving: 95,
   faisal: 115,
   audit: 135,
@@ -125,7 +141,9 @@ const NEXT_CLOCK: Record<Phase, number> = {
   adjust: 22,
   flex: 35,
   riders: 72,
-  late: 95,
+  late: 76,
+  arjun: 82,
+  riya: 95,
   receiving: 115,
   faisal: 135,
   audit: 142,
@@ -160,6 +178,34 @@ function mark(state: Day3State, key: Milestone, now: number): Day3State {
 
 /* ── Opening ──────────────────────────────────────────────────────────── */
 
+function createPeople(): PeopleState {
+  return {
+    arjun: {
+      opened: false,
+      location: null,
+      incentiveChecked: false,
+      performanceChecked: false,
+      responding: false,
+      actedBeforeVerifying: false,
+      response: { acknowledge: null, clarify: null, request: null },
+      outcome: null,
+      checkedSim: null,
+      answeredSim: null,
+    },
+    riya: {
+      opened: false,
+      trendViewed: false,
+      zonesViewed: false,
+      zoneCFound: false,
+      zoneOpen: null,
+      interventions: [],
+      applied: false,
+      defaulted: false,
+      foundSim: null,
+    },
+  };
+}
+
 export function createDay3(): Day3State {
   return {
     phase: "opening",
@@ -167,13 +213,15 @@ export function createDay3(): Day3State {
     phaseStartedAt: 0,
     revised: false,
     assignments: Object.fromEntries(REGULARS.map((worker) => [worker.id, null])),
-    flex: {},
+    // Riya is already on the floor: the store booked her afternoon this morning.
+    flex: { [RIYA.id]: { windowId: RIYA.dayWindow, station: "picking" } },
     riders: { nearby: 0, morning: 0, local: 0 },
     transfers: [],
     late: null,
     receiving: null,
     receivingSkipped: false,
     faisal: [],
+    people: createPeople(),
     auditStart: AUDIT.planned,
     core: null,
     forecastResponse: null,
@@ -273,13 +321,47 @@ export function bookFlex(
   return { ...state, flex: { ...state.flex, [flexId]: { windowId, station } } };
 }
 
+/**
+ * Cancelling a booking releases the person — except Riya, whose afternoon is
+ * already paid for and already worked. Cancelling her extension puts her back
+ * on the shift she was always on.
+ */
 export function cancelFlex(state: Day3State, flexId: string): Day3State {
   if (!canBookFlex(state) || !state.flex[flexId]) return state;
+  if (flexId === RIYA.id) {
+    if (state.flex[RIYA.id]?.windowId === RIYA.dayWindow) return state;
+    return {
+      ...state,
+      flex: { ...state.flex, [RIYA.id]: { windowId: RIYA.dayWindow, station: "picking" } },
+    };
+  }
   return {
     ...state,
     flex: omit(state.flex, flexId),
     transfers: state.transfers.filter((transfer) => transfer.workerId !== flexId),
   };
+}
+
+/** The same plan without one flex booking, for measuring what that booking bought. */
+export function withoutFlexBooking(state: Day3State, flexId: string): Day3State {
+  const flex =
+    flexId === RIYA.id
+      ? { ...state.flex, [RIYA.id]: { windowId: RIYA.dayWindow, station: "picking" as Station } }
+      : omit(state.flex, flexId);
+  return {
+    ...state,
+    flex,
+    transfers: state.transfers.filter((transfer) => transfer.workerId !== flexId),
+  };
+}
+
+/** Bookings the store is paying for tonight — Riya's afternoon is not one. */
+export function paidBookings(state: Day3State): string[] {
+  return FLEX.filter((worker) => {
+    const booking = state.flex[worker.id];
+    const window = booking ? flexWindow(worker, booking.windowId) : undefined;
+    return Boolean(window && paidMinutes(worker, window) > 0);
+  }).map((worker) => worker.id);
 }
 
 export function confirmFlex(state: Day3State, now: number): Day3State {
@@ -318,6 +400,7 @@ function lateCandidate(state: Day3State): Worker {
   const manoj = FLEX.find((worker) => worker.id === "manoj");
   if (manoj && state.flex.manoj) return manoj;
   const booked = FLEX.find((worker) => {
+    if (worker.id === RIYA.id) return false;
     const booking = state.flex[worker.id];
     const window = booking ? flexWindow(worker, booking.windowId) : undefined;
     return Boolean(window && window.start < LATE_ARRIVAL);
@@ -398,9 +481,132 @@ export function confirmLateRepair(state: Day3State, now: number): Day3State {
       lateRepairMs: now - state.phaseStartedAt,
       managerCovered: coveredByManager(state),
     },
-    "receiving",
+    "arjun",
     now,
   );
+}
+
+/* ── Phase 3b · the people ────────────────────────────────────────────── */
+
+function withArjun(state: Day3State, patch: Partial<ArjunState>): Day3State {
+  return { ...state, people: { ...state.people, arjun: { ...state.people.arjun, ...patch } } };
+}
+
+function withRiya(state: Day3State, patch: Partial<RiyaState>): Day3State {
+  return { ...state, people: { ...state.people, riya: { ...state.people.riya, ...patch } } };
+}
+
+export function openArjun(state: Day3State): Day3State {
+  if (state.phase !== "arjun" || state.people.arjun.opened) return state;
+  return withArjun(state, { opened: true });
+}
+
+/** Where the conversation happens is decided once, like it is on a floor. */
+export function setArjunLocation(state: Day3State, location: ArjunLocation): Day3State {
+  if (state.phase !== "arjun" || state.people.arjun.location) return state;
+  return withArjun(state, { opened: true, location });
+}
+
+export function checkArjunIncentive(state: Day3State, now: number): Day3State {
+  const arjun = state.people.arjun;
+  if (state.phase !== "arjun" || !arjun.location || arjun.responding || arjun.incentiveChecked) return state;
+  return withArjun(state, { incentiveChecked: true, checkedSim: simMinute(state, now) });
+}
+
+export function checkArjunPerformance(state: Day3State): Day3State {
+  const arjun = state.people.arjun;
+  if (state.phase !== "arjun" || !arjun.location || arjun.responding || arjun.performanceChecked) return state;
+  return withArjun(state, { performanceChecked: true });
+}
+
+/**
+ * Moving to the response closes the manager tools: whatever is said next is
+ * said on what the operator actually knows.
+ */
+export function respondToArjun(state: Day3State): Day3State {
+  const arjun = state.people.arjun;
+  if (state.phase !== "arjun" || !arjun.location || arjun.responding) return state;
+  return withArjun(state, { responding: true, actedBeforeVerifying: !arjun.incentiveChecked });
+}
+
+export type ArjunLine =
+  | { slot: "acknowledge"; id: AcknowledgeId }
+  | { slot: "clarify"; id: ClarifyId }
+  | { slot: "request"; id: RequestId };
+
+export function selectArjunLine(state: Day3State, line: ArjunLine): Day3State {
+  const arjun = state.people.arjun;
+  if (state.phase !== "arjun" || !arjun.responding || arjun.outcome) return state;
+  if (arjun.response[line.slot] === line.id) return state;
+  return withArjun(state, { response: { ...arjun.response, [line.slot]: line.id } });
+}
+
+export function answerArjun(state: Day3State, now: number): Day3State {
+  const arjun = state.people.arjun;
+  if (state.phase !== "arjun" || !arjun.responding || arjun.outcome || !arjunComplete(arjun)) return state;
+  const next = withArjun(state, { outcome: arjunOutcomeOf(arjun), answeredSim: simMinute(state, now) });
+  return mark(next, "arjun", now);
+}
+
+export function finishArjun(state: Day3State, now: number): Day3State {
+  if (state.phase !== "arjun" || !state.people.arjun.outcome) return state;
+  return enter(state, "riya", now);
+}
+
+export function openRiya(state: Day3State): Day3State {
+  if (state.phase !== "riya" || state.people.riya.opened) return state;
+  return withRiya(state, { opened: true });
+}
+
+export function viewRiyaTrend(state: Day3State): Day3State {
+  if (state.phase !== "riya" || state.people.riya.trendViewed) return state;
+  return withRiya(state, { trendViewed: true });
+}
+
+export function viewRiyaZones(state: Day3State): Day3State {
+  if (state.phase !== "riya" || state.people.riya.zonesViewed) return state;
+  return withRiya(state, { zonesViewed: true });
+}
+
+/** Opening the zone she is slow in is where the diagnosis actually happens. */
+export function openRiyaZone(state: Day3State, zoneId: string, now: number): Day3State {
+  const riya = state.people.riya;
+  if (state.phase !== "riya" || riya.zoneOpen === zoneId) return state;
+  const foundNow = zoneId === "C" && !riya.zoneCFound;
+  return withRiya(state, {
+    zoneOpen: zoneId,
+    zonesViewed: true,
+    zoneCFound: riya.zoneCFound || zoneId === "C",
+    foundSim: foundNow ? simMinute(state, now) : riya.foundSim,
+  });
+}
+
+/** What each intervention rules out. Coaching and a warning sit beside anything. */
+const RIYA_EXCLUDES: Record<RiyaAction, RiyaAction[]> = {
+  zone: ["remove", "keep", "packing"],
+  pair: ["remove", "keep", "packing"],
+  coach: [],
+  warn: [],
+  keep: ["zone", "pair", "remove", "packing"],
+  remove: ["zone", "pair", "keep", "packing"],
+  packing: ["zone", "pair", "keep", "remove"],
+};
+
+/** Two at a time: a manager on Onam Eve does not get to do everything. */
+export function toggleRiya(state: Day3State, action: RiyaAction): Day3State {
+  if (state.phase !== "riya" || state.people.riya.applied) return state;
+  const current = state.people.riya.interventions;
+  if (current.includes(action)) {
+    return withRiya(state, { interventions: current.filter((entry) => entry !== action) });
+  }
+  const kept = current.filter((entry) => !RIYA_EXCLUDES[action].includes(entry));
+  if (kept.length >= 2) return state;
+  return withRiya(state, { interventions: [...kept, action] });
+}
+
+export function applyRiya(state: Day3State, now: number): Day3State {
+  if (state.phase !== "riya" || state.people.riya.interventions.length === 0) return state;
+  return enter(mark(withRiya(state, { applied: true }), "riya", now), "receiving", now);
 }
 
 /* ── Phase 3 · high-value receiving ───────────────────────────────────── */
@@ -614,6 +820,23 @@ export function lockPlan(state: Day3State, now: number, by: "operator" | "clock"
   if (next.late && next.late.after === null) {
     next = { ...next, late: { ...next.late, after: lateCoverage(next) } };
   }
+  // Nobody answered Arjun, so he works the shift he agreed to and no more;
+  // nobody answered the floor lead about Riya, so he pulls her himself.
+  if (!next.people.arjun.outcome) {
+    next = {
+      ...next,
+      people: { ...next.people, arjun: { ...next.people.arjun, outcome: "unaddressed" } },
+    };
+  }
+  if (!next.people.riya.applied) {
+    next = {
+      ...next,
+      people: {
+        ...next.people,
+        riya: { ...next.people.riya, interventions: ["remove"], applied: true, defaulted: true },
+      },
+    };
+  }
   if (!next.receiving) {
     let defaulted = false;
     if (!receivingTransfer(next) && !next.receivingSkipped) {
@@ -667,7 +890,7 @@ export function flexHours(state: Day3State): number {
   return FLEX.reduce((sum, worker) => {
     const booking = state.flex[worker.id];
     const window = booking ? flexWindow(worker, booking.windowId) : undefined;
-    return window ? sum + (window.end - window.start) / 60 : sum;
+    return window ? sum + paidMinutes(worker, window) / 60 : sum;
   }, 0);
 }
 
@@ -692,5 +915,11 @@ export function d3Snapshot(state: Day3State) {
     },
     flexCost: flexCost(state),
     riderCost: riderCost(state),
+    people: {
+      arjun: state.people.arjun.outcome,
+      arjunChecked: state.people.arjun.incentiveChecked,
+      riya: state.people.riya.interventions,
+      riyaDiagnosed: state.people.riya.zoneCFound,
+    },
   };
 }
