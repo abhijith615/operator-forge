@@ -68,12 +68,6 @@ const DAYS: Day[] = [
     state: "live",
   },
   {
-    day: 6,
-    title: "Peak Day",
-    teaser: "Everything you learned in five days, in one sustained rush.",
-    state: "locked",
-  },
-  {
     day: 7,
     title: "Live AMA",
     teaser:
@@ -123,7 +117,7 @@ export default function ChallengePage() {
 
             <Reveal delay={0.18}>
               <p className="mx-auto mt-5 max-w-xl text-[14px] leading-relaxed text-lo text-balance">
-                You run it alongside a cohort that started the same week. Six
+                You run it alongside a cohort that started the same week. Five
                 fifteen-minute simulations, one live session with someone who
                 does this for a living, and an honest read on how you actually
                 think under pressure.
@@ -253,9 +247,9 @@ export default function ChallengePage() {
 
             <Reveal delay={0.3}>
               <p className="mt-8 text-[12.5px] leading-relaxed text-faint">
-                Day 6 and the AMA are not built yet. Days 1 to 5 are complete
-                and playable now — finishing them is how you find out whether
-                the rest is worth your week.
+                The AMA is not scheduled yet. Days 1 to 5 are complete and
+                playable now — finishing them is how you find out whether the
+                rest is worth your week.
               </p>
             </Reveal>
           </Container>
