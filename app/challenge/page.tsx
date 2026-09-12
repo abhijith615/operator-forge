@@ -68,6 +68,13 @@ const DAYS: Day[] = [
     state: "live",
   },
   {
+    day: 6,
+    title: "Self Review",
+    teaser:
+      "Five days of your own decisions, laid out together. What you did well, what you repeated without noticing, and the honest read you write about yourself before anyone else does.",
+    state: "locked",
+  },
+  {
     day: 7,
     title: "Live AMA",
     teaser:
@@ -247,9 +254,9 @@ export default function ChallengePage() {
 
             <Reveal delay={0.3}>
               <p className="mt-8 text-[12.5px] leading-relaxed text-faint">
-                The AMA is not scheduled yet. Days 1 to 5 are complete and
-                playable now — finishing them is how you find out whether the
-                rest is worth your week.
+                Self Review and the AMA are not open yet. Days 1 to 5 are
+                complete and playable now — finishing them is how you find out
+                whether the rest is worth your week.
               </p>
             </Reveal>
           </Container>
