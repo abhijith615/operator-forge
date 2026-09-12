@@ -121,7 +121,28 @@ export type ChallengeEventName =
   | "recovery_action_assigned"
   | "recovery_plan_locked"
   | "recovery_executed"
-  | "day4_completed";
+  | "day4_completed"
+  /* ── Day 5 · Protect the Promise ── */
+  | "day5_started"
+  | "customer_case_opened"
+  | "customer_context_inspected"
+  | "policy_context_inspected"
+  | "product_moved"
+  | "batch_destination_changed"
+  | "substitution_checked"
+  | "customer_contact_opened"
+  | "customer_recovery_selected"
+  | "packing_item_moved"
+  | "extra_packaging_added"
+  | "unsafe_pack_confirmed"
+  | "batch_freeze_selected"
+  | "active_pick_paused"
+  | "finale_resource_assigned"
+  | "recovery_budget_used"
+  | "promise_protected"
+  | "promise_compromised"
+  | "preventive_control_linked"
+  | "day5_completed";
 
 export interface ChallengeEvent {
   name: ChallengeEventName;

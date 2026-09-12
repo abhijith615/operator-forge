@@ -261,7 +261,46 @@ export interface ChallengeResult {
   workforce?: WorkforceSummary;
   /** Day 4 only — the floor before and after, and how it was cleared. */
   flow?: FlowSummary;
+  /** Day 5 only — what each customer ended up holding. */
+  promise?: PromiseSummary;
   durationMs: number;
+}
+
+/** The Day 5 numbers a scorecard needs, flattened for storage. */
+export interface PromiseSummary {
+  outcome: {
+    title: "PROMISES PROTECTED" | "PROMISES PARTLY HELD" | "PROMISES BROKEN";
+    /** Out of five journeys — four cases and the three-customer finale. */
+    promiseProtection: number;
+    customerEffort: "Low" | "Moderate" | "High";
+    customerEffortScore: number;
+    metricCourage: number;
+    needVsTransaction: number;
+    /** Seconds of click-to-dispatch spent protecting customers. */
+    ctdCost: number;
+    /** Rupees of packaging, markdown, substitution and recovery. */
+    spend: number;
+    wasteUnits: number;
+  };
+  /** Usability, quality, safety, effort and trust, averaged across the evening. */
+  promise: { usability: number; quality: number; safety: number; effort: number; trust: number };
+  journeys: {
+    id: string;
+    label: string;
+    customer: string;
+    /** Whether the final customer-use node lit up. */
+    state: "clear" | "risk" | "broken";
+    headline: string;
+    detail: string;
+  }[];
+  prevention: { incident: string; control: string | null; fits: boolean }[];
+  timeline: { time: string; tone: "good" | "warn"; text: string }[];
+  bestCall: FeedbackItem | null;
+  developmentArea: { area: string; body: string };
+  /** One deterministic paragraph about how this operator decides. */
+  insight: string;
+  operatorCompetencies: Record<string, number>;
+  lockedByClock: boolean;
 }
 
 /** The Day 4 numbers a scorecard needs, flattened for storage. */

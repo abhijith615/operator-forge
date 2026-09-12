@@ -61,9 +61,11 @@ const DAYS: Day[] = [
   },
   {
     day: 5,
-    title: "The Rating Slide",
-    teaser: "Four stars becomes three point six over one week. The cause is not where you think.",
-    state: "locked",
+    title: "Protect the Promise",
+    teaser:
+      "6:42 PM. Four orders are on time, in policy and inside target — and every one of them fails the person who ordered it. Find what the customer actually came for, and protect that.",
+    href: "/challenge/day-5",
+    state: "live",
   },
   {
     day: 6,
@@ -251,7 +253,7 @@ export default function ChallengePage() {
 
             <Reveal delay={0.3}>
               <p className="mt-8 text-[12.5px] leading-relaxed text-faint">
-                Days 5–6 and the AMA are not built yet. Days 1 to 4 are complete
+                Day 6 and the AMA are not built yet. Days 1 to 5 are complete
                 and playable now — finishing them is how you find out whether
                 the rest is worth your week.
               </p>
