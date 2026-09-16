@@ -10,6 +10,7 @@ import { Reveal } from "@/components/motion/reveal";
 import { Button } from "@/components/ui/button";
 import { Aurora, GridField, Horizon } from "@/components/visuals/aurora";
 import { DAY_TWO_TOTAL_VARIANCE, rupees } from "@/lib/challenge/day-two/ledger";
+import { OFFER } from "@/lib/constants/offer";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -148,6 +149,9 @@ export default function ChallengePage() {
             <Reveal delay={0.3}>
               <p className="mt-5 font-mono text-[11px] tracking-[0.1em] text-faint uppercase">
                 15 minutes a day · For registered participants · Sign in with the email you registered
+              </p>
+              <p className="mx-auto mt-4 inline-flex items-center rounded-full border border-ember-500/30 bg-ember-500/10 px-3 py-1 text-[12.5px] font-medium text-ember-400">
+                Simulations will be LIVE on {OFFER.liveLabel}
               </p>
             </Reveal>
           </Container>

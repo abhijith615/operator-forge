@@ -632,6 +632,45 @@ create policy "challenge_registrations_insert"
   to anon, authenticated
   with check (true);
 
+-- ── Cohort calendar ───────────────────────────────────────────────────────
+--
+-- When each cohort opens, and what a seat costs, so the database can refuse
+-- early access and underpaid payments on its own. No policies: read only by
+-- the security definer functions below.
+
+create table if not exists public.challenge_cohorts (
+  cohort      text        primary key check (char_length(cohort) <= 32),
+  starts_at   timestamptz not null,
+  ends_at     timestamptz not null,
+  price_paise integer     not null check (price_paise > 0),
+  check (ends_at > starts_at)
+);
+alter table public.challenge_cohorts enable row level security;
+
+insert into public.challenge_cohorts (cohort, starts_at, ends_at, price_paise)
+values ('2026-09-28', '2026-09-28 00:00:00+05:30', '2026-10-04 23:59:59+05:30', 49900)
+on conflict (cohort) do update
+  set starts_at = excluded.starts_at, ends_at = excluded.ends_at, price_paise = excluded.price_paise;
+
+-- ── Payments, as Razorpay reported them ───────────────────────────────────
+--
+-- Written only by razorpay_webhook. No policies and no grants.
+
+create table if not exists public.challenge_payments (
+  payment_id      text        primary key check (payment_id ~ '^pay_[A-Za-z0-9]{6,40}$'),
+  event           text        not null,
+  amount_paise    integer,
+  currency        text,
+  email           text,
+  phone           text,
+  order_id        text,
+  registration_id uuid        references public.challenge_registrations (id) on delete set null,
+  payload         jsonb       not null,
+  received_at     timestamptz not null default now()
+);
+alter table public.challenge_payments enable row level security;
+create index if not exists challenge_payments_email_idx on public.challenge_payments (email);
+
 -- ── Who may play ──────────────────────────────────────────────────────────
 --
 -- The challenge days are for people who registered and paid. An operator gets
@@ -648,7 +687,7 @@ set search_path = ''
 stable
 as $$
   with mine as (
-    select r.paid_at
+    select r.cohort, r.paid_at
     from auth.users u
     join public.challenge_registrations r on r.email = lower(u.email)
     where u.id = auth.uid()
@@ -657,14 +696,20 @@ as $$
   )
   select case
     when public.is_admin() then 'granted'
-    when exists (select 1 from mine where paid_at is not null) then 'granted'
+    when exists (
+      select 1 from mine m
+      left join public.challenge_cohorts c on c.cohort = m.cohort
+      where m.paid_at is not null and (c.starts_at is null or c.starts_at <= now())
+    ) then 'granted'
+    -- Paid, but nobody except an admin plays before the cohort starts.
+    when exists (select 1 from mine where paid_at is not null) then 'upcoming'
     when exists (select 1 from mine) then 'unpaid'
     else 'unregistered'
   end;
 $$;
 
 comment on function public.challenge_access_status is
-  'granted, unpaid or unregistered — for the signed-in caller''s confirmed email and the cohort (any cohort when null).';
+  'granted, upcoming, unpaid or unregistered — for the signed-in caller''s confirmed email and the cohort (any cohort when null).';
 
 revoke all on function public.challenge_access_status(text) from public;
 revoke all on function public.challenge_access_status(text) from anon;
@@ -751,3 +796,196 @@ begin
     execute format('grant execute on function public.%s to authenticated', fn);
   end loop;
 end $$;
+
+-- ── Razorpay webhook ──────────────────────────────────────────────────────
+--
+-- /api/razorpay/webhook relays the raw body and the X-Razorpay-Signature
+-- header here. The HMAC is checked against the Vault secret named
+-- `razorpay_webhook_secret` (the same value is set on the webhook in the
+-- Razorpay dashboard), so the function is safe to expose: without the secret
+-- nobody can produce a signature it accepts. Create the secret once with
+--   select vault.create_secret(encode(extensions.gen_random_bytes(24), 'hex'),
+--                              'razorpay_webhook_secret');
+
+create or replace function public.razorpay_webhook(p_body text, p_signature text)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_secret   text;
+  v_expected text;
+  v_event    jsonb;
+  v_name     text;
+  v_payment  jsonb;
+  v_id       text;
+  v_amount   integer;
+  v_currency text;
+  v_email    text;
+  v_phone    text;
+  v_digits   text;
+  v_reg      uuid;
+  v_matches  integer;
+begin
+  if p_body is null or p_signature is null or char_length(p_body) > 262144 then
+    return 'rejected';
+  end if;
+
+  select s.decrypted_secret into v_secret
+  from vault.decrypted_secrets s
+  where s.name = 'razorpay_webhook_secret'
+  limit 1;
+  if coalesce(v_secret, '') = '' then
+    return 'not_configured';
+  end if;
+
+  v_expected := encode(
+    extensions.hmac(convert_to(p_body, 'UTF8'), convert_to(v_secret, 'UTF8'), 'sha256'),
+    'hex'
+  );
+  if v_expected <> lower(trim(p_signature)) then
+    return 'rejected';
+  end if;
+
+  begin
+    v_event := p_body::jsonb;
+  exception when others then
+    return 'ignored';
+  end;
+
+  v_name := v_event ->> 'event';
+  if v_name is null or v_name not in ('payment.captured', 'order.paid') then
+    return 'ignored';
+  end if;
+
+  v_payment := v_event -> 'payload' -> 'payment' -> 'entity';
+  v_id := v_payment ->> 'id';
+  if v_payment is null or v_id is null or v_id !~ '^pay_[A-Za-z0-9]{6,40}$'
+     or coalesce(v_payment ->> 'status', '') <> 'captured' then
+    return 'ignored';
+  end if;
+
+  v_amount   := nullif(v_payment ->> 'amount', '')::integer;
+  v_currency := v_payment ->> 'currency';
+  v_email    := nullif(lower(trim(coalesce(v_payment ->> 'email', ''))), '');
+  v_digits   := regexp_replace(coalesce(v_payment ->> 'contact', ''), '[^0-9]', '', 'g');
+  v_phone    := case when v_digits ~ '[6-9][0-9]{9}$' then '+91' || right(v_digits, 10) end;
+
+  -- payment.captured and order.paid both describe the same payment.
+  insert into public.challenge_payments
+    (payment_id, event, amount_paise, currency, email, phone, order_id, payload)
+  values
+    (v_id, v_name, v_amount, v_currency, v_email, v_phone, v_payment ->> 'order_id', v_event)
+  on conflict (payment_id) do nothing;
+
+  if exists (select 1 from public.challenge_payments where payment_id = v_id and registration_id is not null) then
+    return 'duplicate';
+  end if;
+
+  -- Only a full-price rupee payment for a cohort opens anything.
+  if v_currency is distinct from 'INR' or v_amount is null
+     or v_amount < (select min(price_paise) from public.challenge_cohorts) then
+    return 'recorded_unmatched';
+  end if;
+
+  -- Email first: the newest unpaid registration under the payer's email.
+  select r.id into v_reg
+  from public.challenge_registrations r
+  where v_email is not null and r.email = v_email
+  order by (r.paid_at is null) desc, r.created_at desc
+  limit 1;
+
+  -- Phone only when it points at exactly one unpaid registration, so nobody
+  -- can claim someone else's payment by registering with their number.
+  if v_reg is null and v_phone is not null then
+    select count(*) into v_matches
+    from public.challenge_registrations r
+    where r.phone = v_phone and r.paid_at is null;
+    if v_matches = 1 then
+      select r.id into v_reg
+      from public.challenge_registrations r
+      where r.phone = v_phone and r.paid_at is null;
+    end if;
+  end if;
+
+  if v_reg is null then
+    return 'recorded_unmatched';
+  end if;
+
+  update public.challenge_registrations
+  set paid_at = coalesce(paid_at, now()),
+      payment_ref = coalesce(payment_ref, v_id)
+  where id = v_reg;
+
+  update public.challenge_payments set registration_id = v_reg where payment_id = v_id;
+
+  return 'matched';
+end;
+$$;
+
+revoke all on function public.razorpay_webhook(text, text) from public;
+grant execute on function public.razorpay_webhook(text, text) to anon, authenticated;
+
+/* A registration that arrives after its payment claims it — by email only. */
+create or replace function public.challenge_registration_claim_payment()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_payment text;
+begin
+  select p.payment_id into v_payment
+  from public.challenge_payments p
+  where p.registration_id is null
+    and p.email = new.email
+    and p.currency = 'INR'
+    and p.amount_paise >= (select min(price_paise) from public.challenge_cohorts)
+  order by p.received_at desc
+  limit 1;
+
+  if v_payment is not null then
+    update public.challenge_registrations
+    set paid_at = now(), payment_ref = v_payment
+    where id = new.id and paid_at is null;
+    update public.challenge_payments set registration_id = new.id where payment_id = v_payment;
+  end if;
+  return null;
+end;
+$$;
+
+revoke all on function public.challenge_registration_claim_payment() from public, anon, authenticated;
+
+drop trigger if exists challenge_registration_claim_payment on public.challenge_registrations;
+create trigger challenge_registration_claim_payment
+  after insert on public.challenge_registrations
+  for each row execute function public.challenge_registration_claim_payment();
+
+create or replace function public.admin_unmatched_payments()
+returns table (
+  payment_id text, amount_paise integer, currency text,
+  email text, phone text, received_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = ''
+stable
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorised' using errcode = '42501';
+  end if;
+
+  return query
+  select p.payment_id, p.amount_paise, p.currency, p.email, p.phone, p.received_at
+  from public.challenge_payments p
+  where p.registration_id is null
+  order by p.received_at desc;
+end;
+$$;
+
+revoke all on function public.admin_unmatched_payments() from public;
+revoke all on function public.admin_unmatched_payments() from anon;
+grant execute on function public.admin_unmatched_payments() to authenticated;

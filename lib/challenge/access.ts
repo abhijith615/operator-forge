@@ -12,14 +12,21 @@ import type { Operator } from "@/types/operator";
 
 export const CHALLENGE_ACCESS_ROUTE = "/challenge/access";
 
-export type ChallengeAccessStatus = "granted" | "unpaid" | "unregistered";
+/**
+ * `upcoming` is registered and paid, but the cohort has not started yet —
+ * only admins play before the start date.
+ */
+export type ChallengeAccessStatus = "granted" | "upcoming" | "unpaid" | "unregistered";
+
+const STATUSES: readonly ChallengeAccessStatus[] = ["granted", "upcoming", "unpaid", "unregistered"];
 
 /**
  * Where the signed-in operator stands with the challenge.
  *
  * The database decides: `challenge_access_status` matches the confirmed email
- * on the account against the registrations, which the app itself cannot read,
- * and only a registration an admin has marked paid lets someone in. Anything
+ * on the account against the registrations, which the app itself cannot read.
+ * Only a paid registration lets someone in, and only once the cohort has
+ * started; admins are let in at any time. Anything
  * that goes wrong asking counts as a no — a paid product fails closed.
  * Simulator Mode has no registrations to check, so it lets everyone in.
  */
@@ -34,7 +41,7 @@ export const readChallengeAccess = cache(async (): Promise<ChallengeAccessStatus
     console.error("[challenge] access check failed:", error.code, error.message);
     return "unregistered";
   }
-  return data === "granted" || data === "unpaid" ? data : "unregistered";
+  return STATUSES.find((status) => status === data) ?? "unregistered";
 });
 
 export async function hasChallengeAccess(): Promise<boolean> {

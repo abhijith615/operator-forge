@@ -75,6 +75,16 @@ export interface AdminRegistration {
   has_account: boolean;
 }
 
+/** A Razorpay payment the webhook could not tie to a registration. */
+export interface AdminUnmatchedPayment {
+  payment_id: string;
+  amount_paise: number | null;
+  currency: string | null;
+  email: string | null;
+  phone: string | null;
+  received_at: string;
+}
+
 export interface AdminSnapshot {
   summary: AdminSummary;
   operators: AdminOperator[];
@@ -82,6 +92,7 @@ export interface AdminSnapshot {
   dropoffs: AdminDropoff[];
   waitlist: AdminWaitlistEntry[];
   registrations: AdminRegistration[];
+  unmatchedPayments: AdminUnmatchedPayment[];
   /** When the server read this, so the page can say how stale it is. */
   readAt: string;
 }
@@ -115,13 +126,14 @@ export async function readAdminSnapshot(): Promise<AdminSnapshot | null> {
   const supabase = await getSupabaseServerClient();
   if (!supabase) return null;
 
-  const [summary, operators, daily, dropoffs, waitlist, registrations] = await Promise.all([
+  const [summary, operators, daily, dropoffs, waitlist, registrations, unmatched] = await Promise.all([
     supabase.rpc("admin_summary"),
     supabase.rpc("admin_operators"),
     supabase.rpc("admin_daily_signups", { p_days: 30 }),
     supabase.rpc("admin_dropoffs"),
     supabase.rpc("admin_waitlist"),
     supabase.rpc("admin_challenge_registrations"),
+    supabase.rpc("admin_unmatched_payments"),
   ]);
 
   // A denied caller errors on every one of these. Returning null rather than
@@ -140,6 +152,7 @@ export async function readAdminSnapshot(): Promise<AdminSnapshot | null> {
     dropoffs: (dropoffs.data ?? []) as AdminDropoff[],
     waitlist: (waitlist.data ?? []) as AdminWaitlistEntry[],
     registrations: (registrations.data ?? []) as AdminRegistration[],
+    unmatchedPayments: (unmatched.data ?? []) as AdminUnmatchedPayment[],
     readAt: new Date().toISOString(),
   };
 }

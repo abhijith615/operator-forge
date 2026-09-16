@@ -18,6 +18,8 @@ export const OFFER = {
   /** Sunday 4 October 2026, end of day in India. */
   endsAt: "2026-10-04T23:59:59+05:30",
   dateLabel: "28 Sept – 04 Oct 2026",
+  /** When the simulations open to participants. The database enforces it. */
+  liveLabel: "28 Sept 2026",
   price: 499,
   listPrice: 1499,
   currency: "INR",

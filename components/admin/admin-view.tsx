@@ -83,8 +83,9 @@ export function AdminView({ initial }: { initial: AdminSnapshot }) {
           />
         </div>
         <p className="mb-3 text-[12.5px] leading-relaxed text-lo">
-          Check the payment in Razorpay, then mark the registration paid — that is what opens the
-          challenge to this email. The person must sign in with the same email.
+          Razorpay payments mark a registration paid on their own when the payer&rsquo;s email (or,
+          failing that, phone) matches. Use Mark paid for anything confirmed another way. Paid
+          participants get in from the cohort start date and must sign in with the same email.
         </p>
         <Table
           head={["Name", "Email", "Phone", "Registered", "Source", "Signed in", "Payment"]}
@@ -101,6 +102,29 @@ export function AdminView({ initial }: { initial: AdminSnapshot }) {
           ])}
         />
       </section>
+
+      {data.unmatchedPayments.length > 0 ? (
+        <section>
+          <SectionTitle count={data.unmatchedPayments.length}>Payments without a registration</SectionTitle>
+          <p className="mb-3 text-[12.5px] leading-relaxed text-lo">
+            Paid in Razorpay, but no registration matched the email or phone. Find the person&rsquo;s
+            registration above and mark it paid with this payment ID. Small amounts are other
+            payments on the account and can be ignored.
+          </p>
+          <Table
+            head={["Payment ID", "Amount", "Email", "Phone", "Received"]}
+            empty=""
+            rowKeys={data.unmatchedPayments.map((p) => p.payment_id)}
+            rows={data.unmatchedPayments.map((p) => [
+              <span key="id" className="font-mono text-[11.5px]">{p.payment_id}</span>,
+              p.amount_paise === null ? <Muted>—</Muted> : `${p.currency ?? ""} ${(p.amount_paise / 100).toFixed(2)}`,
+              p.email ? <span key="e" className="font-mono text-[11.5px]">{p.email}</span> : <Muted>—</Muted>,
+              p.phone ? <span key="p" className="font-mono text-[11.5px]">{p.phone}</span> : <Muted>—</Muted>,
+              when(p.received_at),
+            ])}
+          />
+        </section>
+      ) : null}
 
       {/* ── Counts ─────────────────────────────────────────────────────── */}
       <section>
