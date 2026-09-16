@@ -989,3 +989,31 @@ $$;
 revoke all on function public.admin_unmatched_payments() from public;
 revoke all on function public.admin_unmatched_payments() from anon;
 grant execute on function public.admin_unmatched_payments() to authenticated;
+
+-- ── Registration form diagnostics ─────────────────────────────────────────
+--
+-- When the landing-page form refuses a submission in the browser, it reports
+-- which fields failed and the *shape* of what was entered (digits and letters
+-- masked), so autofill quirks can be found without collecting anyone's
+-- details. Insert-only through the API; read in the dashboard.
+
+create table if not exists public.challenge_form_events (
+  id          uuid        primary key default gen_random_uuid(),
+  kind        text        not null check (kind in ('invalid', 'request_failed')),
+  fields      text[]      not null default '{}' check (cardinality(fields) <= 3),
+  detail      jsonb       not null default '{}'::jsonb check (pg_column_size(detail) <= 1024),
+  user_agent  text        check (char_length(user_agent) <= 300),
+  created_at  timestamptz not null default now()
+);
+
+comment on table public.challenge_form_events is
+  'Why registration attempts failed in the browser. Masked shapes only — never the values people typed.';
+
+alter table public.challenge_form_events enable row level security;
+grant insert on public.challenge_form_events to anon, authenticated;
+
+drop policy if exists "challenge_form_events_insert" on public.challenge_form_events;
+create policy "challenge_form_events_insert"
+  on public.challenge_form_events for insert
+  to anon, authenticated
+  with check (true);

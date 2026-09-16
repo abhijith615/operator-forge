@@ -28,18 +28,31 @@ export const HONEYPOT_FIELD = "hp_x7";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
+/**
+ * Removes what browser and phone autofill slip into values: invisible
+ * formatting characters (iOS wraps saved phone numbers in U+202A…U+202C,
+ * some keyboards add zero-width spaces) and full-width forms. Without this an
+ * autofilled number fails validation while the same number typed by hand
+ * passes, and an email could be stored with a character the sign-in email
+ * does not have.
+ */
+export function cleanInput(raw: string): string {
+  return raw.normalize("NFKC").replace(/\p{Cf}/gu, "");
+}
+
 /** An Indian mobile number in any common spelling, as +91XXXXXXXXXX — or null. */
 export function normalisePhone(raw: string): string | null {
-  const compact = raw.replace(/[\s\-().]/g, "");
-  const match = /^(?:\+?91|0)?([6-9]\d{9})$/.exec(compact);
+  const digits = cleanInput(raw).replace(/\D/g, "");
+  // Ten digits, optionally after 0, 91, 091 or 0091.
+  const match = /^(?:0{0,2}91|0)?([6-9]\d{9})$/.exec(digits);
   return match ? `+91${match[1]}` : null;
 }
 
 export function validateRegistration(
   input: RegistrationFields,
 ): { ok: true; value: RegistrationFields } | { ok: false; errors: RegistrationErrors } {
-  const name = input.name.replace(/\s+/g, " ").trim();
-  const email = input.email.trim().toLowerCase();
+  const name = cleanInput(input.name).replace(/\s+/g, " ").trim();
+  const email = cleanInput(input.email).replace(/\s+/g, "").toLowerCase();
   const phone = normalisePhone(input.phone);
   const errors: RegistrationErrors = {};
 
@@ -53,6 +66,24 @@ export function validateRegistration(
 
   if (Object.keys(errors).length > 0 || !phone) return { ok: false, errors };
   return { ok: true, value: { name, phone, email } };
+}
+
+export const FORM_EVENT_ENDPOINT = "/api/challenge/form-event";
+
+/**
+ * The pattern of a value with its content masked: digits become 9, letters
+ * a, and anything unusual is spelled out as its code point — which is exactly
+ * what reveals an autofill quirk, and nothing about the person.
+ */
+export function shapeOf(raw: string, max = 40): string {
+  let out = "";
+  for (const char of raw.slice(0, max)) {
+    if (/\p{Nd}/u.test(char)) out += /\d/.test(char) ? "9" : "<wide9>";
+    else if (/\p{L}/u.test(char)) out += "a";
+    else if (" @.+-()".includes(char)) out += char;
+    else out += `<U+${char.codePointAt(0)?.toString(16).toUpperCase().padStart(4, "0")}>`;
+  }
+  return raw.length > max ? `${out}…` : out;
 }
 
 /** Where an ad click came from. Only these keys are kept, each capped in length. */

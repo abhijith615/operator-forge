@@ -8,8 +8,10 @@ import { buttonVariants } from "@/components/ui/button";
 import { OFFER, OFFER_DAYS, inr, whatsappUrl } from "@/lib/constants/offer";
 import {
   ATTRIBUTION_KEYS,
+  FORM_EVENT_ENDPOINT,
   HONEYPOT_FIELD,
   REGISTER_ENDPOINT,
+  shapeOf,
   validateRegistration,
   type RegistrationErrors,
   type RegistrationFields,
@@ -29,12 +31,64 @@ const HOUR_MS = 3_600_000;
 /** How long payment waits on saving the registration before going anyway. */
 const SAVE_TIMEOUT_MS = 6_000;
 
+const FIELD_NAMES = ["name", "phone", "email"] as const;
+
+function isAutofilled(input: HTMLInputElement | null): boolean {
+  if (!input) return false;
+  try {
+    return input.matches(":autofill");
+  } catch {
+    try {
+      return input.matches(":-webkit-autofill");
+    } catch {
+      return false;
+    }
+  }
+}
+
+/**
+ * Tells us why a submission was refused, so problems that only happen on
+ * someone else's phone can be found. Masked shapes only — never the values.
+ */
+function reportFormEvent(
+  form: HTMLFormElement,
+  kind: "invalid" | "request_failed",
+  fields: readonly string[],
+  error?: string,
+) {
+  try {
+    const value = (name: string) => form.querySelector<HTMLInputElement>(`[name="${name}"]`)?.value ?? "";
+    const body = JSON.stringify({
+      kind,
+      fields,
+      detail: {
+        phoneShape: shapeOf(value("phone")),
+        emailShape: shapeOf(value("email")),
+        nameLength: value("name").length,
+        autofilled: FIELD_NAMES.filter((name) =>
+          isAutofilled(form.querySelector<HTMLInputElement>(`[name="${name}"]`)),
+        ),
+        error,
+      },
+    });
+    const blob = new Blob([body], { type: "application/json" });
+    if (!navigator.sendBeacon?.(FORM_EVENT_ENDPOINT, blob)) {
+      void fetch(FORM_EVENT_ENDPOINT, { method: "POST", body, keepalive: true }).catch(() => {});
+    }
+  } catch {
+    // Diagnostics must never get in the way.
+  }
+}
+
 /**
  * Sends the registration and reads the answer. Anything other than a clear
  * answer — a network drop, an error page, a timeout — comes back as null,
  * which the form treats as "go to payment".
  */
-async function sendRegistration(data: FormData): Promise<RegistrationResult | null> {
+async function sendRegistration(
+  data: FormData,
+  onFailure: (error: string) => void,
+): Promise<RegistrationResult | null> {
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), SAVE_TIMEOUT_MS);
   try {
@@ -44,11 +98,17 @@ async function sendRegistration(data: FormData): Promise<RegistrationResult | nu
       headers: { accept: "application/json" },
       signal: controller.signal,
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      onFailure(`http ${response.status}`);
+      return null;
+    }
     const result = (await response.json()) as RegistrationResult;
-    return result && typeof result.status === "string" ? result : null;
+    if (result && typeof result.status === "string") return result;
+    onFailure("unreadable response");
+    return null;
   } catch (error) {
     console.error("[7-day-challenge] registration request failed", error);
+    onFailure(error instanceof Error ? `${error.name}: ${error.message}` : "unknown error");
     return null;
   } finally {
     window.clearTimeout(timer);
@@ -304,7 +364,9 @@ export function RegistrationForm() {
     setMessage(null);
     if (!checked.ok) {
       setErrors(checked.errors);
-      const first = (["name", "phone", "email"] as const).find((key) => checked.errors[key]);
+      const failed = FIELD_NAMES.filter((key) => checked.errors[key]);
+      reportFormEvent(form, "invalid", failed);
+      const first = failed[0];
       if (first) form.querySelector<HTMLInputElement>(`[name="${first}"]`)?.focus();
       return;
     }
@@ -315,9 +377,12 @@ export function RegistrationForm() {
     startTransition(async () => {
       // Saving the registration must never stop someone paying: whatever goes
       // wrong sending it, go to payment regardless.
-      const result = await sendRegistration(data);
+      const result = await sendRegistration(data, (error) => reportFormEvent(form, "request_failed", [], error));
 
-      if (result?.status === "invalid") setErrors(result.errors);
+      if (result?.status === "invalid") {
+        setErrors(result.errors);
+        reportFormEvent(form, "invalid", FIELD_NAMES.filter((key) => result.errors[key]), "server");
+      }
       else if (result?.status === "closed") setMessage(result.message);
       else {
         // Stays "Taking you to payment…" while Razorpay loads.
@@ -372,7 +437,7 @@ export function RegistrationForm() {
         autoComplete="tel-national"
         placeholder="98765 43210"
         prefix="+91"
-        maxLength={16}
+        maxLength={32}
         required
         error={errors.phone}
       />
