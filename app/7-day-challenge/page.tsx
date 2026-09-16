@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
-import { Kalam } from "next/font/google";
 import {
   ArrowRight,
   BarChart3,
@@ -34,7 +33,9 @@ import {
   StickyRegisterBar,
   WhatsAppButton,
 } from "@/components/offer/offer-client";
+import { LEGAL_LINKS } from "@/lib/constants/legal";
 import { OFFER, OFFER_DAYS, OFFER_ROUTE, inr } from "@/lib/constants/offer";
+import { hand } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
 
 /**
@@ -47,8 +48,6 @@ import { cn } from "@/lib/utils";
  * `lib/constants/offer.ts`; there are no invented numbers, testimonials or
  * countdowns to a deadline that does not exist.
  */
-
-const hand = Kalam({ weight: ["400", "700"], subsets: ["latin"], display: "swap" });
 
 const DESCRIPTION = `From classrooms to control rooms. Run a live dark store, fix what breaks and learn live from a state operations head — a 7-day online Q-Com operations challenge, ${OFFER.dateLabel}. ${inr(OFFER.price)}.`;
 
@@ -661,6 +660,15 @@ export default function SevenDayChallengePage() {
               <Link href="/" className="mt-1 inline-block underline-offset-4 hover:text-white hover:underline">
                 operatorforge.in
               </Link>
+              <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-1">
+                {LEGAL_LINKS.map((link) => (
+                  <li key={link.href}>
+                    <Link href={link.href} className="underline-offset-4 hover:text-white hover:underline">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
           <p className="mt-10 border-t border-white/10 pt-5 text-[11.5px] leading-relaxed text-white/45">

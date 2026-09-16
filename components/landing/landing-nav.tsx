@@ -8,6 +8,7 @@ import { ArrowUpRight, Menu, X } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { useScrolled } from "@/hooks/use-scrolled";
+import { OFFER_ROUTE } from "@/lib/constants/offer";
 import { easing } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +21,7 @@ const links = [
   // Rooted, not bare: the nav renders on /challenge too, where a bare
   // #platform points at a section that is not on the page.
   { label: "Platform", href: "/#platform" },
-  { label: "7-Day Challenge", href: "/challenge" },
+  { label: "7-Day Challenge", href: OFFER_ROUTE },
 ] as const;
 
 export function LandingNav() {

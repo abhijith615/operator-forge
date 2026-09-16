@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Container } from "@/components/landing/section";
 import { LogoMark } from "@/components/brand/logo";
 import { Horizon } from "@/components/visuals/aurora";
+import { LEGAL_LINKS } from "@/lib/constants/legal";
+import { OFFER_ROUTE } from "@/lib/constants/offer";
 import { site } from "@/lib/constants/site";
 
 const COLUMNS = [
@@ -10,7 +12,8 @@ const COLUMNS = [
     title: "Platform",
     links: [
       { label: "Platform", href: "/#platform" },
-      { label: "7-Day Challenge", href: "/challenge" },
+      { label: "7-Day Challenge", href: OFFER_ROUTE },
+      { label: "Challenge overview", href: "/challenge" },
       { label: "Start Day 1", href: "/challenge/day-1" },
     ],
   },
@@ -21,6 +24,7 @@ const COLUMNS = [
       { label: "Sign in", href: "/login" },
     ],
   },
+  { title: "Legal", links: LEGAL_LINKS },
 ] as const;
 
 export function Footer() {
@@ -28,7 +32,7 @@ export function Footer() {
     <footer className="relative">
       <Horizon />
       <Container className="py-16">
-        <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr]">
+        <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
           <div>
             <div className="flex items-center gap-2.5">
               <LogoMark className="size-6" />
