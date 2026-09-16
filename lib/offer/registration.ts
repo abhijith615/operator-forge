@@ -16,8 +16,15 @@ export type RegistrationErrors = Partial<Record<keyof RegistrationFields, string
 export type RegistrationResult =
   | { status: "ready"; paymentUrl: string }
   | { status: "invalid"; errors: RegistrationErrors }
-  | { status: "closed"; message: string }
-  | { status: "ignored" };
+  | { status: "closed"; message: string };
+
+export const REGISTER_ENDPOINT = "/api/challenge/register";
+
+/**
+ * A field people never see. Named and labelled so browser autofill has no
+ * reason to fill it — the old "company" field was being autofilled.
+ */
+export const HONEYPOT_FIELD = "hp_x7";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 

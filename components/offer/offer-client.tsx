@@ -3,12 +3,13 @@
 import * as React from "react";
 import { ArrowRight, MessageCircle } from "lucide-react";
 
-import { registerForChallenge } from "@/app/7-day-challenge/actions";
 import { track } from "@/components/offer/meta-pixel";
 import { buttonVariants } from "@/components/ui/button";
 import { OFFER, OFFER_DAYS, inr, whatsappUrl } from "@/lib/constants/offer";
 import {
   ATTRIBUTION_KEYS,
+  HONEYPOT_FIELD,
+  REGISTER_ENDPOINT,
   validateRegistration,
   type RegistrationErrors,
   type RegistrationFields,
@@ -27,6 +28,32 @@ const DAY_MS = 86_400_000;
 const HOUR_MS = 3_600_000;
 /** How long payment waits on saving the registration before going anyway. */
 const SAVE_TIMEOUT_MS = 6_000;
+
+/**
+ * Sends the registration and reads the answer. Anything other than a clear
+ * answer — a network drop, an error page, a timeout — comes back as null,
+ * which the form treats as "go to payment".
+ */
+async function sendRegistration(data: FormData): Promise<RegistrationResult | null> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), SAVE_TIMEOUT_MS);
+  try {
+    const response = await fetch(REGISTER_ENDPOINT, {
+      method: "POST",
+      body: data,
+      headers: { accept: "application/json" },
+      signal: controller.signal,
+    });
+    if (!response.ok) return null;
+    const result = (await response.json()) as RegistrationResult;
+    return result && typeof result.status === "string" ? result : null;
+  } catch (error) {
+    console.error("[7-day-challenge] registration request failed", error);
+    return null;
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
 
 const FOCUS_RING =
   "focus-visible:ring-2 focus-visible:ring-[#0B0B0B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF7F0] focus-visible:outline-none";
@@ -213,9 +240,10 @@ function Field({
 /**
  * Name, phone and email, then payment.
  *
- * Submitted with a handler rather than the form's `action`, because React
- * clears a form after an action — and on a validation error that would wipe
- * what the person just typed.
+ * The page's script sends it and navigates itself, so a validation error
+ * keeps what the person typed. The form also carries a plain `action`, so a
+ * submit that lands before the script has loaded still reaches the server and
+ * is redirected to payment.
  */
 export function RegistrationForm() {
   const status = useCohortStatus();
@@ -239,6 +267,12 @@ export function RegistrationForm() {
   // Ad parameters from the landing URL travel with the registration.
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    // Sent back here by a submit that happened before this script loaded.
+    const outcome = params.get("form");
+    if (outcome === "invalid") setMessage("Please check your details and try again.");
+    else if (outcome === "closed") {
+      setMessage("This cohort has finished. Message us on WhatsApp to hear about the next one.");
+    }
     const found: Record<string, string> = {};
     for (const key of ATTRIBUTION_KEYS) {
       const value = params.get(key);
@@ -279,22 +313,12 @@ export function RegistrationForm() {
     track("InitiateCheckout", { content_name: OFFER.name, value: OFFER.price, currency: OFFER.currency });
 
     startTransition(async () => {
-      // Saving the registration must never stop someone paying. If the action
-      // throws — a network drop, or a page left open across a deploy — or is
-      // still thinking after a few seconds, go to payment regardless.
-      let result: RegistrationResult | null = null;
-      try {
-        result = await Promise.race([
-          registerForChallenge(data),
-          new Promise<null>((resolve) => window.setTimeout(() => resolve(null), SAVE_TIMEOUT_MS)),
-        ]);
-      } catch (error) {
-        console.error("[7-day-challenge] registration request failed", error);
-      }
+      // Saving the registration must never stop someone paying: whatever goes
+      // wrong sending it, go to payment regardless.
+      const result = await sendRegistration(data);
 
       if (result?.status === "invalid") setErrors(result.errors);
       else if (result?.status === "closed") setMessage(result.message);
-      else if (result?.status === "ignored") return;
       else {
         // Stays "Taking you to payment…" while Razorpay loads.
         setLeaving(true);
@@ -304,13 +328,26 @@ export function RegistrationForm() {
   };
 
   return (
-    <form id="register-form" noValidate onSubmit={onSubmit} className="relative space-y-3.5">
+    <form
+      id="register-form"
+      action={REGISTER_ENDPOINT}
+      method="post"
+      noValidate
+      onSubmit={onSubmit}
+      className="relative space-y-3.5"
+    >
       {/* A field only bots fill in. */}
       <div aria-hidden className="absolute -left-[9999px] h-px w-px overflow-hidden">
-        <label>
-          Company
-          <input name="company" type="text" tabIndex={-1} autoComplete="off" />
-        </label>
+        <label htmlFor={HONEYPOT_FIELD}>Leave this empty</label>
+        <input
+          id={HONEYPOT_FIELD}
+          name={HONEYPOT_FIELD}
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          data-lpignore="true"
+          data-1p-ignore
+        />
       </div>
       {Object.entries(attribution).map(([key, value]) => (
         <input key={key} type="hidden" name={key} value={value} />
