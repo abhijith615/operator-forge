@@ -578,3 +578,41 @@ grant execute on function public.challenge_standing(integer) to authenticated;
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('challenge-videos', 'challenge-videos', true, 104857600, array['video/mp4'])
 on conflict (id) do nothing;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 7-Day Operations Leader Challenge — registrations
+-- The landing page at /7-day-challenge takes a name, phone and email before
+-- sending someone to payment, so a registration that never pays can still be
+-- followed up. Anyone may add a row through the API; nobody can read, change
+-- or delete one through it. Registrations are read in the Supabase dashboard.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create table if not exists public.challenge_registrations (
+  id           uuid        primary key default gen_random_uuid(),
+  cohort       text        not null check (char_length(cohort) <= 32),
+  name         text        not null check (char_length(name) between 2 and 80),
+  phone        text        not null check (phone ~ '^\+91[6-9][0-9]{9}$'),
+  email        text        not null check (
+                 char_length(email) <= 254
+                 and email ~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]{2,}$'
+               ),
+  attribution  jsonb       not null default '{}'::jsonb check (pg_column_size(attribution) <= 2048),
+  created_at   timestamptz not null default now()
+);
+
+comment on table public.challenge_registrations is
+  'Sign-ups from the paid-challenge landing page, captured before payment.';
+
+create index if not exists challenge_registrations_cohort_idx
+  on public.challenge_registrations (cohort, created_at desc);
+
+alter table public.challenge_registrations enable row level security;
+
+grant insert on public.challenge_registrations to anon, authenticated;
+
+-- Insert only. There is deliberately no select, update or delete policy.
+drop policy if exists "challenge_registrations_insert" on public.challenge_registrations;
+create policy "challenge_registrations_insert"
+  on public.challenge_registrations for insert
+  to anon, authenticated
+  with check (true);

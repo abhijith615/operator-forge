@@ -26,11 +26,12 @@ import {
 import { LogoMark } from "@/components/brand/logo";
 import { MetaPixel } from "@/components/offer/meta-pixel";
 import {
-  CheckoutButton,
   CohortBadge,
   FloatingWhatsApp,
   LightCanvas,
-  StickyJoinBar,
+  RegisterButton,
+  RegistrationForm,
+  StickyRegisterBar,
   WhatsAppButton,
 } from "@/components/offer/offer-client";
 import { OFFER, OFFER_DAYS, OFFER_ROUTE, inr } from "@/lib/constants/offer";
@@ -97,8 +98,8 @@ const VERBS = ["Observe", "Think", "Decide", "Collaborate", "Communicate", "Solv
 const STEPS: { icon: LucideIcon; title: string; body: string }[] = [
   {
     icon: ShieldCheck,
-    title: `Join for ${inr(OFFER.price)}`,
-    body: `Secure your seat through Razorpay for the cohort that starts ${OFFER_DAYS[0]?.date}.`,
+    title: `Register for ${inr(OFFER.price)}`,
+    body: `Enter your name, phone and email, then pay securely on Razorpay for the cohort that starts ${OFFER_DAYS[0]?.date}.`,
   },
   {
     icon: Smartphone,
@@ -154,8 +155,12 @@ const FAQS: { q: string; a: string }[] = [
     a: "Your scorecards and operator profile are a practice assessment built from simulated shifts. They show how you think under pressure; they are not an employment certification.",
   },
   {
-    q: "How do I pay?",
-    a: `Securely through Razorpay. The offer price is ${inr(OFFER.price)} for all seven days.`,
+    q: "How do I register and pay?",
+    a: `Enter your name, phone and email in the registration form, and you go straight to a secure Razorpay payment page. The offer price is ${inr(OFFER.price)} for all seven days.`,
+  },
+  {
+    q: "Can I get a refund?",
+    a: `${OFFER.refundNote} Message us on WhatsApp at ${OFFER.whatsapp.display}.`,
   },
 ];
 
@@ -176,6 +181,22 @@ function skyline(): { x: number; w: number; h: number }[] {
 }
 
 const SKYLINE = skyline();
+
+/** Seats and refunds, said the same way wherever the price appears. */
+function OfferNotes({ className }: { className?: string }) {
+  return (
+    <div className={cn("flex flex-col gap-2", className)}>
+      <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[#8A5A00]/25 bg-[#FFF4CC] px-2.5 py-1 text-[12px] font-semibold text-[#8A5A00]">
+        <span aria-hidden className="size-1.5 animate-pulse rounded-full bg-[#D97706]" />
+        {OFFER.seatsNote}
+      </span>
+      <p className="flex items-center gap-1.5 text-[13px] font-medium text-[#0B0B0B]">
+        <ShieldCheck className="size-4 shrink-0 text-[#128C7E]" aria-hidden />
+        {OFFER.refundNote}
+      </p>
+    </div>
+  );
+}
 
 /* ── Page ─────────────────────────────────────────────────────────────── */
 
@@ -200,9 +221,9 @@ export default function SevenDayChallengePage() {
           </Link>
           <div className="ml-auto flex items-center gap-2">
             <WhatsAppButton compact />
-            <CheckoutButton size="sm" location="header" className="hidden sm:inline-flex">
-              Join · {inr(OFFER.price)}
-            </CheckoutButton>
+            <RegisterButton size="sm" className="hidden sm:inline-flex">
+              Register · {inr(OFFER.price)}
+            </RegisterButton>
           </div>
         </div>
       </header>
@@ -252,8 +273,8 @@ export default function SevenDayChallengePage() {
 
               {/* The offer */}
               <div
-                id="hero-cta"
-                className="mt-8 rounded-[24px] border border-black/10 bg-white p-5 shadow-[0_24px_60px_-36px_rgba(0,0,0,0.35)] sm:p-6"
+                id="register"
+                className="mt-8 scroll-mt-24 rounded-[24px] border border-black/10 bg-white p-5 shadow-[0_24px_60px_-36px_rgba(0,0,0,0.35)] sm:p-6"
               >
                 <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
                   <p className="flex items-baseline gap-3">
@@ -267,14 +288,15 @@ export default function SevenDayChallengePage() {
                   </span>
                 </div>
                 <p className="mt-2 text-[13px] text-[#6B6B6B]">Offer price · all seven days included</p>
+                <OfferNotes className="mt-3" />
 
-                <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
-                  <CheckoutButton location="hero" className="w-full sm:w-auto">
-                    Join the 7-Day Challenge
-                    <ArrowRight />
-                  </CheckoutButton>
-                  <WhatsAppButton className="w-full sm:w-auto" />
+                <div className="mt-5 border-t border-black/10 pt-5">
+                  <h2 className="text-[17px] font-bold tracking-[-0.02em]">Reserve your seat</h2>
+                  <div className="mt-3.5">
+                    <RegistrationForm />
+                  </div>
                 </div>
+                <WhatsAppButton className="mt-3 w-full" />
 
                 <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 text-[12px] text-[#6B6B6B]">
                   <li className="flex items-center gap-1.5">
@@ -296,7 +318,7 @@ export default function SevenDayChallengePage() {
             {/* The operator panel */}
             <aside
               aria-label="What the challenge builds"
-              className="relative flex min-h-[360px] flex-col justify-end overflow-hidden rounded-[28px] bg-[#0B0B0B] p-7 text-white lg:min-h-0"
+              className="relative flex min-h-[360px] flex-col justify-end overflow-hidden rounded-[28px] bg-[#0B0B0B] p-7 text-white lg:sticky lg:top-24 lg:min-h-[600px] lg:self-start"
             >
               <span
                 aria-hidden
@@ -520,6 +542,7 @@ export default function SevenDayChallengePage() {
               </span>
             </p>
             <p className="mt-2 text-[13px] text-[#6B6B6B]">One payment · all seven days · {OFFER.dateLabel}</p>
+            <OfferNotes className="mt-3" />
 
             <ul className="mt-6 space-y-3 border-t border-black/10 pt-6">
               {INCLUDED.map((line) => (
@@ -530,10 +553,10 @@ export default function SevenDayChallengePage() {
               ))}
             </ul>
 
-            <CheckoutButton location="pricing" className="mt-7 w-full">
-              Join the 7-Day Challenge
+            <RegisterButton className="mt-7 w-full">
+              Register now
               <ArrowRight />
-            </CheckoutButton>
+            </RegisterButton>
             <p className="mt-3 flex items-center justify-center gap-1.5 text-[12px] text-[#6B6B6B]">
               <ShieldCheck className="size-3.5" aria-hidden />
               Secure checkout via Razorpay
@@ -593,13 +616,10 @@ export default function SevenDayChallengePage() {
               <strong className="font-bold text-[#0B0B0B]">{inr(OFFER.price)}</strong>
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <CheckoutButton
-                location="final"
-                className="w-full bg-none bg-[#0B0B0B] text-white shadow-none hover:shadow-none hover:brightness-125 sm:w-auto"
-              >
-                Join the 7-Day Challenge · {inr(OFFER.price)}
+              <RegisterButton className="w-full bg-none bg-[#0B0B0B] text-white shadow-none hover:shadow-none hover:brightness-125 sm:w-auto">
+                Register now · {inr(OFFER.price)}
                 <ArrowRight />
-              </CheckoutButton>
+              </RegisterButton>
               <WhatsAppButton className="w-full sm:w-auto" />
             </div>
           </div>
@@ -648,7 +668,7 @@ export default function SevenDayChallengePage() {
         </div>
       </footer>
 
-      <StickyJoinBar />
+      <StickyRegisterBar />
       <FloatingWhatsApp />
     </div>
   );

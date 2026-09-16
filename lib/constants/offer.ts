@@ -11,6 +11,8 @@ export const OFFER_ROUTE = "/7-day-challenge";
 
 export const OFFER = {
   name: "7-Day Operations Leader Challenge",
+  /** Stored with every registration, so one table can hold many cohorts. */
+  cohort: "2026-09-28",
   /** Monday 28 September 2026, midnight in India. */
   startsAt: "2026-09-28T00:00:00+05:30",
   /** Sunday 4 October 2026, end of day in India. */
@@ -19,7 +21,10 @@ export const OFFER = {
   price: 499,
   listPrice: 1499,
   currency: "INR",
-  paymentUrl: "https://rzp.io/rzp/Ucr2TilY",
+  paymentUrl: "https://rzp.io/rzp/zA3rZnNR",
+  /** Deliberately no number: the page never states a seat count. */
+  seatsNote: "Limited seats available",
+  refundNote: "Complete refund if you have a genuine case.",
   whatsapp: {
     /** Country code and number, digits only, as wa.me expects. */
     number: "918089508891",
