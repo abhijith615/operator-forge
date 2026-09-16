@@ -2,6 +2,7 @@
 
 import { getOperator } from "@/lib/auth/session";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { hasChallengeAccess } from "./access";
 import { toRow } from "./runs";
 import type { ChallengeResult } from "./types";
 
@@ -20,6 +21,9 @@ export async function saveChallengeRun(
 ): Promise<{ ok: boolean }> {
   const operator = await getOperator();
   if (!operator) return { ok: false };
+  // The pages already turn away anyone unregistered; this keeps a direct call
+  // to the action from putting them on the leaderboard anyway.
+  if (!(await hasChallengeAccess())) return { ok: false };
 
   const supabase = await getSupabaseServerClient();
   if (!supabase) return { ok: false };

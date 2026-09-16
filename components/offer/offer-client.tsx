@@ -12,6 +12,7 @@ import {
   validateRegistration,
   type RegistrationErrors,
   type RegistrationFields,
+  type RegistrationResult,
 } from "@/lib/offer/registration";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,8 @@ import { cn } from "@/lib/utils";
 
 const DAY_MS = 86_400_000;
 const HOUR_MS = 3_600_000;
+/** How long payment waits on saving the registration before going anyway. */
+const SAVE_TIMEOUT_MS = 6_000;
 
 const FOCUS_RING =
   "focus-visible:ring-2 focus-visible:ring-[#0B0B0B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF7F0] focus-visible:outline-none";
@@ -156,6 +159,7 @@ function Field({
   label,
   error,
   prefix,
+  hint,
   ...input
 }: {
   id: string;
@@ -163,8 +167,10 @@ function Field({
   label: string;
   error?: string;
   prefix?: string;
+  hint?: string;
 } & React.ComponentProps<"input">) {
   const errorId = `${id}-error`;
+  const hintId = `${id}-hint`;
   return (
     <div>
       <label htmlFor={id} className="block text-[13px] font-semibold text-[#0B0B0B]">
@@ -186,7 +192,7 @@ function Field({
           id={id}
           name={name}
           aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
+          aria-describedby={error ? errorId : hint ? hintId : undefined}
           className="h-full w-full min-w-0 bg-transparent px-3.5 text-[16px] text-[#0B0B0B] outline-none placeholder:text-[#9A9A9A]"
           {...input}
         />
@@ -194,6 +200,10 @@ function Field({
       {error ? (
         <p id={errorId} className="mt-1.5 text-[12.5px] font-medium text-[#B42318]">
           {error}
+        </p>
+      ) : hint ? (
+        <p id={hintId} className="mt-1.5 text-[12px] text-[#6B6B6B]">
+          {hint}
         </p>
       ) : null}
     </div>
@@ -212,7 +222,19 @@ export function RegistrationForm() {
   const [errors, setErrors] = React.useState<RegistrationErrors>({});
   const [message, setMessage] = React.useState<string | null>(null);
   const [attribution, setAttribution] = React.useState<Record<string, string>>({});
-  const [pending, startTransition] = React.useTransition();
+  const [saving, startTransition] = React.useTransition();
+  const [leaving, setLeaving] = React.useState(false);
+  const pending = saving || leaving;
+
+  // Back from the payment page, the browser may restore this page as it was
+  // left — mid-navigation. Give the button back.
+  React.useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) setLeaving(false);
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
 
   // Ad parameters from the landing URL travel with the registration.
   React.useEffect(() => {
@@ -257,10 +279,27 @@ export function RegistrationForm() {
     track("InitiateCheckout", { content_name: OFFER.name, value: OFFER.price, currency: OFFER.currency });
 
     startTransition(async () => {
-      // Success never comes back here: the action redirects to payment.
-      const result = await registerForChallenge(data);
-      if (result.status === "invalid") setErrors(result.errors);
-      else if (result.status === "closed") setMessage(result.message);
+      // Saving the registration must never stop someone paying. If the action
+      // throws — a network drop, or a page left open across a deploy — or is
+      // still thinking after a few seconds, go to payment regardless.
+      let result: RegistrationResult | null = null;
+      try {
+        result = await Promise.race([
+          registerForChallenge(data),
+          new Promise<null>((resolve) => window.setTimeout(() => resolve(null), SAVE_TIMEOUT_MS)),
+        ]);
+      } catch (error) {
+        console.error("[7-day-challenge] registration request failed", error);
+      }
+
+      if (result?.status === "invalid") setErrors(result.errors);
+      else if (result?.status === "closed") setMessage(result.message);
+      else if (result?.status === "ignored") return;
+      else {
+        // Stays "Taking you to payment…" while Razorpay loads.
+        setLeaving(true);
+        window.location.assign(result?.paymentUrl ?? OFFER.paymentUrl);
+      }
     });
   };
 
@@ -310,6 +349,7 @@ export function RegistrationForm() {
         placeholder="you@example.com"
         maxLength={254}
         required
+        hint="Use the email you'll sign in with — it unlocks the challenge."
         error={errors.email}
       />
 

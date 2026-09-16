@@ -1,15 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { ArrowRight, Trophy } from "lucide-react";
 
 import { LandingNav } from "@/components/landing/landing-nav";
 import { Footer } from "@/components/landing/footer";
 import { Container, Section, SectionHeading } from "@/components/landing/section";
 import { Button } from "@/components/ui/button";
-import { getOperator } from "@/lib/auth/session";
+import { requireChallengeAccess } from "@/lib/challenge/access";
 import { readLeaderboard, readStanding } from "@/lib/challenge/runs";
-import { LOGIN_ROUTE } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -22,8 +20,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function ChallengeLeaderboardPage() {
-  const operator = await getOperator();
-  if (!operator) redirect(`${LOGIN_ROUTE}?next=%2Fchallenge%2Fleaderboard`);
+  await requireChallengeAccess("/challenge/leaderboard");
 
   const [rows, standing] = await Promise.all([readLeaderboard(1, 50), readStanding(1)]);
 

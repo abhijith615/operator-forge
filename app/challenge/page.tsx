@@ -147,7 +147,7 @@ export default function ChallengePage() {
 
             <Reveal delay={0.3}>
               <p className="mt-5 font-mono text-[11px] tracking-[0.1em] text-faint uppercase">
-                15 minutes a day · Free · One account, seven days
+                15 minutes a day · For registered participants · Sign in with the email you registered
               </p>
             </Reveal>
           </Container>

@@ -592,9 +592,11 @@ create table if not exists public.challenge_registrations (
   cohort       text        not null check (char_length(cohort) <= 32),
   name         text        not null check (char_length(name) between 2 and 80),
   phone        text        not null check (phone ~ '^\+91[6-9][0-9]{9}$'),
+  -- Stored lowercased, so the access check below can match it exactly.
   email        text        not null check (
                  char_length(email) <= 254
-                 and email ~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]{2,}$'
+                 and email = lower(email)
+                 and email ~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]{2,}$'
                ),
   attribution  jsonb       not null default '{}'::jsonb check (pg_column_size(attribution) <= 2048),
   created_at   timestamptz not null default now()
@@ -606,6 +608,9 @@ comment on table public.challenge_registrations is
 create index if not exists challenge_registrations_cohort_idx
   on public.challenge_registrations (cohort, created_at desc);
 
+create index if not exists challenge_registrations_email_idx
+  on public.challenge_registrations (email, cohort);
+
 alter table public.challenge_registrations enable row level security;
 
 grant insert on public.challenge_registrations to anon, authenticated;
@@ -616,3 +621,34 @@ create policy "challenge_registrations_insert"
   on public.challenge_registrations for insert
   to anon, authenticated
   with check (true);
+
+-- ── Who may play ──────────────────────────────────────────────────────────
+--
+-- The challenge days are for registered people. An operator gets in when the
+-- email on their account — confirmed by Google or by a magic link, never a
+-- value the client sends — matches a registration. Admins always get in.
+-- Registrations stay unreadable through the API; this answers yes or no only.
+
+create or replace function public.has_challenge_access(p_cohort text default null)
+returns boolean
+language sql
+security definer
+set search_path = ''
+stable
+as $$
+  select public.is_admin() or exists (
+    select 1
+    from auth.users u
+    join public.challenge_registrations r on r.email = lower(u.email)
+    where u.id = auth.uid()
+      and u.email_confirmed_at is not null
+      and (p_cohort is null or r.cohort = p_cohort)
+  );
+$$;
+
+comment on function public.has_challenge_access is
+  'True when the signed-in caller''s confirmed email is registered for the cohort (any cohort when null), or they are an admin.';
+
+revoke all on function public.has_challenge_access(text) from public;
+revoke all on function public.has_challenge_access(text) from anon;
+grant execute on function public.has_challenge_access(text) to authenticated;

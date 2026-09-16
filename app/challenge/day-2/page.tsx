@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { DayTwoSimulation } from "@/components/challenge/day-two/simulation";
-import { getOperator } from "@/lib/auth/session";
+import { requireChallengeAccess } from "@/lib/challenge/access";
 import { readOwnRun } from "@/lib/challenge/runs";
-import { LOGIN_ROUTE, ONBOARDING_ROUTE } from "@/lib/constants/routes";
 import { DAY_TWO_TOTAL_VARIANCE, rupees } from "@/lib/challenge/day-two/ledger";
 
 export const metadata: Metadata = {
@@ -15,12 +14,8 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-const NEXT = "%2Fchallenge%2Fday-2";
-
 export default async function DayTwoPage() {
-  const operator = await getOperator();
-  if (!operator) redirect(`${LOGIN_ROUTE}?next=${NEXT}`);
-  if (!operator.onboarded) redirect(`${ONBOARDING_ROUTE}?next=${NEXT}`);
+  const operator = await requireChallengeAccess("/challenge/day-2");
 
   // Same rule as Day 1: an audit you can re-run until the numbers flatter you
   // is not an assessment.

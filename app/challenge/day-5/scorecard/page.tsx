@@ -3,9 +3,8 @@ import { redirect } from "next/navigation";
 
 import { RunSummary } from "@/components/challenge/run-summary";
 import { Day5Scorecard } from "@/components/challenge/day-five/scorecard";
-import { getOperator } from "@/lib/auth/session";
+import { requireChallengeAccess } from "@/lib/challenge/access";
 import { readOwnResult, readOwnRun } from "@/lib/challenge/runs";
-import { LOGIN_ROUTE, ONBOARDING_ROUTE } from "@/lib/constants/routes";
 
 export const metadata: Metadata = {
   title: "Day 5 · Your scorecard",
@@ -14,12 +13,8 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-const NEXT = "%2Fchallenge%2Fday-5%2Fscorecard";
-
 export default async function DayFiveScorecardPage() {
-  const operator = await getOperator();
-  if (!operator) redirect(`${LOGIN_ROUTE}?next=${NEXT}`);
-  if (!operator.onboarded) redirect(`${ONBOARDING_ROUTE}?next=${NEXT}`);
+  await requireChallengeAccess("/challenge/day-5/scorecard");
 
   const run = await readOwnRun(5);
   // Exact complement of the guard on /challenge/day-5, so the two cannot bounce.
