@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 
 import { LogoMark } from "@/components/brand/logo";
-import { MetaPixel } from "@/components/offer/meta-pixel";
+import { MetaPixelEvent } from "@/components/offer/meta-pixel";
 import {
   CohortBadge,
   FloatingWhatsApp,
@@ -204,7 +204,10 @@ export default function SevenDayChallengePage() {
   return (
     <div className="min-h-dvh bg-[#FAF7F0] text-[#0B0B0B] antialiased">
       <LightCanvas />
-      <MetaPixel />
+      <MetaPixelEvent
+        event="ViewContent"
+        params={{ content_name: OFFER.name, value: OFFER.price, currency: OFFER.currency }}
+      />
 
       {/* ── Header ── */}
       <header className="sticky top-0 z-40 border-b border-black/[0.06] bg-[#FAF7F0]/85 backdrop-blur-md">

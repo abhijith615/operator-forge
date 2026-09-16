@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 
+import { MetaPixel } from "@/components/offer/meta-pixel";
 import { AppProviders } from "@/components/providers";
 import { site } from "@/lib/constants/site";
 
@@ -57,6 +58,7 @@ export default function RootLayout({
           Skip to content
         </a>
         <AppProviders>{children}</AppProviders>
+        <MetaPixel />
       </body>
     </html>
   );
