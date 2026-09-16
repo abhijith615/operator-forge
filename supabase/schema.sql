@@ -599,8 +599,18 @@ create table if not exists public.challenge_registrations (
                  and email ~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]{2,}$'
                ),
   attribution  jsonb       not null default '{}'::jsonb check (pg_column_size(attribution) <= 2048),
-  created_at   timestamptz not null default now()
+  created_at   timestamptz not null default now(),
+  -- Set by an admin once the payment is confirmed in Razorpay. Access to the
+  -- challenge waits for it.
+  paid_at      timestamptz,
+  payment_ref  text
 );
+
+alter table public.challenge_registrations add column if not exists paid_at timestamptz;
+alter table public.challenge_registrations add column if not exists payment_ref text;
+alter table public.challenge_registrations drop constraint if exists challenge_registrations_payment_ref_check;
+alter table public.challenge_registrations add constraint challenge_registrations_payment_ref_check
+  check (payment_ref is null or char_length(payment_ref) <= 64);
 
 comment on table public.challenge_registrations is
   'Sign-ups from the paid-challenge landing page, captured before payment.';
@@ -624,10 +634,41 @@ create policy "challenge_registrations_insert"
 
 -- ── Who may play ──────────────────────────────────────────────────────────
 --
--- The challenge days are for registered people. An operator gets in when the
--- email on their account — confirmed by Google or by a magic link, never a
--- value the client sends — matches a registration. Admins always get in.
--- Registrations stay unreadable through the API; this answers yes or no only.
+-- The challenge days are for people who registered and paid. An operator gets
+-- in when the email on their account — confirmed by Google or by a magic link,
+-- never a value the client sends — matches a registration marked paid. Admins
+-- always get in. Registrations stay unreadable through the API; these answer
+-- about the caller only.
+
+create or replace function public.challenge_access_status(p_cohort text default null)
+returns text
+language sql
+security definer
+set search_path = ''
+stable
+as $$
+  with mine as (
+    select r.paid_at
+    from auth.users u
+    join public.challenge_registrations r on r.email = lower(u.email)
+    where u.id = auth.uid()
+      and u.email_confirmed_at is not null
+      and (p_cohort is null or r.cohort = p_cohort)
+  )
+  select case
+    when public.is_admin() then 'granted'
+    when exists (select 1 from mine where paid_at is not null) then 'granted'
+    when exists (select 1 from mine) then 'unpaid'
+    else 'unregistered'
+  end;
+$$;
+
+comment on function public.challenge_access_status is
+  'granted, unpaid or unregistered — for the signed-in caller''s confirmed email and the cohort (any cohort when null).';
+
+revoke all on function public.challenge_access_status(text) from public;
+revoke all on function public.challenge_access_status(text) from anon;
+grant execute on function public.challenge_access_status(text) to authenticated;
 
 create or replace function public.has_challenge_access(p_cohort text default null)
 returns boolean
@@ -636,19 +677,77 @@ security definer
 set search_path = ''
 stable
 as $$
-  select public.is_admin() or exists (
-    select 1
-    from auth.users u
-    join public.challenge_registrations r on r.email = lower(u.email)
-    where u.id = auth.uid()
-      and u.email_confirmed_at is not null
-      and (p_cohort is null or r.cohort = p_cohort)
-  );
+  select public.challenge_access_status(p_cohort) = 'granted';
 $$;
-
-comment on function public.has_challenge_access is
-  'True when the signed-in caller''s confirmed email is registered for the cohort (any cohort when null), or they are an admin.';
 
 revoke all on function public.has_challenge_access(text) from public;
 revoke all on function public.has_challenge_access(text) from anon;
 grant execute on function public.has_challenge_access(text) to authenticated;
+
+-- ── Registrations in the admin panel ──────────────────────────────────────
+
+create or replace function public.admin_challenge_registrations()
+returns table (
+  id uuid, cohort text, name text, phone text, email text,
+  attribution jsonb, created_at timestamptz, paid_at timestamptz, payment_ref text,
+  has_account boolean
+)
+language plpgsql
+security definer
+set search_path = ''
+stable
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorised' using errcode = '42501';
+  end if;
+
+  return query
+  select r.id, r.cohort, r.name, r.phone, r.email, r.attribution, r.created_at,
+         r.paid_at, r.payment_ref,
+         exists (select 1 from auth.users u where lower(u.email) = r.email)
+  from public.challenge_registrations r
+  order by r.created_at desc;
+end;
+$$;
+
+/* Marking paid keeps the first paid time; marking unpaid clears both fields. */
+create or replace function public.admin_set_registration_paid(
+  p_id uuid, p_paid boolean, p_ref text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorised' using errcode = '42501';
+  end if;
+
+  update public.challenge_registrations
+  set paid_at = case when p_paid then coalesce(paid_at, now()) else null end,
+      payment_ref = case
+        when p_paid then coalesce(nullif(left(trim(coalesce(p_ref, '')), 64), ''), payment_ref)
+        else null
+      end
+  where id = p_id;
+
+  if not found then
+    raise exception 'registration not found' using errcode = 'P0002';
+  end if;
+end;
+$$;
+
+do $$
+declare fn text;
+begin
+  foreach fn in array array[
+    'admin_challenge_registrations()',
+    'admin_set_registration_paid(uuid, boolean, text)'
+  ] loop
+    execute format('revoke all on function public.%s from public', fn);
+    execute format('revoke all on function public.%s from anon', fn);
+    execute format('grant execute on function public.%s to authenticated', fn);
+  end loop;
+end $$;

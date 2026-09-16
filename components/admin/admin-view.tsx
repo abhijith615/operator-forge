@@ -1,12 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CircleAlert, RefreshCw } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { setRegistrationPaid } from "@/lib/admin/actions";
 import { cn } from "@/lib/utils";
-import type { AdminSnapshot } from "@/lib/admin/queries";
+import type { AdminRegistration, AdminSnapshot } from "@/lib/admin/queries";
 
 const POLL_MS = 15_000;
 
@@ -63,6 +64,43 @@ export function AdminView({ initial }: { initial: AdminSnapshot }) {
           read {when(new Date(dataUpdatedAt).toISOString())}
         </span>
       </div>
+
+      {/* ── Challenge registrations ─────────────────────────────────────── */}
+      <section>
+        <SectionTitle count={data.registrations.length}>Challenge registrations</SectionTitle>
+        <div className="mb-3 grid grid-cols-3 gap-2.5">
+          <Stat label="Registered" value={data.registrations.length} />
+          <Stat
+            label="Paid"
+            value={data.registrations.filter((r) => r.paid_at).length}
+            tone="ion"
+            hint="can open the challenge"
+          />
+          <Stat
+            label="Awaiting payment"
+            value={data.registrations.filter((r) => !r.paid_at).length}
+            tone="warn"
+          />
+        </div>
+        <p className="mb-3 text-[12.5px] leading-relaxed text-lo">
+          Check the payment in Razorpay, then mark the registration paid — that is what opens the
+          challenge to this email. The person must sign in with the same email.
+        </p>
+        <Table
+          head={["Name", "Email", "Phone", "Registered", "Source", "Signed in", "Payment"]}
+          empty="No registrations yet."
+          rowKeys={data.registrations.map((r) => r.id)}
+          rows={data.registrations.map((r) => [
+            r.name,
+            <span key="e" className="font-mono text-[11.5px]">{r.email}</span>,
+            <span key="p" className="font-mono text-[11.5px]">{r.phone}</span>,
+            when(r.created_at),
+            r.attribution?.utm_source ?? <Muted>direct</Muted>,
+            r.has_account ? "Yes" : <Muted>Not yet</Muted>,
+            <PaidControl key="paid" registration={r} />,
+          ])}
+        />
+      </section>
 
       {/* ── Counts ─────────────────────────────────────────────────────── */}
       <section>
@@ -261,6 +299,76 @@ function DailyChart({ daily }: { daily: AdminSnapshot["daily"] }) {
   );
 }
 
+function PaidControl({ registration }: { registration: AdminRegistration }) {
+  const queryClient = useQueryClient();
+  const [ref, setRef] = React.useState("");
+  const [error, setError] = React.useState<string | null>(null);
+  const [pending, startTransition] = React.useTransition();
+
+  const save = (paid: boolean) => {
+    if (!paid && !window.confirm(`Mark ${registration.email} as unpaid? They will lose access.`)) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await setRegistrationPaid(registration.id, paid, ref);
+      if (!result.ok) {
+        setError(result.message ?? "Could not save.");
+        return;
+      }
+      setRef("");
+      await queryClient.invalidateQueries({ queryKey: ["admin-snapshot"] });
+    });
+  };
+
+  if (registration.paid_at) {
+    return (
+      <div className="flex min-w-[180px] flex-wrap items-center gap-2">
+        <span className="rounded-full border border-ion-500/30 bg-ion-500/10 px-2 py-0.5 text-[11px] font-medium text-ion-400">
+          Paid {when(registration.paid_at)}
+        </span>
+        {registration.payment_ref ? (
+          <span className="font-mono text-[11px] text-lo">{registration.payment_ref}</span>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => save(false)}
+          disabled={pending}
+          className="text-[11.5px] text-faint underline-offset-4 hover:text-mid hover:underline disabled:opacity-50"
+        >
+          {pending ? "Saving…" : "Undo"}
+        </button>
+        {error ? <span className="text-[11.5px] text-alert-500">{error}</span> : null}
+      </div>
+    );
+  }
+
+  return (
+    <form
+      className="flex min-w-[240px] flex-wrap items-center gap-2"
+      onSubmit={(event) => {
+        event.preventDefault();
+        save(true);
+      }}
+    >
+      <input
+        value={ref}
+        onChange={(event) => setRef(event.target.value)}
+        maxLength={64}
+        placeholder="Payment ID (optional)"
+        aria-label={`Razorpay payment ID for ${registration.email}`}
+        className="h-8 w-40 rounded-md border border-line-strong bg-white/[0.03] px-2 font-mono text-[11.5px] text-hi outline-none placeholder:text-faint focus:border-ember-500/60"
+      />
+      <button
+        type="submit"
+        disabled={pending}
+        className="h-8 rounded-full bg-ember-500 px-3 text-[12px] font-semibold text-void hover:brightness-105 disabled:opacity-50"
+      >
+        {pending ? "Saving…" : "Mark paid"}
+      </button>
+      {error ? <span className="w-full text-[11.5px] text-alert-500">{error}</span> : null}
+    </form>
+  );
+}
+
 function Muted({ children }: { children: React.ReactNode }) {
   return <span className="text-faint">{children}</span>;
 }
@@ -268,10 +376,13 @@ function Muted({ children }: { children: React.ReactNode }) {
 function Table({
   head,
   rows,
+  rowKeys,
   empty,
 }: {
   head: string[];
   rows: React.ReactNode[][];
+  /** Stable row identities, for rows that hold their own state. */
+  rowKeys?: string[];
   empty: string;
 }) {
   if (rows.length === 0) {
@@ -301,7 +412,7 @@ function Table({
         <tbody>
           {rows.map((row, index) => (
             <tr
-              key={index}
+              key={rowKeys?.[index] ?? index}
               className="border-b border-line last:border-0 hover:bg-white/[0.02]"
             >
               {row.map((cell, cellIndex) => (

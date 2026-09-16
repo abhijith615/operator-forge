@@ -12,31 +12,38 @@ import type { Operator } from "@/types/operator";
 
 export const CHALLENGE_ACCESS_ROUTE = "/challenge/access";
 
+export type ChallengeAccessStatus = "granted" | "unpaid" | "unregistered";
+
 /**
- * Whether the signed-in operator registered for the challenge.
+ * Where the signed-in operator stands with the challenge.
  *
- * The database decides: `has_challenge_access` matches the confirmed email on
- * the account against the registrations, which the app itself cannot read.
- * Anything that goes wrong asking counts as a no — a paid product fails closed.
+ * The database decides: `challenge_access_status` matches the confirmed email
+ * on the account against the registrations, which the app itself cannot read,
+ * and only a registration an admin has marked paid lets someone in. Anything
+ * that goes wrong asking counts as a no — a paid product fails closed.
  * Simulator Mode has no registrations to check, so it lets everyone in.
  */
-export const hasChallengeAccess = cache(async (): Promise<boolean> => {
+export const readChallengeAccess = cache(async (): Promise<ChallengeAccessStatus> => {
   const supabase = await getSupabaseServerClient();
-  if (!supabase) return true;
+  if (!supabase) return "granted";
 
-  const { data, error } = await supabase.rpc("has_challenge_access", {
+  const { data, error } = await supabase.rpc("challenge_access_status", {
     p_cohort: OFFER.cohort,
   });
   if (error) {
     console.error("[challenge] access check failed:", error.code, error.message);
-    return false;
+    return "unregistered";
   }
-  return data === true;
+  return data === "granted" || data === "unpaid" ? data : "unregistered";
 });
+
+export async function hasChallengeAccess(): Promise<boolean> {
+  return (await readChallengeAccess()) === "granted";
+}
 
 /**
  * The guard in front of every challenge page, in order: signed in, onboarded,
- * registered. `path` is where to come back to once each is sorted.
+ * registered and paid. `path` is where to come back to once each is sorted.
  */
 export async function requireChallengeAccess(path: string): Promise<Operator> {
   const next = encodeURIComponent(path);

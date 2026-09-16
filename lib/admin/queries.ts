@@ -61,12 +61,27 @@ export interface AdminWaitlistEntry {
   created_at: string;
 }
 
+export interface AdminRegistration {
+  id: string;
+  cohort: string;
+  name: string;
+  phone: string;
+  email: string;
+  attribution: Record<string, string>;
+  created_at: string;
+  paid_at: string | null;
+  payment_ref: string | null;
+  /** Someone has signed in with this email. */
+  has_account: boolean;
+}
+
 export interface AdminSnapshot {
   summary: AdminSummary;
   operators: AdminOperator[];
   daily: AdminDailySignup[];
   dropoffs: AdminDropoff[];
   waitlist: AdminWaitlistEntry[];
+  registrations: AdminRegistration[];
   /** When the server read this, so the page can say how stale it is. */
   readAt: string;
 }
@@ -100,12 +115,13 @@ export async function readAdminSnapshot(): Promise<AdminSnapshot | null> {
   const supabase = await getSupabaseServerClient();
   if (!supabase) return null;
 
-  const [summary, operators, daily, dropoffs, waitlist] = await Promise.all([
+  const [summary, operators, daily, dropoffs, waitlist, registrations] = await Promise.all([
     supabase.rpc("admin_summary"),
     supabase.rpc("admin_operators"),
     supabase.rpc("admin_daily_signups", { p_days: 30 }),
     supabase.rpc("admin_dropoffs"),
     supabase.rpc("admin_waitlist"),
+    supabase.rpc("admin_challenge_registrations"),
   ]);
 
   // A denied caller errors on every one of these. Returning null rather than
@@ -123,6 +139,7 @@ export async function readAdminSnapshot(): Promise<AdminSnapshot | null> {
     daily: (daily.data ?? []) as AdminDailySignup[],
     dropoffs: (dropoffs.data ?? []) as AdminDropoff[],
     waitlist: (waitlist.data ?? []) as AdminWaitlistEntry[],
+    registrations: (registrations.data ?? []) as AdminRegistration[],
     readAt: new Date().toISOString(),
   };
 }
