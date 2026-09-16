@@ -1,7 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
-
 import { OFFER } from "@/lib/constants/offer";
 import {
   attributionFrom,
@@ -11,14 +9,15 @@ import {
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
- * Saves a landing-page registration, then sends the person to payment.
+ * Saves a landing-page registration and hands back the payment link.
  *
  * The row is written before payment so a registration that never pays can
  * still be followed up. Writing it must never stand between someone and
  * paying, though: if storage fails the failure is logged — without the
  * person's details — and they go to payment anyway.
  *
- * Only returns when it cannot redirect; success ends in `redirect`.
+ * The browser does the navigating, not a server `redirect`: the form can then
+ * fall back to the payment link itself when this action fails to answer.
  */
 export async function registerForChallenge(form: FormData): Promise<RegistrationResult> {
   // People never see this field. Anything that fills it in is not a person.
@@ -54,5 +53,5 @@ export async function registerForChallenge(form: FormData): Promise<Registration
     console.error("[7-day-challenge] registration not stored: Supabase is not configured");
   }
 
-  redirect(OFFER.paymentUrl);
+  return { status: "ready", paymentUrl: OFFER.paymentUrl };
 }

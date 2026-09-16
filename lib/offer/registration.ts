@@ -14,6 +14,7 @@ export interface RegistrationFields {
 export type RegistrationErrors = Partial<Record<keyof RegistrationFields, string>>;
 
 export type RegistrationResult =
+  | { status: "ready"; paymentUrl: string }
   | { status: "invalid"; errors: RegistrationErrors }
   | { status: "closed"; message: string }
   | { status: "ignored" };
