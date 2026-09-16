@@ -6,6 +6,7 @@ import { ArrowRight, ChevronDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Aurora, GridField } from "@/components/visuals/aurora";
+import { OFFER_ROUTE } from "@/lib/constants/offer";
 import { easing } from "@/lib/motion";
 
 const lineOne = "Become an Operator.";
@@ -79,7 +80,7 @@ export function Hero() {
           className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
         >
           <Button asChild variant="primary" size="lg" className="w-full sm:w-auto">
-            <Link href="/challenge">
+            <Link href={OFFER_ROUTE}>
               7-Day Challenge
               <ArrowRight className="transition-transform duration-300 ease-out-expo group-hover/btn:translate-x-1" />
             </Link>
