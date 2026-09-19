@@ -84,6 +84,11 @@ const SECTIONS: LegalSection[] = [
           To show a cohort leaderboard. It shows only your first name, the initial of your last name, your score and
           your result — never your email, phone number or decisions.
         </li>
+        <li>
+          To issue your certificate of completion. Each certificate has a verification link that shows your name, the
+          programme and the date you completed it to anyone who has the link — which is how employers can check it.
+          The link cannot be guessed; only the people you share it with will see it.
+        </li>
         <li>To contact you about the programme you signed up for, including by WhatsApp, email or phone.</li>
         <li>To handle refunds, questions and complaints.</li>
         <li>To measure which ads bring people to us, and to show our ads to relevant audiences on Meta.</li>

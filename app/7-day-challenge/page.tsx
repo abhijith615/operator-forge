@@ -154,7 +154,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Will I get a certificate?",
-    a: "Yes. Everyone who completes the challenge receives a certificate of completion from Operator Forge, with your name and the challenge dates. It shows you completed the programme; your scorecards and operator profile are a practice assessment, not an employment certification.",
+    a: "Yes. Complete all five simulations (Days 1 to 5) and your certificate of completion unlocks in your account — with your name, the challenge dates and a verification link — ready to download and add to LinkedIn. It shows you completed the programme; your scorecards and operator profile are a practice assessment, not an employment certification.",
   },
   {
     q: "How do I register and pay?",
@@ -448,8 +448,9 @@ export default function SevenDayChallengePage() {
                 Finish the seven days. Take the certificate with you.
               </h2>
               <p className="mt-4 max-w-md text-[16px] leading-relaxed text-white/70">
-                Everyone who completes the challenge receives a certificate of completion from Operator Forge — with
-                your name and the challenge dates — to add to your CV and LinkedIn.
+                Complete all five simulations and your certificate of completion unlocks in your account — with your
+                name, the challenge dates and a link anyone can use to verify it. Download it, and add it to your CV
+                and LinkedIn in one click.
               </p>
               <p className={cn(hand.className, "mt-6 -rotate-2 text-[24px] leading-tight text-ember-500")}>
                 Proof you have done the work, not just read about it.

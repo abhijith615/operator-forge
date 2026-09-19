@@ -143,6 +143,9 @@ export default function ChallengePage() {
                 <Button asChild variant="secondary" size="lg" className="w-full sm:w-auto">
                   <Link href="/challenge/leaderboard">Leaderboard</Link>
                 </Button>
+                <Button asChild variant="secondary" size="lg" className="w-full sm:w-auto">
+                  <Link href="/challenge/certificate">Your certificate</Link>
+                </Button>
               </div>
             </Reveal>
 

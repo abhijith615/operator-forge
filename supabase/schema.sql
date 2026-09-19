@@ -1019,3 +1019,134 @@ create policy "challenge_form_events_insert"
   on public.challenge_form_events for insert
   to anon, authenticated
   with check (true);
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Certificates of completion
+--
+-- Earned by completing all five simulations (Days 1–5) with access to the
+-- challenge. Issued once per operator; the name is fixed at issue time. The
+-- code is unguessable and is what the public verification page looks up.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create table if not exists public.challenge_certificates (
+  code         text        primary key check (code ~ '^OF-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}$'),
+  operator_id  uuid        not null unique references public.operators (id) on delete cascade,
+  cohort       text        not null,
+  full_name    text        not null check (char_length(full_name) between 1 and 120),
+  completed_at timestamptz not null,
+  issued_at    timestamptz not null default now()
+);
+
+comment on table public.challenge_certificates is
+  'Certificates of completion. Issued once per operator by issue_challenge_certificate; verified publicly by code.';
+
+alter table public.challenge_certificates enable row level security;
+
+drop policy if exists "challenge_certificates_select_own" on public.challenge_certificates;
+create policy "challenge_certificates_select_own"
+  on public.challenge_certificates for select
+  to authenticated
+  using (auth.uid() = operator_id);
+
+create or replace function public.challenge_certificate_progress()
+returns table (days_done integer, days_required integer, eligible boolean)
+language sql
+security definer
+set search_path = ''
+stable
+as $$
+  with done as (
+    select count(distinct r.day)::integer as n
+    from public.challenge_runs r
+    where r.operator_id = auth.uid() and r.day between 1 and 5
+  )
+  select d.n, 5, d.n >= 5 and public.challenge_access_status(null) = 'granted'
+  from done d;
+$$;
+
+revoke all on function public.challenge_certificate_progress() from public;
+revoke all on function public.challenge_certificate_progress() from anon;
+grant execute on function public.challenge_certificate_progress() to authenticated;
+
+create or replace function public.issue_challenge_certificate()
+returns table (code text, full_name text, cohort text, completed_at timestamptz, issued_at timestamptz)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid    uuid := auth.uid();
+  v_name   text;
+  v_done   timestamptz;
+  v_cohort text;
+  v_code   text;
+  v_hex    text;
+begin
+  if v_uid is null then
+    raise exception 'not signed in' using errcode = '42501';
+  end if;
+
+  if not exists (select 1 from public.challenge_certificates c where c.operator_id = v_uid) then
+    if not (select p.eligible from public.challenge_certificate_progress() p) then
+      raise exception 'not eligible' using errcode = 'P0001';
+    end if;
+
+    select nullif(trim(o.full_name), '') into v_name from public.operators o where o.id = v_uid;
+    if v_name is null then
+      raise exception 'no name on the account' using errcode = 'P0001';
+    end if;
+
+    select max(r.completed_at) into v_done
+    from public.challenge_runs r
+    where r.operator_id = v_uid and r.day between 1 and 5;
+
+    -- The cohort they paid for; admins without a registration get the
+    -- cohort that has most recently started.
+    select coalesce(
+      (select r.cohort
+         from auth.users u
+         join public.challenge_registrations r on r.email = lower(u.email)
+        where u.id = v_uid and r.paid_at is not null
+        order by r.paid_at desc
+        limit 1),
+      (select k.cohort from public.challenge_cohorts k
+        order by (k.starts_at <= now()) desc, k.starts_at desc
+        limit 1)
+    ) into v_cohort;
+
+    loop
+      v_hex := upper(encode(extensions.gen_random_bytes(6), 'hex'));
+      v_code := 'OF-' || substr(v_hex, 1, 4) || '-' || substr(v_hex, 5, 4) || '-' || substr(v_hex, 9, 4);
+      exit when not exists (select 1 from public.challenge_certificates c where c.code = v_code);
+    end loop;
+
+    insert into public.challenge_certificates (code, operator_id, cohort, full_name, completed_at)
+    values (v_code, v_uid, v_cohort, left(v_name, 120), v_done)
+    on conflict (operator_id) do nothing;
+  end if;
+
+  return query
+  select c.code, c.full_name, c.cohort, c.completed_at, c.issued_at
+  from public.challenge_certificates c
+  where c.code is not null and c.operator_id = v_uid;
+end;
+$$;
+
+revoke all on function public.issue_challenge_certificate() from public;
+revoke all on function public.issue_challenge_certificate() from anon;
+grant execute on function public.issue_challenge_certificate() to authenticated;
+
+create or replace function public.verify_challenge_certificate(p_code text)
+returns table (code text, full_name text, cohort text, completed_at timestamptz, issued_at timestamptz)
+language sql
+security definer
+set search_path = ''
+stable
+as $$
+  select c.code, c.full_name, c.cohort, c.completed_at, c.issued_at
+  from public.challenge_certificates c
+  where c.code = upper(trim(p_code));
+$$;
+
+revoke all on function public.verify_challenge_certificate(text) from public;
+grant execute on function public.verify_challenge_certificate(text) to anon, authenticated;
