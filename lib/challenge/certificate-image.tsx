@@ -113,7 +113,7 @@ export async function renderCertificateImage(certificate: Certificate, verifyUrl
               {OFFER.name}
             </div>
             <div style={{ fontSize: 32, color: "#3D3D3D", marginTop: 14 }}>
-              {`Five live quick-commerce operations simulations · ${cohortLabel(certificate.cohort)}`}
+              {`Five live operations simulations and a live AMA · ${cohortLabel(certificate.cohort)}`}
             </div>
           </div>
 

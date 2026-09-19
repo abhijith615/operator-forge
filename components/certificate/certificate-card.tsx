@@ -37,7 +37,7 @@ export function CertificateCard({ certificate, className }: { certificate: Certi
             {OFFER.name}
           </p>
           <p className="mt-1 text-[13px] text-[#3D3D3D]">
-            Five live quick-commerce operations simulations · {cohortLabel(certificate.cohort)}
+            Five live operations simulations and a live AMA · {cohortLabel(certificate.cohort)}
           </p>
         </div>
 

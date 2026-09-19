@@ -61,8 +61,9 @@ export default async function VerifyCertificatePage({ params }: Props) {
                 ))}
               </dl>
               <p className="mt-5 text-[13px] leading-relaxed text-[#6B6B6B]">
-                Awarded for completing five live quick-commerce operations simulations. A certificate of completion,
-                not an employment certification or professional qualification.
+                Awarded for completing five live quick-commerce operations simulations and a live AMA with an
+                operations leader. A certificate of completion, not an employment certification or professional
+                qualification.
               </p>
             </div>
             <CertificateCard certificate={certificate} className="mx-2.5 sm:mx-3.5" />

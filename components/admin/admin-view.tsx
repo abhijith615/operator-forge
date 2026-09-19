@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CircleAlert, RefreshCw } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { setRegistrationPaid } from "@/lib/admin/actions";
+import { setAmaAttended, setRegistrationPaid } from "@/lib/admin/actions";
 import { cn } from "@/lib/utils";
 import type { AdminRegistration, AdminSnapshot } from "@/lib/admin/queries";
 
@@ -85,10 +85,11 @@ export function AdminView({ initial }: { initial: AdminSnapshot }) {
         <p className="mb-3 text-[12.5px] leading-relaxed text-lo">
           Razorpay payments mark a registration paid on their own when the payer&rsquo;s email (or,
           failing that, phone) matches. Use Mark paid for anything confirmed another way. Paid
-          participants get in from the cohort start date and must sign in with the same email.
+          participants get in from the cohort start date and must sign in with the same email. After the live
+          AMA, tick who attended — the certificate needs all five simulations and the AMA.
         </p>
         <Table
-          head={["Name", "Email", "Phone", "Registered", "Source", "Signed in", "Payment"]}
+          head={["Name", "Email", "Phone", "Registered", "Source", "Signed in", "Payment", "AMA"]}
           empty="No registrations yet."
           rowKeys={data.registrations.map((r) => r.id)}
           rows={data.registrations.map((r) => [
@@ -99,6 +100,7 @@ export function AdminView({ initial }: { initial: AdminSnapshot }) {
             r.attribution?.utm_source ?? <Muted>direct</Muted>,
             r.has_account ? "Yes" : <Muted>Not yet</Muted>,
             <PaidControl key="paid" registration={r} />,
+            <AmaControl key="ama" registration={r} />,
           ])}
         />
       </section>
@@ -319,6 +321,48 @@ function DailyChart({ daily }: { daily: AdminSnapshot["daily"] }) {
         <span>peak {peak}</span>
         <span>{daily[daily.length - 1]?.day ?? ""}</span>
       </div>
+    </div>
+  );
+}
+
+function AmaControl({ registration }: { registration: AdminRegistration }) {
+  const queryClient = useQueryClient();
+  const [error, setError] = React.useState<string | null>(null);
+  const [pending, startTransition] = React.useTransition();
+  const attended = Boolean(registration.ama_attended_at);
+
+  const toggle = () => {
+    if (attended && !window.confirm(`Clear AMA attendance for ${registration.email}?`)) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await setAmaAttended(registration.id, !attended);
+      if (!result.ok) {
+        setError(result.message ?? "Could not save.");
+        return;
+      }
+      await queryClient.invalidateQueries({ queryKey: ["admin-snapshot"] });
+    });
+  };
+
+  return (
+    <div className="flex min-w-[130px] flex-col items-start gap-1">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={attended}
+        aria-label={`${registration.email} attended the AMA`}
+        onClick={toggle}
+        disabled={pending}
+        className={cn(
+          "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[12px] font-semibold transition-colors disabled:opacity-50",
+          attended
+            ? "border-ion-500/30 bg-ion-500/10 text-ion-400"
+            : "border-line-strong text-mid hover:border-ember-500/50 hover:text-hi",
+        )}
+      >
+        {pending ? "Saving…" : attended ? "Attended" : "Mark attended"}
+      </button>
+      {error ? <span className="text-[11.5px] text-alert-500">{error}</span> : null}
     </div>
   );
 }

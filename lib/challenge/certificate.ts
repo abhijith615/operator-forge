@@ -10,8 +10,9 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
  * Certificates of completion.
  *
  * The database decides everything: who qualifies (all five simulations done,
- * with access to the challenge), the certificate code, and the name on it —
- * fixed when it is first issued. The app only asks and draws.
+ * the live AMA attended, with access to the challenge — admins skip the AMA),
+ * the certificate code, and the name on it — fixed when it is first issued.
+ * The app only asks and draws.
  */
 
 export const CERTIFICATE_ROUTE = "/challenge/certificate";
@@ -21,6 +22,10 @@ export const DAYS_REQUIRED = 5;
 export interface CertificateProgress {
   daysDone: number;
   daysRequired: number;
+  /** Marked by an admin after the live AMA on Day 7. */
+  amaAttended: boolean;
+  /** Admins skip the AMA and the start date, so they can test certificates. */
+  isAdmin: boolean;
   eligible: boolean;
 }
 
@@ -61,9 +66,21 @@ export async function readCertificateProgress(): Promise<CertificateProgress | n
   const supabase = await getSupabaseServerClient();
   if (!supabase) return null;
   const { data, error } = await supabase.rpc("challenge_certificate_progress");
-  const row = firstRow<{ days_done: number; days_required: number; eligible: boolean }>(data);
+  const row = firstRow<{
+    days_done: number;
+    days_required: number;
+    ama_attended: boolean;
+    is_admin: boolean;
+    eligible: boolean;
+  }>(data);
   if (error || !row) return null;
-  return { daysDone: row.days_done, daysRequired: row.days_required, eligible: row.eligible };
+  return {
+    daysDone: row.days_done,
+    daysRequired: row.days_required,
+    amaAttended: row.ama_attended,
+    isAdmin: row.is_admin,
+    eligible: row.eligible,
+  };
 }
 
 /** Issues the signed-in operator's certificate, or returns the one they have. Null if they do not qualify. */

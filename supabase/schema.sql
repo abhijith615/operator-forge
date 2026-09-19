@@ -1150,3 +1150,107 @@ $$;
 
 revoke all on function public.verify_challenge_certificate(text) from public;
 grant execute on function public.verify_challenge_certificate(text) to anon, authenticated;
+
+-- ── Certificates need the live AMA too ────────────────────────────────────
+--
+-- An admin ticks attendance after the Day 7 AMA. The certificate needs all five
+-- simulations and that tick; admins skip the AMA (and the cohort start date)
+-- so they can test certificates at any time.
+
+alter table public.challenge_registrations add column if not exists ama_attended_at timestamptz;
+
+drop function if exists public.challenge_certificate_progress();
+create function public.challenge_certificate_progress()
+returns table (days_done integer, days_required integer, ama_attended boolean, is_admin boolean, eligible boolean)
+language sql
+security definer
+set search_path = ''
+stable
+as $$
+  with done as (
+    select count(distinct r.day)::integer as n
+    from public.challenge_runs r
+    where r.operator_id = auth.uid() and r.day between 1 and 5
+  ),
+  ama as (
+    select exists (
+      select 1
+      from auth.users u
+      join public.challenge_registrations r on r.email = lower(u.email)
+      where u.id = auth.uid()
+        and u.email_confirmed_at is not null
+        and r.paid_at is not null
+        and r.ama_attended_at is not null
+    ) as attended
+  ),
+  who as (select public.is_admin() as admin)
+  select
+    d.n,
+    5,
+    a.attended,
+    w.admin,
+    d.n >= 5 and (
+      w.admin
+      or (a.attended and public.challenge_access_status(null) = 'granted')
+    )
+  from done d, ama a, who w;
+$$;
+
+revoke all on function public.challenge_certificate_progress() from public;
+revoke all on function public.challenge_certificate_progress() from anon;
+grant execute on function public.challenge_certificate_progress() to authenticated;
+
+drop function if exists public.admin_challenge_registrations();
+create function public.admin_challenge_registrations()
+returns table (
+  id uuid, cohort text, name text, phone text, email text,
+  attribution jsonb, created_at timestamptz, paid_at timestamptz, payment_ref text,
+  ama_attended_at timestamptz, has_account boolean
+)
+language plpgsql
+security definer
+set search_path = ''
+stable
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorised' using errcode = '42501';
+  end if;
+
+  return query
+  select r.id, r.cohort, r.name, r.phone, r.email, r.attribution, r.created_at,
+         r.paid_at, r.payment_ref, r.ama_attended_at,
+         exists (select 1 from auth.users u where lower(u.email) = r.email)
+  from public.challenge_registrations r
+  order by r.created_at desc;
+end;
+$$;
+
+revoke all on function public.admin_challenge_registrations() from public;
+revoke all on function public.admin_challenge_registrations() from anon;
+grant execute on function public.admin_challenge_registrations() to authenticated;
+
+create or replace function public.admin_set_ama_attended(p_id uuid, p_attended boolean)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorised' using errcode = '42501';
+  end if;
+
+  update public.challenge_registrations
+  set ama_attended_at = case when p_attended then coalesce(ama_attended_at, now()) else null end
+  where id = p_id;
+
+  if not found then
+    raise exception 'registration not found' using errcode = 'P0002';
+  end if;
+end;
+$$;
+
+revoke all on function public.admin_set_ama_attended(uuid, boolean) from public;
+revoke all on function public.admin_set_ama_attended(uuid, boolean) from anon;
+grant execute on function public.admin_set_ama_attended(uuid, boolean) to authenticated;

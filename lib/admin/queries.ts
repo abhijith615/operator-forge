@@ -71,6 +71,8 @@ export interface AdminRegistration {
   created_at: string;
   paid_at: string | null;
   payment_ref: string | null;
+  /** When an admin marked them as having attended the live AMA. */
+  ama_attended_at: string | null;
   /** Someone has signed in with this email. */
   has_account: boolean;
 }

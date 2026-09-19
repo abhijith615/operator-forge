@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
-import { ArrowRight, Award, Check, Download, Linkedin } from "lucide-react";
+import { ArrowRight, Award, Check, Download, Linkedin, Mic } from "lucide-react";
 
 import { CertificateCard } from "@/components/certificate/certificate-card";
 import { CopyLink } from "@/components/certificate/copy-link";
@@ -19,7 +19,7 @@ import {
   verificationPath,
 } from "@/lib/challenge/certificate";
 import { readOwnRun } from "@/lib/challenge/runs";
-import { OFFER, whatsappUrl } from "@/lib/constants/offer";
+import { OFFER, OFFER_DAYS, whatsappUrl } from "@/lib/constants/offer";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -52,6 +52,11 @@ export default async function CertificatePage() {
   );
   const done = runs.map(Boolean);
   const nextDay = done.findIndex((isDone) => !isDone) + 1;
+  const daysComplete = nextDay === 0;
+  const amaDone = Boolean(progress?.amaAttended || progress?.isAdmin);
+  const stepsDone = done.filter(Boolean).length + (amaDone ? 1 : 0);
+  const stepsTotal = DAYS_REQUIRED + 1;
+  const amaDate = OFFER_DAYS[6]?.date ?? "Day 7";
 
   const verifyUrl = certificate ? `${await origin()}${verificationPath(certificate.code)}` : null;
 
@@ -71,8 +76,8 @@ export default async function CertificatePage() {
               You did it, {certificate.fullName.split(" ")[0]}.
             </h1>
             <p className="mt-4 max-w-2xl text-[16.5px] leading-relaxed text-[#3D3D3D]">
-              All five simulations complete. Here is your certificate — download it, add it to LinkedIn, and share the
-              verification link so anyone can check it is genuine.
+              All five simulations and the live AMA complete. Here is your certificate — download it, add it to
+              LinkedIn, and share the verification link so anyone can check it is genuine.
             </p>
 
             <div className="mt-10 grid items-start gap-10 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.65fr)]">
@@ -133,24 +138,24 @@ export default async function CertificatePage() {
         ) : (
           <>
             <h1 className="mt-3 text-[clamp(2.2rem,6vw,3.6rem)] leading-[1] font-bold tracking-[-0.05em]">
-              {(progress?.daysDone ?? 0) >= DAYS_REQUIRED ? "Almost there." : "Your certificate is waiting."}
+              {daysComplete ? "Almost there." : "Your certificate is waiting."}
             </h1>
             <p className="mt-4 max-w-2xl text-[16.5px] leading-relaxed text-[#3D3D3D]">
-              Complete all five simulations — Days 1 to 5 — and your certificate of completion for the {OFFER.name}{" "}
-              unlocks here, ready to download and add to LinkedIn.
+              Complete all five simulations — Days 1 to 5 — and attend the live AMA on Day 7, and your certificate of
+              completion for the {OFFER.name} unlocks here, ready to download and add to LinkedIn.
             </p>
 
             <div className="mt-8 max-w-xl rounded-[22px] border border-black/10 bg-white p-6">
               <div className="flex items-baseline justify-between gap-3">
                 <p className="text-[17px] font-bold">Your progress</p>
                 <p className="font-mono text-[13px] text-[#6B6B6B]">
-                  {progress?.daysDone ?? done.filter(Boolean).length} / {DAYS_REQUIRED} days
+                  {stepsDone} / {stepsTotal} steps
                 </p>
               </div>
               <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-[#F1ECE1]">
                 <div
                   className="h-full rounded-full bg-ember-500"
-                  style={{ width: `${((progress?.daysDone ?? 0) / DAYS_REQUIRED) * 100}%` }}
+                  style={{ width: `${(stepsDone / stepsTotal) * 100}%` }}
                 />
               </div>
               <ol className="mt-5 space-y-2">
@@ -170,6 +175,20 @@ export default async function CertificatePage() {
                     </span>
                   </li>
                 ))}
+                <li className="flex items-center gap-3 text-[14.5px]">
+                  <span
+                    className={cn(
+                      "grid size-6 place-items-center rounded-full text-[12px] font-bold",
+                      amaDone ? "bg-[#0B0B0B] text-ember-500" : "border border-black/20 text-[#6B6B6B]",
+                    )}
+                  >
+                    {amaDone ? <Check className="size-3.5" aria-hidden /> : <Mic className="size-3.5" aria-hidden />}
+                  </span>
+                  <span className={amaDone ? "text-[#0B0B0B]" : "text-[#6B6B6B]"}>
+                    Day 7 · Attend the live AMA ({amaDate})
+                    <span className="sr-only">{amaDone ? " — complete" : " — not yet"}</span>
+                  </span>
+                </li>
               </ol>
 
               {nextDay > 0 ? (
@@ -183,15 +202,20 @@ export default async function CertificatePage() {
                   Play Day {nextDay}
                   <ArrowRight className="size-4" aria-hidden />
                 </Link>
+              ) : !amaDone ? (
+                <p className="mt-6 text-[14px] leading-relaxed text-[#3D3D3D]">
+                  All five simulations done. Join the live AMA on {amaDate} — we record attendance there, and your
+                  certificate unlocks here shortly after.
+                </p>
               ) : !operator.fullName ? (
                 <p className="mt-6 text-[14px] text-[#3D3D3D]">
                   Add your name in your profile so it can go on the certificate.
                 </p>
               ) : (
                 <p className="mt-6 text-[14px] text-[#3D3D3D]">
-                  All five days are done. If your certificate does not appear,{" "}
+                  Everything is done. If your certificate does not appear,{" "}
                   <a
-                    href={whatsappUrl("Hi Operator Forge, I finished all five days but cannot see my certificate.")}
+                    href={whatsappUrl("Hi Operator Forge, I finished all five days and the AMA but cannot see my certificate.")}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-medium underline underline-offset-4"
