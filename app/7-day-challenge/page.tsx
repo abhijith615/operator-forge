@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import {
   ArrowRight,
+  Award,
   BarChart3,
   Box,
   CalendarDays,
@@ -79,6 +80,7 @@ const FEATURES: { icon: LucideIcon; label: string }[] = [
   { icon: Laptop, label: "Online, simulation-based learning" },
   { icon: Box, label: "Real-world scenarios" },
   { icon: UsersRound, label: "Learn from industry operators" },
+  { icon: Award, label: "Completion certificate" },
 ];
 
 const DAY_ICON: LucideIcon[] = [Store, FileSearch, UsersRound, Cog, PackageCheck, BarChart3, MessagesSquare];
@@ -107,8 +109,8 @@ const STEPS: { icon: LucideIcon; title: string; body: string }[] = [
   },
   {
     icon: Mic,
-    title: "Your profile, then the live AMA",
-    body: "Day 6 reads back how you decide. Day 7 puts your questions to an operations leader.",
+    title: "Your profile, the AMA, your certificate",
+    body: "Day 6 reads back how you decide. Day 7 puts your questions to an operations leader — and you finish with a certificate of completion.",
   },
 ];
 
@@ -118,6 +120,7 @@ const INCLUDED = [
   "Your personalised Operator profile and key strengths — Day 6",
   `Live AMA with the ${OFFER.speaker.role} — Day 7`,
   "A cohort that starts the same week as you",
+  "A certificate of completion from Operator Forge",
 ];
 
 const FOR_WHO = [
@@ -150,8 +153,8 @@ const FAQS: { q: string; a: string }[] = [
     a: "A phone or a laptop and a stable internet connection. The simulations run in your browser — there is nothing to install.",
   },
   {
-    q: "Is this a certification?",
-    a: "Your scorecards and operator profile are a practice assessment built from simulated shifts. They show how you think under pressure; they are not an employment certification.",
+    q: "Will I get a certificate?",
+    a: "Yes. Everyone who completes the challenge receives a certificate of completion from Operator Forge, with your name and the challenge dates. It shows you completed the programme; your scorecards and operator profile are a practice assessment, not an employment certification.",
   },
   {
     q: "How do I register and pay?",
@@ -313,6 +316,10 @@ export default function SevenDayChallengePage() {
                     <Smartphone className="size-3.5" aria-hidden />
                     Works on a phone
                   </li>
+                  <li className="flex items-center gap-1.5">
+                    <Award className="size-3.5" aria-hidden />
+                    Completion certificate
+                  </li>
                 </ul>
               </div>
             </div>
@@ -422,6 +429,62 @@ export default function SevenDayChallengePage() {
                   <span aria-hidden className="absolute inset-x-0 -bottom-1 h-1 rounded-full bg-ember-500" />
                 </span>
               </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ── The certificate ── */}
+        <section aria-labelledby="certificate-heading" className="mx-auto max-w-6xl px-5 pb-16 sm:px-6 lg:pb-24">
+          <div className="grid items-center gap-10 rounded-[28px] bg-[#0B0B0B] p-6 text-white sm:p-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+            <div>
+              <p className="flex items-center gap-2 font-mono text-[10.5px] tracking-[0.24em] text-ember-500 uppercase">
+                <Award className="size-4" aria-hidden />
+                Completion certificate
+              </p>
+              <h2
+                id="certificate-heading"
+                className="mt-3 text-[clamp(1.9rem,4.8vw,3rem)] leading-[1.02] font-bold tracking-[-0.045em]"
+              >
+                Finish the seven days. Take the certificate with you.
+              </h2>
+              <p className="mt-4 max-w-md text-[16px] leading-relaxed text-white/70">
+                Everyone who completes the challenge receives a certificate of completion from Operator Forge — with
+                your name and the challenge dates — to add to your CV and LinkedIn.
+              </p>
+              <p className={cn(hand.className, "mt-6 -rotate-2 text-[24px] leading-tight text-ember-500")}>
+                Proof you have done the work, not just read about it.
+              </p>
+            </div>
+
+            {/* An illustration of the certificate, not the certificate itself. */}
+            <div aria-hidden className="relative">
+              <div className="absolute -inset-3 rotate-2 rounded-[22px] bg-ember-500" />
+              <div className="relative rounded-[18px] border-[6px] border-double border-[#0B0B0B]/80 bg-[#FAF7F0] px-6 py-8 text-center text-[#0B0B0B] sm:px-10">
+                <div className="mx-auto flex w-fit items-center gap-2">
+                  <span className="grid size-7 place-items-center rounded-lg bg-[#0B0B0B]">
+                    <LogoMark className="size-5" />
+                  </span>
+                  <span className="text-[14px] font-semibold tracking-[-0.01em]">Operator Forge</span>
+                </div>
+                <p className="mt-5 font-mono text-[10px] tracking-[0.3em] text-[#6B6B6B] uppercase">
+                  Certificate of completion
+                </p>
+                <p className="mt-3 text-[13px] text-[#6B6B6B]">This certifies that</p>
+                <p className={cn(hand.className, "mt-1 text-[34px] leading-tight")}>Your Name</p>
+                <div className="mx-auto mt-1 h-px w-3/4 bg-[#0B0B0B]/20" />
+                <p className="mt-3 text-[13px] leading-relaxed text-[#3D3D3D]">has completed the</p>
+                <p className="text-[18px] leading-tight font-bold tracking-[-0.02em]">{OFFER.name}</p>
+                <p className="mt-1 text-[13px] text-[#3D3D3D]">{OFFER.dateLabel}</p>
+                <div className="mt-6 flex items-end justify-between gap-4 text-left">
+                  <div>
+                    <div className="h-px w-24 bg-[#0B0B0B]/30" />
+                    <p className="mt-1 font-mono text-[9px] tracking-[0.2em] text-[#6B6B6B] uppercase">Operator Forge</p>
+                  </div>
+                  <span className="grid size-14 place-items-center rounded-full bg-ember-500 ring-4 ring-ember-500/30">
+                    <Award className="size-7" />
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </section>

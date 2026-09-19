@@ -647,8 +647,10 @@ create table if not exists public.challenge_cohorts (
 );
 alter table public.challenge_cohorts enable row level security;
 
+-- The cohort id is a label only. This cohort was first set for 28 Sept and
+-- moved to 12–18 Oct 2026; its id stayed so existing registrations keep it.
 insert into public.challenge_cohorts (cohort, starts_at, ends_at, price_paise)
-values ('2026-09-28', '2026-09-28 00:00:00+05:30', '2026-10-04 23:59:59+05:30', 49900)
+values ('2026-09-28', '2026-10-12 00:00:00+05:30', '2026-10-18 23:59:59+05:30', 49900)
 on conflict (cohort) do update
   set starts_at = excluded.starts_at, ends_at = excluded.ends_at, price_paise = excluded.price_paise;
 

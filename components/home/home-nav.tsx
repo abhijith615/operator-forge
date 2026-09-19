@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 export const HOME_FOCUS =
   "focus-visible:ring-2 focus-visible:ring-[#0B0B0B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF7F0] focus-visible:outline-none";
 
-/** The start date as the badge says it: "28 Sept". */
+/** The start date as the badge says it: "12 Oct". */
 const STARTS = OFFER.liveLabel.replace(/\s\d{4}$/, "");
 
 /**

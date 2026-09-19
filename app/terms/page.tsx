@@ -49,7 +49,8 @@ const SECTIONS: LegalSection[] = [
           </li>
           <li>
             <strong>What is included.</strong> As described on the <Link href={OFFER_ROUTE}>challenge page</Link>: live
-            operations simulations on Days 1 to 5, an operator profile on Day 6 and a live AMA on Day 7.
+            operations simulations on Days 1 to 5, an operator profile on Day 6, a live AMA on Day 7 and a certificate of
+            completion for participants who complete the challenge.
           </li>
           <li>
             <strong>Access.</strong> Access is personal and tied to the email address you registered with. Sign in with
@@ -115,12 +116,14 @@ const SECTIONS: LegalSection[] = [
   },
   {
     id: "assessments",
-    title: "Scores, profiles and outcomes",
+    title: "Scores, certificates and outcomes",
     body: (
       <p>
-        Scorecards, leaderboards and operator profiles are a practice assessment based on simulated situations. They
-        are not an employment certification, a professional qualification or a guarantee of a job, internship,
-        interview or salary. Features we describe as &ldquo;coming soon&rdquo; — such as mentor sessions or sharing
+        Participants who complete the challenge receive a certificate of completion from Operator Forge, which
+        confirms that they took part in and completed the programme. Scorecards, leaderboards and operator profiles
+        are a practice assessment based on simulated situations. Neither the certificate nor the assessment is an
+        employment certification, a professional qualification or a guarantee of a job, internship, interview or
+        salary. Features we describe as &ldquo;coming soon&rdquo; — such as mentor sessions or sharing
         profiles with hiring partners — are not yet available and are not part of any purchase unless we say so
         explicitly.
       </p>

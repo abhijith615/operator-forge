@@ -11,15 +11,19 @@ export const OFFER_ROUTE = "/7-day-challenge";
 
 export const OFFER = {
   name: "7-Day Operations Leader Challenge",
-  /** Stored with every registration, so one table can hold many cohorts. */
+  /**
+   * Stored with every registration, so one table can hold many cohorts. A
+   * label, not a date: this cohort was moved from 28 Sept to 12 Oct and kept
+   * its id so the registrations already taken stay with it.
+   */
   cohort: "2026-09-28",
-  /** Monday 28 September 2026, midnight in India. */
-  startsAt: "2026-09-28T00:00:00+05:30",
-  /** Sunday 4 October 2026, end of day in India. */
-  endsAt: "2026-10-04T23:59:59+05:30",
-  dateLabel: "28 Sept – 04 Oct 2026",
+  /** Monday 12 October 2026, midnight in India. */
+  startsAt: "2026-10-12T00:00:00+05:30",
+  /** Sunday 18 October 2026, end of day in India. */
+  endsAt: "2026-10-18T23:59:59+05:30",
+  dateLabel: "12 – 18 Oct 2026",
   /** When the simulations open to participants. The database enforces it. */
-  liveLabel: "28 Sept 2026",
+  liveLabel: "12 Oct 2026",
   price: 499,
   listPrice: 1499,
   currency: "INR",
@@ -32,7 +36,7 @@ export const OFFER = {
     number: "918089508891",
     display: "+91 80895 08891",
     message:
-      "Hi Operator Forge, I have a question about the 7-Day Operations Leader Challenge (28 Sept – 04 Oct 2026).",
+      "Hi Operator Forge, I have a question about the 7-Day Operations Leader Challenge (12 – 18 Oct 2026).",
   },
   speaker: {
     role: "State Head (Kerala), Blinkit",
@@ -57,7 +61,7 @@ const DATE_FORMAT = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
 });
 
-/** "Mon, 28 Sept" for the nth day of the cohort, counted from zero. */
+/** "Mon, 12 Oct" for the nth day of the cohort, counted from zero. */
 export function cohortDate(index: number): string {
   return DATE_FORMAT.format(new Date(Date.parse(OFFER.startsAt) + index * DAY_MS));
 }
