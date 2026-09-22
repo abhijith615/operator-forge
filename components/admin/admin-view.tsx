@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CircleAlert, RefreshCw } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { setAmaAttended, setRegistrationPaid } from "@/lib/admin/actions";
+import { setAmaAttended, setRegistrationPaid, testSheetConnection } from "@/lib/admin/actions";
 import { cn } from "@/lib/utils";
 import type { AdminRegistration, AdminSnapshot } from "@/lib/admin/queries";
 
@@ -88,6 +88,7 @@ export function AdminView({ initial }: { initial: AdminSnapshot }) {
           participants get in from the cohort start date and must sign in with the same email. After the live
           AMA, tick who attended — the certificate needs all five simulations and the AMA.
         </p>
+        <SheetTest />
         <Table
           head={["Name", "Email", "Phone", "Registered", "Source", "Signed in", "Payment", "AMA"]}
           empty="No registrations yet."
@@ -321,6 +322,38 @@ function DailyChart({ daily }: { daily: AdminSnapshot["daily"] }) {
         <span>peak {peak}</span>
         <span>{daily[daily.length - 1]?.day ?? ""}</span>
       </div>
+    </div>
+  );
+}
+
+/** Checks the Google Sheet copy end to end and says what to fix. */
+function SheetTest() {
+  const [result, setResult] = React.useState<{ ok: boolean; message: string } | null>(null);
+  const [pending, startTransition] = React.useTransition();
+
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-3">
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() =>
+          startTransition(async () => {
+            try {
+              setResult(await testSheetConnection());
+            } catch {
+              setResult({ ok: false, message: "The test could not run. Reload the page and try again." });
+            }
+          })
+        }
+        className="inline-flex h-8 items-center rounded-full border border-line-strong px-3 text-[12px] font-semibold text-mid transition-colors hover:border-ember-500/50 hover:text-hi disabled:opacity-50"
+      >
+        {pending ? "Testing…" : "Test Google Sheet"}
+      </button>
+      {result ? (
+        <p role="status" className={cn("text-[12.5px]", result.ok ? "text-ion-400" : "text-alert-500")}>
+          {result.message}
+        </p>
+      ) : null}
     </div>
   );
 }

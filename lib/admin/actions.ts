@@ -1,5 +1,6 @@
 "use server";
 
+import { checkSheetConnection, type SheetCheck } from "@/lib/offer/sheets";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -45,4 +46,13 @@ export async function setAmaAttended(id: string, attended: boolean): Promise<{ o
     return { ok: false, message: error.code === "42501" ? "Not authorised." : "Could not save. Try again." };
   }
   return { ok: true };
+}
+
+/** Sends a test row to the Google Sheet and says exactly what went wrong, if anything. */
+export async function testSheetConnection(): Promise<SheetCheck> {
+  const supabase = await getSupabaseServerClient();
+  if (!supabase) return { ok: false, reason: "no_supabase", message: "Supabase is not configured." };
+  const { data: admin } = await supabase.rpc("is_admin");
+  if (admin !== true) return { ok: false, reason: "not_admin", message: "Not authorised." };
+  return checkSheetConnection();
 }
