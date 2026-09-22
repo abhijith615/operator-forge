@@ -74,14 +74,30 @@ async function post(registration: SheetRegistration): Promise<SheetCheck> {
       cache: "no-store",
     });
     const text = await response.text();
-    let result: { ok?: boolean; error?: string; message?: string } | null = null;
+    type ScriptReply = { ok?: boolean; error?: string; message?: string; emailed?: boolean; emailError?: string | null };
+    let result: ScriptReply | null = null;
     try {
-      result = JSON.parse(text) as { ok?: boolean; error?: string; message?: string };
+      result = JSON.parse(text) as ScriptReply;
     } catch {
       result = null;
     }
 
-    if (result?.ok) return { ok: true, message: "Connected. A test row was added to the Registrations tab." };
+    if (result?.ok) {
+      if (result.emailed === false) {
+        return {
+          ok: false,
+          reason: "email_failed",
+          message: `A test row was added to the sheet, but the email failed: ${result.emailError ?? "unknown error"}. Deploy a new version and allow the "send email" permission.`,
+        };
+      }
+      return {
+        ok: true,
+        message:
+          result.emailed === true
+            ? "Connected. A test row was added to the sheet and a [TEST] email was sent."
+            : "Connected. A test row was added to the sheet. (No email — update Code.gs to the latest version to turn on emails.)",
+      };
+    }
     if (result?.error === "unauthorised") {
       return {
         ok: false,
@@ -138,7 +154,7 @@ async function post(registration: SheetRegistration): Promise<SheetCheck> {
 export async function sendRegistrationToSheet(registration: SheetRegistration): Promise<void> {
   if (!isSheetsConfigured) return;
   const result = await post(registration);
-  if (!result.ok) console.error("[sheets] registration not copied:", result.reason);
+  if (!result.ok) console.error("[sheets] registration not copied or not emailed:", result.reason);
 }
 
 /** For the admin panel: sends a clearly-marked test row and reports the outcome. */
