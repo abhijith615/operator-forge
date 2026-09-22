@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 
 import { OFFER, OFFER_ROUTE } from "@/lib/constants/offer";
 import {
@@ -7,6 +7,7 @@ import {
   validateRegistration,
   type RegistrationResult,
 } from "@/lib/offer/registration";
+import { sendRegistrationToSheet } from "@/lib/offer/sheets";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
@@ -79,6 +80,7 @@ export async function POST(request: NextRequest) {
   }
   if (String(form.get(HONEYPOT_FIELD) ?? "").trim() !== "") attribution.flag = "trap-field";
 
+  let stored = false;
   const supabase = await getSupabaseServerClient();
   if (supabase) {
     // No `.select()`: the table is insert-only through the API.
@@ -90,9 +92,25 @@ export async function POST(request: NextRequest) {
       attribution,
     });
     if (error) console.error("[7-day-challenge] registration not stored:", error.code, error.message);
+    else stored = true;
   } else {
     console.error("[7-day-challenge] registration not stored: Supabase is not configured");
   }
+
+  // A copy for the Google Sheet, sent once the response is on its way so it
+  // can never hold up the move to payment.
+  const submittedAt = new Date().toISOString();
+  after(() =>
+    sendRegistrationToSheet({
+      submittedAt,
+      name: checked.value.name,
+      phone: checked.value.phone,
+      email: checked.value.email,
+      cohort: OFFER.cohort,
+      stored,
+      attribution,
+    }),
+  );
 
   return respond(request, { status: "ready", paymentUrl: OFFER.paymentUrl });
 }

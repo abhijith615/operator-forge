@@ -121,7 +121,8 @@ const SECTIONS: LegalSection[] = [
             records and simulation results are stored.
           </li>
           <li>
-            <strong>Google</strong> — if you choose &ldquo;Continue with Google&rdquo; to sign in.
+            <strong>Google</strong> — if you choose &ldquo;Continue with Google&rdquo; to sign in, and Google Sheets, where
+            we keep a working copy of challenge registrations (name, phone, email and ad campaign tags).
           </li>
           <li>
             <strong>Razorpay</strong> — to take payments and process refunds.
