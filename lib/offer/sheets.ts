@@ -74,9 +74,9 @@ async function post(registration: SheetRegistration): Promise<SheetCheck> {
       cache: "no-store",
     });
     const text = await response.text();
-    let result: { ok?: boolean; error?: string } | null = null;
+    let result: { ok?: boolean; error?: string; message?: string } | null = null;
     try {
-      result = JSON.parse(text) as { ok?: boolean; error?: string };
+      result = JSON.parse(text) as { ok?: boolean; error?: string; message?: string };
     } catch {
       result = null;
     }
@@ -90,6 +90,9 @@ async function post(registration: SheetRegistration): Promise<SheetCheck> {
           "The script refused the secret. WEBHOOK_SECRET in Apps Script → Project Settings → Script properties must match GOOGLE_SHEETS_WEBHOOK_SECRET exactly.",
       };
     }
+    if (result?.error === "script") {
+      return { ok: false, reason: "script_error", message: `The script ran but failed: ${result.message ?? "unknown error"}` };
+    }
     if (/<html/i.test(text) && /(sign in|signin|accounts\.google)/i.test(text)) {
       return {
         ok: false,
@@ -99,13 +102,20 @@ async function post(registration: SheetRegistration): Promise<SheetCheck> {
       };
     }
     if (/<html/i.test(text)) {
-      const scriptError = /TypeError|ReferenceError|Exception|Script function not found/i.exec(text)?.[0];
+      // Apps Script's error page carries the message; show it rather than a guess.
+      const scriptError = /(?:TypeError|ReferenceError|Exception|Script function not found)[^<]{0,160}/i
+        .exec(text)?.[0]
+        ?.replace(/&#39;|&quot;/g, "'")
+        .trim();
+      const notAttached = Boolean(scriptError && /null/i.test(scriptError) && /getSheetByName|getActiveSpreadsheet/i.test(scriptError));
       return {
         ok: false,
         reason: "script_error",
-        message: scriptError
-          ? `The script ran but failed (${scriptError}). Check that Code.gs was pasted in full and saved, then deploy a new version.`
-          : `The script returned a web page instead of a reply (HTTP ${response.status}). Deploy a new version of the web app and use its /exec URL.`,
+        message: notAttached
+          ? "The script is not attached to your spreadsheet. Replace Code.gs with the latest version and add a SPREADSHEET_ID script property (the ID from the sheet's URL), then deploy a new version."
+          : scriptError
+            ? `The script ran but failed: ${scriptError}. Replace Code.gs with the latest version, save, and deploy a new version.`
+            : `The script returned a web page instead of a reply (HTTP ${response.status}). Deploy a new version of the web app and use its /exec URL.`,
       };
     }
     return {

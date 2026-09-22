@@ -10,6 +10,9 @@
  *   2. Project Settings (gear icon) → Script properties → Add property:
  *        WEBHOOK_SECRET = <a long random string — the same value you set as
  *                          GOOGLE_SHEETS_WEBHOOK_SECRET on the website>
+ *      If the script was created at script.google.com rather than from the
+ *      sheet's Extensions menu, also add:
+ *        SPREADSHEET_ID = <the long ID in the sheet's URL, between /d/ and /edit>
  *   3. Deploy → New deployment → type "Web app":
  *        Execute as:     Me
  *        Who has access: Anyone
@@ -74,9 +77,11 @@ function doPost(e) {
   ];
 
   const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
   try {
+    lock.waitLock(10000);
     sheet_().appendRow(row);
+  } catch (err) {
+    return reply_({ ok: false, error: 'script', message: String((err && err.message) || err) });
   } finally {
     lock.releaseLock();
   }
@@ -89,7 +94,7 @@ function doGet() {
 }
 
 function sheet_() {
-  const book = SpreadsheetApp.getActiveSpreadsheet();
+  const book = book_();
   let sheet = book.getSheetByName(SHEET_NAME);
   if (!sheet) sheet = book.insertSheet(SHEET_NAME);
   if (sheet.getLastRow() === 0) {
@@ -98,6 +103,20 @@ function sheet_() {
     sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
   }
   return sheet;
+}
+
+/**
+ * The spreadsheet this script belongs to, or the one named by SPREADSHEET_ID
+ * for a script created on its own at script.google.com.
+ */
+function book_() {
+  const id = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+  if (id) return SpreadsheetApp.openById(id.trim());
+  const active = SpreadsheetApp.getActiveSpreadsheet();
+  if (active) return active;
+  throw new Error(
+    'This script is not attached to a spreadsheet. Open the sheet → Extensions → Apps Script and paste the code there, or add a SPREADSHEET_ID script property.'
+  );
 }
 
 /**
