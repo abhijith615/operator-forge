@@ -25,7 +25,10 @@
  *        GOOGLE_SHEETS_WEBHOOK_URL    = <the /exec URL>
  *        GOOGLE_SHEETS_WEBHOOK_SECRET = <the same secret as step 2>
  *      Redeploy the site so it picks them up.
- *   5. Optional: run `testAppend` from the editor to see a test row appear.
+ *   5. In the editor, pick `authorize` in the function list and click Run.
+ *      Google asks for permission here (not when deploying): Review
+ *      permissions → your account → Advanced → Go to … (unsafe) → Allow.
+ *      Optional: run `testAppend` to see a test row and email arrive.
  *
  * "Anyone" can reach the URL, but only requests carrying the secret are
  * written; everything else is refused.
@@ -218,6 +221,19 @@ function esc_(value) {
 
 function reply_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Run this once from the editor after pasting new code: Google asks for the
+ * spreadsheet and email permissions here, not when you deploy. It changes
+ * nothing — it only reports what it can reach.
+ */
+function authorize() {
+  const book = book_();
+  Logger.log('Spreadsheet: ' + book.getName());
+  Logger.log('Emails left today: ' + MailApp.getRemainingDailyQuota());
+  Logger.log('Notifications go to: ' +
+    (PropertiesService.getScriptProperties().getProperty('NOTIFY_EMAIL') || DEFAULT_NOTIFY_EMAIL));
 }
 
 /** Run from the editor to append a clearly-marked test row. */
