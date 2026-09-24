@@ -11,6 +11,7 @@ import {
   Clock,
   Cog,
   FileSearch,
+  Fingerprint,
   Laptop,
   MessagesSquare,
   Mic,
@@ -34,7 +35,7 @@ import {
   StickyRegisterBar,
   WhatsAppButton,
 } from "@/components/offer/offer-client";
-import { LEGAL_LINKS } from "@/lib/constants/legal";
+import { LEGAL_LINKS, TERMS_ROUTE } from "@/lib/constants/legal";
 import { OFFER, OFFER_DAYS, OFFER_ROUTE, inr } from "@/lib/constants/offer";
 import { hand } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
@@ -50,21 +51,21 @@ import { cn } from "@/lib/utils";
  * countdowns to a deadline that does not exist.
  */
 
-const DESCRIPTION = `From classrooms to control rooms. Run a live dark store, fix what breaks and learn live from a state operations head — a 7-day online Q-Com operations challenge, ${OFFER.dateLabel}. ${inr(OFFER.price)}.`;
+const DESCRIPTION = `Run realistic Q-Commerce scenarios, make operational decisions and discover how you perform. Five live simulations, a personalised Operator Profile and a live industry AMA — ${OFFER.dateLabel}. ${inr(OFFER.price)}.`;
 
 export const metadata: Metadata = {
   title: `${OFFER.name} · ${OFFER.dateLabel}`,
   description: DESCRIPTION,
   alternates: { canonical: OFFER_ROUTE },
   openGraph: {
-    title: "From Classrooms to Control Rooms",
+    title: "Experience an Operations Job Before Your First Interview",
     description: DESCRIPTION,
     url: OFFER_ROUTE,
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "From Classrooms to Control Rooms",
+    title: "Experience an Operations Job Before Your First Interview",
     description: DESCRIPTION,
   },
 };
@@ -76,11 +77,58 @@ export const viewport: Viewport = {
 
 /* ── Content ──────────────────────────────────────────────────────────── */
 
-const FEATURES: { icon: LucideIcon; label: string }[] = [
-  { icon: Laptop, label: "Online, simulation-based learning" },
-  { icon: Box, label: "Real-world scenarios" },
-  { icon: UsersRound, label: "Learn from industry operators" },
-  { icon: Award, label: "Completion certificate" },
+/** The hero's proof points. `lead` is the one we want read first. */
+const PROOF_POINTS: { icon: LucideIcon; label: string; lead?: boolean }[] = [
+  { icon: Box, label: "5 simulations" },
+  { icon: Fingerprint, label: "Personalised Operator Profile", lead: true },
+  { icon: Mic, label: "Live Industry AMA" },
+];
+
+/**
+ * What you leave with, in the order that matters: the experience, then the
+ * profile it produces, then the AMA, then the certificate.
+ */
+const BENEFITS: { icon: LucideIcon; title: string; body: string; lead?: boolean }[] = [
+  {
+    icon: Store,
+    title: "Real operations experience",
+    body: "Five live dark-store simulations. Absences, stockouts, angry customers and a clock that does not wait.",
+  },
+  {
+    icon: Fingerprint,
+    title: "Personalised Operator Profile",
+    body: "How you actually decide under pressure — your strengths, your habits and where you lose time — built from every decision you made, not a questionnaire.",
+    lead: true,
+  },
+  {
+    icon: Mic,
+    title: "Live industry AMA",
+    body: `An hour with the ${OFFER.speaker.role}. Ask what the job is really like.`,
+  },
+  {
+    icon: Award,
+    title: "Certificate of completion",
+    body: "Finish the five simulations and the AMA, and download a certificate with a verification link for LinkedIn.",
+  },
+];
+
+/** The arc of the week, in three words. */
+const OUTCOMES: { step: string; title: string; body: string }[] = [
+  {
+    step: "01",
+    title: "Experience",
+    body: "Run five live Q-Commerce shifts and make the calls an operations manager makes before lunch.",
+  },
+  {
+    step: "02",
+    title: "Discover",
+    body: "Your Operator Profile reads back how you decide under pressure — strengths, habits and blind spots.",
+  },
+  {
+    step: "03",
+    title: "Prove",
+    body: "Finish the week with a scorecard for every day and a certificate anyone can verify.",
+  },
 ];
 
 const DAY_ICON: LucideIcon[] = [Store, FileSearch, UsersRound, Cog, PackageCheck, BarChart3, MessagesSquare];
@@ -162,7 +210,11 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Can I get a refund?",
-    a: `${OFFER.refundNote} Message us on WhatsApp at ${OFFER.whatsapp.display}.`,
+    a: `${OFFER.refundNote} ${OFFER.refundDetail} Our WhatsApp number is ${OFFER.whatsapp.display}.`,
+  },
+  {
+    q: "What is the Operator Profile?",
+    a: "A read of how you work, built from what you actually did in the simulations — every decision, how long you took, and how deep the queue was behind it. It names your strengths, the habits you repeat and where you lose time. It is a practice assessment, not an employment certification, and it is yours to keep.",
   },
 ];
 
@@ -192,9 +244,14 @@ function OfferNotes({ className }: { className?: string }) {
         <span aria-hidden className="size-1.5 animate-pulse rounded-full bg-[#D97706]" />
         {OFFER.seatsNote}
       </span>
-      <p className="flex items-center gap-1.5 text-[13px] font-medium text-[#0B0B0B]">
-        <ShieldCheck className="size-4 shrink-0 text-[#128C7E]" aria-hidden />
-        {OFFER.refundNote}
+      <p className="flex items-start gap-1.5 text-[13px] leading-relaxed font-medium text-[#0B0B0B]">
+        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-[#128C7E]" aria-hidden />
+        <span>
+          {OFFER.refundNote}{" "}
+          <Link href={`${TERMS_ROUTE}#refunds`} className="font-semibold underline underline-offset-4">
+            Refund policy
+          </Link>
+        </span>
       </p>
     </div>
   );
@@ -250,31 +307,50 @@ export default function SevenDayChallengePage() {
                 <CohortBadge />
               </div>
 
-              <h1 className="mt-6 text-[clamp(2.45rem,10.4vw,5.6rem)] leading-[0.94] font-bold tracking-[-0.055em]">
-                <span className="block">From</span>
-                <span className="block">Classrooms to</span>
-                <span className="relative inline-block">
+              <h1 className="mt-6 text-[clamp(2.1rem,7.4vw,4.3rem)] leading-[1] font-bold tracking-[-0.05em] text-balance">
+                <span className="block">Experience an Operations Job</span>
+                <span className="relative mt-1 inline-block">
                   <span
                     aria-hidden
-                    className="absolute -inset-x-[0.06em] top-[0.3em] bottom-[0.02em] -skew-y-1 rounded-[0.1em] bg-ember-500"
+                    className="absolute -inset-x-[0.06em] top-[0.28em] bottom-[0.02em] -skew-y-1 rounded-[0.1em] bg-ember-500"
                   />
-                  <span className="relative">Control Rooms.</span>
+                  <span className="relative">Before Your First Interview.</span>
                 </span>
               </h1>
 
               <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-[#3D3D3D] sm:text-[18px]">
-                A 7-day <strong className="font-semibold text-[#0B0B0B]">Operations Leader Challenge</strong> in the
-                Q-Com industry. Run a live dark store, fix what breaks, and learn from someone who does it for real.
+                Run realistic Q-Commerce scenarios, make operational decisions, and discover how you perform.
               </p>
 
-              <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2.5">
-                {FEATURES.map(({ icon: Icon, label }) => (
-                  <li key={label} className="flex items-center gap-2 text-[13.5px] text-[#3D3D3D]">
-                    <Icon className="size-[18px] text-[#0B0B0B]" aria-hidden />
+              {/* The three things you leave with, in the order they matter. */}
+              <ul className="mt-6 flex flex-wrap items-center gap-2.5">
+                {PROOF_POINTS.map(({ icon: Icon, label, lead }) => (
+                  <li
+                    key={label}
+                    className={cn(
+                      "inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[13.5px] font-semibold",
+                      lead
+                        ? "bg-[#0B0B0B] text-white shadow-[0_10px_26px_-16px_rgba(0,0,0,0.9)]"
+                        : "border border-black/12 bg-white text-[#0B0B0B]",
+                    )}
+                  >
+                    <Icon className={cn("size-[18px]", lead ? "text-ember-500" : "text-[#6B6B6B]")} aria-hidden />
                     {label}
                   </li>
                 ))}
               </ul>
+
+              {/* Above the fold on a phone: price and the way in. */}
+              <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-3">
+                <RegisterButton>
+                  Register now · {inr(OFFER.price)}
+                  <ArrowRight />
+                </RegisterButton>
+                <p className="text-[13.5px] text-[#3D3D3D]">
+                  <span className="text-[#6B6B6B] line-through">{inr(OFFER.listPrice)}</span>{" "}
+                  <strong className="font-bold text-[#0B0B0B]">{inr(OFFER.price)}</strong> · {OFFER.priceLabel}
+                </p>
+              </div>
 
               {/* The offer */}
               <div
@@ -289,10 +365,10 @@ export default function SevenDayChallengePage() {
                     <span className="text-[52px] leading-none font-bold tracking-[-0.04em]">{inr(OFFER.price)}</span>
                   </p>
                   <span className="mb-1.5 rounded-full bg-ember-500 px-2.5 py-1 text-[12px] font-semibold">
-                    Save {inr(OFFER.listPrice - OFFER.price)}
+                    {OFFER.priceLabel}
                   </span>
                 </div>
-                <p className="mt-2 text-[13px] text-[#6B6B6B]">Offer price · all seven days included</p>
+                <p className="mt-2 text-[13px] text-[#6B6B6B]">All seven days included · {OFFER.dateLabel}</p>
                 <OfferNotes className="mt-3" />
 
                 <div className="mt-5 border-t border-black/10 pt-5">
@@ -363,6 +439,98 @@ export default function SevenDayChallengePage() {
           </div>
         </section>
 
+        {/* ── Who you learn from ── */}
+        <section aria-labelledby="ama-credibility" className="border-y border-black/[0.07] bg-[#0B0B0B] text-white">
+          <div className="mx-auto max-w-6xl px-5 py-10 sm:px-6 lg:py-12">
+            <div className="grid items-center gap-7 lg:grid-cols-[auto_minmax(0,1fr)_auto]">
+              <div className="flex items-center gap-5">
+                <span
+                  aria-hidden
+                  className="grid size-[76px] shrink-0 place-items-center rounded-2xl bg-ember-500 text-[#0B0B0B]"
+                >
+                  <Mic className="size-9" />
+                </span>
+                <div>
+                  <p className="font-mono text-[10.5px] tracking-[0.24em] text-ember-500 uppercase">
+                    Day 7 · Your live AMA
+                  </p>
+                  <h2 id="ama-credibility" className="mt-2 text-[clamp(1.5rem,3.4vw,2.1rem)] leading-tight font-bold tracking-[-0.03em]">
+                    {OFFER.speaker.role}
+                  </h2>
+                  <p className="mt-1 text-[15px] text-white/70">{OFFER.speaker.experience}</p>
+                </div>
+              </div>
+
+              <ul className="flex flex-wrap gap-2 lg:justify-center">
+                {["10+ years in operations", "Runs a state, not a slide deck", "Open Q&A, one hour"].map((line) => (
+                  <li
+                    key={line}
+                    className="rounded-full border border-white/15 px-3.5 py-2 text-[12.5px] text-white/85"
+                  >
+                    {line}
+                  </li>
+                ))}
+              </ul>
+
+              <RegisterButton size="md" className="w-full lg:w-auto">
+                Register · {inr(OFFER.price)}
+                <ArrowRight />
+              </RegisterButton>
+            </div>
+
+            <p className="mt-7 border-t border-white/10 pt-5 text-[11.5px] leading-relaxed text-white/45">
+              The speaker joins in a personal capacity and shares their own views. Operator Forge is independent: it is
+              not affiliated with, endorsed by, or in partnership with Blinkit or any other company named here, and the
+              company name describes the speaker&rsquo;s own experience only.
+            </p>
+          </div>
+        </section>
+
+        {/* ── What you leave with ── */}
+        <section aria-labelledby="benefits" className="mx-auto max-w-6xl px-5 py-14 sm:px-6 lg:py-20">
+          <h2 id="benefits" className="max-w-2xl text-[clamp(1.7rem,4.4vw,2.6rem)] leading-[1.05] font-bold tracking-[-0.04em]">
+            What you leave with
+          </h2>
+          <div className="mt-8 grid gap-3 md:grid-cols-2 lg:grid-cols-12">
+            {BENEFITS.map(({ icon: Icon, title, body, lead }) => (
+              <article
+                key={title}
+                className={cn(
+                  "flex flex-col rounded-[22px] p-6",
+                  lead
+                    ? "bg-ember-500 text-[#0B0B0B] md:col-span-2 lg:col-span-6 lg:row-span-3 lg:justify-center lg:p-8"
+                    : "border border-black/10 bg-white lg:col-span-6",
+                )}
+              >
+                <span
+                  className={cn(
+                    "grid size-11 place-items-center rounded-full",
+                    lead ? "bg-[#0B0B0B] text-ember-500" : "bg-[#F1ECE1] text-[#0B0B0B]",
+                  )}
+                >
+                  <Icon className="size-5" aria-hidden />
+                </span>
+                <h3
+                  className={cn(
+                    "mt-4 leading-[1.15] font-bold tracking-[-0.02em]",
+                    lead ? "text-[clamp(1.5rem,3.4vw,2rem)]" : "text-[19px]",
+                  )}
+                >
+                  {title}
+                </h3>
+                <p className={cn("mt-2 leading-relaxed", lead ? "text-[16px] text-[#0B0B0B]/80" : "text-[14.5px] text-[#3D3D3D]")}>
+                  {body}
+                </p>
+                {lead ? (
+                  <p className={cn(hand.className, "mt-5 -rotate-2 text-[24px] leading-tight")}>
+                    The part you keep.
+                  </p>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        </section>
+
         {/* ── Inspired by ── */}
         <section className="border-y border-black/[0.07] bg-white/60">
           <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-7 sm:px-6 lg:flex-row lg:items-center">
@@ -389,13 +557,34 @@ export default function SevenDayChallengePage() {
           </p>
         </section>
 
+        {/* ── Experience → Discover → Prove ── */}
+        <section aria-labelledby="outcomes" className="border-t border-black/[0.07] bg-white/60">
+          <div className="mx-auto max-w-6xl px-5 py-14 sm:px-6 lg:py-20">
+            <h2
+              id="outcomes"
+              className="max-w-2xl text-[clamp(1.7rem,4.4vw,2.6rem)] leading-[1.05] font-bold tracking-[-0.04em]"
+            >
+              Experience → Discover → Prove
+            </h2>
+            <ol className="mt-8 grid gap-3 md:grid-cols-3">
+              {OUTCOMES.map(({ step, title, body }) => (
+                <li key={title} className="rounded-[22px] border border-black/10 bg-white p-6">
+                  <p className="font-mono text-[11px] tracking-[0.2em] text-[#6B6B6B]">{step}</p>
+                  <h3 className="mt-3 text-[22px] leading-tight font-bold tracking-[-0.025em]">{title}</h3>
+                  <p className="mt-2 text-[14.5px] leading-relaxed text-[#3D3D3D]">{body}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
         {/* ── The seven days ── */}
         <section id="days" className="mx-auto max-w-6xl px-5 py-16 sm:px-6 lg:py-24">
           <p className="font-mono text-[10.5px] tracking-[0.24em] text-[#6B6B6B] uppercase">
             The 7 days · {OFFER.dateLabel}
           </p>
           <h2 className="mt-3 max-w-3xl text-[clamp(2rem,5.6vw,3.4rem)] leading-[1.02] font-bold tracking-[-0.045em]">
-            Seven days. Seven real operating problems.
+            7 Days. 5 Simulations. 1 Operator Profile. 1 Live AMA.
           </h2>
           <p className="mt-4 max-w-2xl text-[16px] leading-relaxed text-[#3D3D3D]">
             Five live simulations where you decide and the store answers, a read on how you think, and a live session
@@ -604,7 +793,7 @@ export default function SevenDayChallengePage() {
               <span className="sr-only">Offer price</span>
               <span className="text-[60px] leading-none font-bold tracking-[-0.04em]">{inr(OFFER.price)}</span>
               <span className="rounded-full bg-ember-500 px-2.5 py-1 text-[12px] font-semibold">
-                Save {inr(OFFER.listPrice - OFFER.price)}
+                {OFFER.priceLabel}
               </span>
             </p>
             <p className="mt-2 text-[13px] text-[#6B6B6B]">One payment · all seven days · {OFFER.dateLabel}</p>

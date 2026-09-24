@@ -28,9 +28,17 @@ export const OFFER = {
   listPrice: 1499,
   currency: "INR",
   paymentUrl: "https://rzp.io/rzp/zA3rZnNR",
+  /** This cohort is the first one, and priced as such. */
+  priceLabel: "Founding Cohort Price",
   /** Deliberately no number: the page never states a seat count. */
   seatsNote: "Limited seats available",
-  refundNote: "Complete refund if you have a genuine case.",
+  /**
+   * The refund rule, stated as a test somebody can apply themselves — no
+   * judgement call, no "genuine case". The Terms say the same thing.
+   */
+  refundNote: "Full refund if you cancel before the challenge starts on 12 Oct 2026.",
+  refundDetail:
+    "Message us on WhatsApp with your payment ID before 12 Oct 2026. Refunds go back to the original payment method through Razorpay within 7 working days. If we cancel or reschedule the cohort, you get a full refund whenever you ask.",
   whatsapp: {
     /** Country code and number, digits only, as wa.me expects. */
     number: "918089508891",

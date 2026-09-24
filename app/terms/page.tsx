@@ -99,17 +99,30 @@ const SECTIONS: LegalSection[] = [
     body: (
       <>
         <p>
-          <strong>{OFFER.refundNote}</strong> To ask for one,{" "}
+          <strong>{OFFER.refundNote}</strong> No reason is needed, and we do not judge the request. To ask for one,{" "}
           <a href={whatsappUrl("Hi Operator Forge, I would like to request a refund for the 7-Day Challenge.")}>
             message us on WhatsApp at {OFFER.whatsapp.display}
           </a>{" "}
-          with your registered email and Razorpay payment ID, and tell us briefly what happened. We review every
-          request individually.
+          with your registered email and your Razorpay payment ID.
         </p>
         <ul>
-          <li>Approved refunds are made to the original payment method through Razorpay. How long they take to reach you depends on your bank or payment provider.</li>
+          <li>
+            <strong>Before the challenge starts ({OFFER.liveLabel}):</strong> a full refund, every time.
+          </li>
+          <li>
+            <strong>Once the simulations open:</strong> the programme has been delivered, so the fee is not
+            refundable — except where the law gives you a right to one, or where we could not provide what we
+            promised.
+          </li>
+          <li>
+            <strong>If we cancel or reschedule the cohort:</strong> a full refund whenever you ask, or a place in a
+            later cohort if you prefer.
+          </li>
+          <li>
+            Refunds go back to the original payment method through Razorpay, normally within 7 working days of being
+            approved; how quickly it appears then depends on your bank or payment provider.
+          </li>
           <li>Access to the programme ends once a refund is made.</li>
-          <li>If we cancel a cohort, you will receive a full refund or, if you prefer, a place in a later cohort.</li>
         </ul>
       </>
     ),
