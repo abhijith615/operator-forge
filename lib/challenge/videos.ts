@@ -42,15 +42,15 @@ export const CHALLENGE_VIDEOS = {
     source: resolveVideo(process.env.NEXT_PUBLIC_DAY2_INTRO_VIDEO_URL, "https://youtu.be/3Pqbx8979Lw"),
   },
   /**
-   * The proof on the landing page: a short run through the simulations. Small
-   * enough to ship with the site, so an ad click never waits on another
-   * service — and still overridable with a hosted copy or a YouTube link.
+   * The proof on the landing page: a short run through the simulations. On
+   * YouTube, which streams it adaptively and keeps ad traffic off the
+   * deployment's own bandwidth.
    */
   simulationDemo: {
     title: "Simulation demo video",
     source: resolveVideo(
       process.env.NEXT_PUBLIC_SIMULATION_DEMO_VIDEO_URL,
-      "/videos/simulation-demo.mp4",
+      "https://youtu.be/XW0HE9POwvE",
     ),
   },
   dayTwoInspection: {
