@@ -26,6 +26,7 @@ import {
 
 import { LogoMark } from "@/components/brand/logo";
 import { MetaPixelEvent } from "@/components/offer/meta-pixel";
+import { ProductProof } from "@/components/offer/product-proof";
 import {
   CohortBadge,
   FloatingWhatsApp,
@@ -438,6 +439,9 @@ export default function SevenDayChallengePage() {
             </aside>
           </div>
         </section>
+
+        {/* ── Product proof ── */}
+        <ProductProof />
 
         {/* ── Who you learn from ── */}
         <section aria-labelledby="ama-credibility" className="border-y border-black/[0.07] bg-[#0B0B0B] text-white">
