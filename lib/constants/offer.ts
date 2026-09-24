@@ -48,6 +48,14 @@ export const OFFER = {
     message:
       "Hi Operator Forge, I have a question about the 7-Day Operations Leader Challenge (12 – 18 Oct 2026).",
   },
+  founder: {
+    name: "Abhijith Vijay",
+    role: "Founder, Operator Forge",
+    photo: "/founder.png",
+    bio: "10+ years across operations, supply chain, logistics and programme management, working on large-scale operational problems.",
+    quote:
+      "I want students to experience the kind of decisions operators actually make — before they enter their first job.",
+  },
   speaker: {
     role: "State Head (Kerala), Blinkit",
     experience: "A decade+ in digital commerce operations",

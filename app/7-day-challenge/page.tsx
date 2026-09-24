@@ -26,6 +26,7 @@ import {
 
 import { LogoMark } from "@/components/brand/logo";
 import { MetaPixelEvent } from "@/components/offer/meta-pixel";
+import { FounderNote } from "@/components/offer/founder-note";
 import { ProductProof } from "@/components/offer/product-proof";
 import {
   CohortBadge,
@@ -822,6 +823,9 @@ export default function SevenDayChallengePage() {
             </p>
           </div>
         </section>
+
+        {/* ── Who built this ── */}
+        <FounderNote />
 
         {/* ── Questions ── */}
         <section className="border-t border-black/[0.07] bg-white/60">
