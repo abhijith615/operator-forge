@@ -41,12 +41,16 @@ export const CHALLENGE_VIDEOS = {
     title: "Day 2 — introduction",
     source: resolveVideo(process.env.NEXT_PUBLIC_DAY2_INTRO_VIDEO_URL, "https://youtu.be/3Pqbx8979Lw"),
   },
-  /** The proof on the landing page: a short run through a live simulation. */
+  /**
+   * The proof on the landing page: a short run through the simulations. Small
+   * enough to ship with the site, so an ad click never waits on another
+   * service — and still overridable with a hosted copy or a YouTube link.
+   */
   simulationDemo: {
     title: "Simulation demo video",
     source: resolveVideo(
       process.env.NEXT_PUBLIC_SIMULATION_DEMO_VIDEO_URL,
-      hosted("simulation-demo.mp4"),
+      "/videos/simulation-demo.mp4",
     ),
   },
   dayTwoInspection: {

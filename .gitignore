@@ -23,3 +23,7 @@ next-env.d.ts
 # supply it locally or point NEXT_PUBLIC_HANDOVER_VIDEO_URL at a hosted copy.
 public/handover.mp4
 *.mp4
+
+# The one exception: the landing page's demo clip is 19MB and ships with the
+# site, so the page needs nothing configured to play it.
+!public/videos/simulation-demo.mp4
