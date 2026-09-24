@@ -19,7 +19,7 @@ import {
   verificationPath,
 } from "@/lib/challenge/certificate";
 import { readOwnRun } from "@/lib/challenge/runs";
-import { OFFER, OFFER_DAYS, whatsappUrl } from "@/lib/constants/offer";
+import { OFFER, OFFER_DAYS, mailtoUrl, whatsappUrl } from "@/lib/constants/offer";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -128,8 +128,8 @@ export default async function CertificatePage() {
                       className="font-medium text-[#0B0B0B] underline underline-offset-4"
                     >
                       message us
-                    </a>
-                    .
+                    </a>{" "}
+                    or email <a href={mailtoUrl(`Certificate ${certificate.code}`)} className="font-medium text-[#0B0B0B] underline underline-offset-4">{OFFER.email}</a>.
                   </p>
                 </div>
               </div>

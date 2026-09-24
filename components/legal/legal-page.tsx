@@ -4,7 +4,7 @@ import { HomeFooter } from "@/components/home/home-footer";
 import { HomeNav } from "@/components/home/home-nav";
 import { LightCanvas } from "@/components/offer/offer-client";
 import { LEGAL_LINKS, LEGAL_UPDATED } from "@/lib/constants/legal";
-import { OFFER, whatsappUrl } from "@/lib/constants/offer";
+import { OFFER, mailtoUrl, whatsappUrl } from "@/lib/constants/offer";
 import { cn } from "@/lib/utils";
 
 export interface LegalSection {
@@ -95,7 +95,7 @@ export function LegalPage({
             <div className="rounded-[22px] bg-[#0B0B0B] p-6 text-white sm:p-8">
               <h2 className="text-[21px] font-bold tracking-[-0.02em]">Questions about this page?</h2>
               <p className="mt-2 text-[15px] leading-relaxed text-white/70">
-                Message us on WhatsApp and a person will reply.
+                Message us on WhatsApp or by email, and a person will reply.
               </p>
               <a
                 href={whatsappUrl(`Hi Operator Forge, I have a question about your ${title.toLowerCase()}.`)}
@@ -104,6 +104,12 @@ export function LegalPage({
                 className="mt-5 inline-flex h-11 items-center rounded-full bg-ember-500 px-5 text-[14px] font-semibold text-[#0B0B0B] transition hover:brightness-105 focus-visible:ring-2 focus-visible:ring-ember-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B0B0B] focus-visible:outline-none"
               >
                 WhatsApp {OFFER.whatsapp.display}
+              </a>
+              <a
+                href={mailtoUrl(`${title} — question`)}
+                className="mt-5 ml-3 inline-flex h-11 items-center rounded-full border border-white/25 px-5 text-[14px] font-semibold text-white transition hover:border-white/60 focus-visible:ring-2 focus-visible:ring-ember-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B0B0B] focus-visible:outline-none"
+              >
+                {OFFER.email}
               </a>
             </div>
           </div>

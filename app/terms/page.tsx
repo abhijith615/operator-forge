@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { LegalPage, type LegalSection } from "@/components/legal/legal-page";
 import { PRIVACY_ROUTE, TERMS_ROUTE } from "@/lib/constants/legal";
-import { OFFER, OFFER_ROUTE, inr, whatsappUrl } from "@/lib/constants/offer";
+import { OFFER, OFFER_ROUTE, inr, mailtoUrl, whatsappUrl } from "@/lib/constants/offer";
 
 export const metadata: Metadata = {
   title: "Terms & Conditions",
@@ -103,7 +103,8 @@ const SECTIONS: LegalSection[] = [
           <a href={whatsappUrl("Hi Operator Forge, I would like to request a refund for the 7-Day Challenge.")}>
             message us on WhatsApp at {OFFER.whatsapp.display}
           </a>{" "}
-          with your registered email and your Razorpay payment ID.
+          or email <a href={mailtoUrl("Refund request")}>{OFFER.email}</a>, with your registered email address and your
+          Razorpay payment ID.
         </p>
         <ul>
           <li>

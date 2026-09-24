@@ -39,6 +39,8 @@ export const OFFER = {
   refundNote: "Full refund if you cancel before the challenge starts on 12 Oct 2026.",
   refundDetail:
     "Message us on WhatsApp with your payment ID before 12 Oct 2026. Refunds go back to the original payment method through Razorpay within 7 working days. If we cancel or reschedule the cohort, you get a full refund whenever you ask.",
+  /** Where written enquiries go. Paired with WhatsApp wherever we ask people to get in touch. */
+  email: "hello@operatorforge.in",
   whatsapp: {
     /** Country code and number, digits only, as wa.me expects. */
     number: "918089508891",
@@ -54,6 +56,13 @@ export const OFFER = {
 
 export function whatsappUrl(message: string = OFFER.whatsapp.message): string {
   return `https://wa.me/${OFFER.whatsapp.number}?text=${encodeURIComponent(message)}`;
+}
+
+/** A mailto link with the subject filled in, so replies arrive already sorted. */
+export function mailtoUrl(subject = `${OFFER.name} — enquiry`, body?: string): string {
+  const params = new URLSearchParams({ subject });
+  if (body) params.set("body", body);
+  return `mailto:${OFFER.email}?${params.toString()}`;
 }
 
 export function inr(value: number): string {

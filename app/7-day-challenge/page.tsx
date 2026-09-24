@@ -37,7 +37,7 @@ import {
   WhatsAppButton,
 } from "@/components/offer/offer-client";
 import { LEGAL_LINKS, TERMS_ROUTE } from "@/lib/constants/legal";
-import { OFFER, OFFER_DAYS, OFFER_ROUTE, inr } from "@/lib/constants/offer";
+import { OFFER, OFFER_DAYS, OFFER_ROUTE, inr, mailtoUrl } from "@/lib/constants/offer";
 import { hand } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
 
@@ -211,7 +211,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Can I get a refund?",
-    a: `${OFFER.refundNote} ${OFFER.refundDetail} Our WhatsApp number is ${OFFER.whatsapp.display}.`,
+    a: `${OFFER.refundNote} ${OFFER.refundDetail} Reach us on WhatsApp at ${OFFER.whatsapp.display} or by email at ${OFFER.email}.`,
   },
   {
     q: "What is the Operator Profile?",
@@ -852,7 +852,11 @@ export default function SevenDayChallengePage() {
                 </summary>
                 <div className="pb-5">
                   <p className="text-[15px] leading-relaxed text-[#3D3D3D]">
-                    Message us on WhatsApp at {OFFER.whatsapp.display} — a person reads every message.
+                    Message us on WhatsApp at {OFFER.whatsapp.display} or email{" "}
+                    <a href={mailtoUrl()} className="font-semibold underline underline-offset-4">
+                      {OFFER.email}
+                    </a>{" "}
+                    — a person reads every message.
                   </p>
                   <WhatsAppButton label="Chat on WhatsApp" className="mt-4" />
                 </div>
@@ -914,7 +918,10 @@ export default function SevenDayChallengePage() {
             <div className="text-[14px] text-white/70">
               <p className="font-mono text-[10.5px] tracking-[0.24em] text-white/45 uppercase">Talk to us</p>
               <p className="mt-2">WhatsApp {OFFER.whatsapp.display}</p>
-              <Link href="/" className="mt-1 inline-block underline-offset-4 hover:text-white hover:underline">
+              <a href={mailtoUrl()} className="mt-1 block w-fit underline-offset-4 hover:text-white hover:underline">
+                {OFFER.email}
+              </a>
+              <Link href="/" className="mt-1 block w-fit underline-offset-4 hover:text-white hover:underline">
                 operatorforge.in
               </Link>
               <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-1">

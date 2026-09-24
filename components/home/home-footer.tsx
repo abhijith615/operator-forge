@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { LogoMark } from "@/components/brand/logo";
 import { LEGAL_LINKS } from "@/lib/constants/legal";
-import { OFFER, OFFER_ROUTE, whatsappUrl } from "@/lib/constants/offer";
+import { OFFER, OFFER_ROUTE, mailtoUrl, whatsappUrl } from "@/lib/constants/offer";
 import { cn } from "@/lib/utils";
 
 const FOCUS =
@@ -23,6 +23,7 @@ const COLUMNS: { title: string; links: { label: string; href: string; external?:
       { label: "Start Mission", href: "/brief" },
       { label: "Sign in", href: "/login" },
       { label: `WhatsApp ${OFFER.whatsapp.display}`, href: whatsappUrl(), external: true },
+      { label: OFFER.email, href: mailtoUrl(), external: true },
     ],
   },
   { title: "Legal", links: [...LEGAL_LINKS] },

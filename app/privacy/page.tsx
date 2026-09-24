@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { LegalPage, type LegalSection } from "@/components/legal/legal-page";
 import { PRIVACY_ROUTE, TERMS_ROUTE } from "@/lib/constants/legal";
-import { OFFER, OFFER_ROUTE, whatsappUrl } from "@/lib/constants/offer";
+import { OFFER, OFFER_ROUTE, mailtoUrl, whatsappUrl } from "@/lib/constants/offer";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -191,9 +191,13 @@ const SECTIONS: LegalSection[] = [
           <li>record a person to act for you if you die or are unable to.</li>
         </ul>
         <p>
-          To do any of these, <a href={whatsappUrl("Hi Operator Forge, I have a privacy request about my data.")}>message
-          us on WhatsApp at {OFFER.whatsapp.display}</a> from the number or with the email you used with us, so we can
-          confirm it is you. If you are not satisfied with our response, you may complain to the Data Protection Board
+          To do any of these, email{" "}
+          <a href={mailtoUrl("Privacy request")}>{OFFER.email}</a> or{" "}
+          <a href={whatsappUrl("Hi Operator Forge, I have a privacy request about my data.")}>
+            message us on WhatsApp at {OFFER.whatsapp.display}
+          </a>
+          , from the number or with the email address you used with us, so we can confirm it is you. We answer privacy
+          requests within 30 days. If you are not satisfied with our response, you may complain to the Data Protection Board
           of India.
         </p>
       </>

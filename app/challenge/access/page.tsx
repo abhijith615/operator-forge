@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { getOperator } from "@/lib/auth/session";
 import { readChallengeAccess } from "@/lib/challenge/access";
 import { switchChallengeAccount } from "@/lib/challenge/access-actions";
-import { OFFER, OFFER_ROUTE, inr, whatsappUrl } from "@/lib/constants/offer";
+import { OFFER, OFFER_ROUTE, inr, mailtoUrl, whatsappUrl } from "@/lib/constants/offer";
 import { LOGIN_ROUTE, safeNext } from "@/lib/constants/routes";
 
 export const metadata: Metadata = {
@@ -169,6 +169,10 @@ export default async function ChallengeAccessPage({
                   className="font-medium text-ember-400 underline-offset-4 hover:underline"
                 >
                   WhatsApp us on {OFFER.whatsapp.display}
+                </a>
+                <span aria-hidden>·</span>
+                <a href={mailtoUrl("Challenge access")} className="font-medium text-ember-400 underline-offset-4 hover:underline">
+                  {OFFER.email}
                 </a>
               </p>
             </div>
