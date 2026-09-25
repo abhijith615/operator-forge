@@ -28,6 +28,7 @@ import {
 import { LogoMark } from "@/components/brand/logo";
 import { FounderNote } from "@/components/offer/founder-note";
 import { MetaPixelEvent } from "@/components/offer/meta-pixel";
+import { OperatorProfile } from "@/components/offer/operator-profile";
 import { ProductProof } from "@/components/offer/product-proof";
 import { Testimonials } from "@/components/offer/testimonials";
 import {
@@ -101,20 +102,14 @@ const TRUST: { icon: LucideIcon; label: string }[] = [
 ];
 
 /**
- * What you leave with, in the order that matters: the experience, then the
- * profile it produces, then the AMA, then the certificate.
+ * What you leave with, beyond the profile — which has a section of its own
+ * further up the page and is not repeated here.
  */
-const BENEFITS: { icon: LucideIcon; title: string; body: string; lead?: boolean }[] = [
+const BENEFITS: { icon: LucideIcon; title: string; body: string }[] = [
   {
     icon: Store,
     title: "Real operations experience",
     body: "Five live dark-store simulations. Absences, stockouts, angry customers and a clock that does not wait.",
-  },
-  {
-    icon: Fingerprint,
-    title: "Personalised Operator Profile",
-    body: "How you actually decide under pressure — your strengths, your habits and where you lose time — built from every decision you made, not a questionnaire.",
-    lead: true,
   },
   {
     icon: Mic,
@@ -448,10 +443,13 @@ export default function SevenDayChallengePage() {
         {/* ── 3. The product, on video ── */}
         <ProductProof />
 
-        {/* ── 4. What people who ran it said (renders only with real data) ── */}
+        {/* ── 4. The Operator Profile, shown ── */}
+        <OperatorProfile />
+
+        {/* ── 5. What people who ran it said (renders only with real data) ── */}
         <Testimonials />
 
-        {/* ── 5. The seven days ── */}
+        {/* ── 6. The seven days ── */}
         <section id="days" className="mx-auto max-w-6xl px-5 py-14 sm:px-6 lg:py-20">
           <p className="font-mono text-[10.5px] tracking-[0.24em] text-[#6B6B6B] uppercase">
             The 7 days · {OFFER.dateLabel}
@@ -497,7 +495,7 @@ export default function SevenDayChallengePage() {
           </div>
         </section>
 
-        {/* ── 6. What you leave with, including the certificate ── */}
+        {/* ── 7. What you leave with, including the certificate ── */}
         <section aria-labelledby="benefits" className="border-t border-black/[0.07] bg-white/60">
           <div className="mx-auto max-w-6xl px-5 py-14 sm:px-6 lg:py-20">
             <h2
@@ -507,48 +505,18 @@ export default function SevenDayChallengePage() {
               What you leave with
             </h2>
             <p className="mt-4 max-w-2xl text-[16px] leading-relaxed text-[#3D3D3D]">
-              Enough to answer &ldquo;tell me about a time you handled pressure&rdquo; with something you actually
-              did, and a profile that says how you did it.
+              Your Operator Profile, and the rest of what the week leaves you with — enough to answer &ldquo;tell me
+              about a time you handled pressure&rdquo; with something you actually did.
             </p>
 
-            <div className="mt-8 grid gap-3 md:grid-cols-2 lg:grid-cols-12">
-              {BENEFITS.map(({ icon: Icon, title, body, lead }) => (
-                <article
-                  key={title}
-                  className={cn(
-                    "flex flex-col rounded-[22px] p-6",
-                    lead
-                      ? "bg-ember-500 text-[#0B0B0B] md:col-span-2 lg:col-span-6 lg:row-span-3 lg:justify-center lg:p-8"
-                      : "border border-black/10 bg-white lg:col-span-6",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "grid size-11 place-items-center rounded-full",
-                      lead ? "bg-[#0B0B0B] text-ember-500" : "bg-[#F1ECE1] text-[#0B0B0B]",
-                    )}
-                  >
+            <div className="mt-8 grid gap-3 md:grid-cols-3">
+              {BENEFITS.map(({ icon: Icon, title, body }) => (
+                <article key={title} className="flex flex-col rounded-[22px] border border-black/10 bg-white p-6">
+                  <span className="grid size-11 place-items-center rounded-full bg-[#F1ECE1] text-[#0B0B0B]">
                     <Icon className="size-5" aria-hidden />
                   </span>
-                  <h3
-                    className={cn(
-                      "mt-4 leading-[1.15] font-bold tracking-[-0.02em]",
-                      lead ? "text-[clamp(1.5rem,3.4vw,2rem)]" : "text-[19px]",
-                    )}
-                  >
-                    {title}
-                  </h3>
-                  <p
-                    className={cn(
-                      "mt-2 leading-relaxed",
-                      lead ? "text-[16px] text-[#0B0B0B]/80" : "text-[14.5px] text-[#3D3D3D]",
-                    )}
-                  >
-                    {body}
-                  </p>
-                  {lead ? (
-                    <p className={cn(hand.className, "mt-5 -rotate-2 text-[24px] leading-tight")}>The part you keep.</p>
-                  ) : null}
+                  <h3 className="mt-4 text-[19px] leading-[1.15] font-bold tracking-[-0.02em]">{title}</h3>
+                  <p className="mt-2 text-[14.5px] leading-relaxed text-[#3D3D3D]">{body}</p>
                 </article>
               ))}
             </div>
@@ -608,7 +576,7 @@ export default function SevenDayChallengePage() {
           </div>
         </section>
 
-        {/* ── 7. The AMA ── */}
+        {/* ── 8. The AMA ── */}
         <section aria-labelledby="ama" className="bg-[#0B0B0B] text-white">
           <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-14 sm:px-6 lg:grid-cols-2 lg:py-20">
             <div>
@@ -669,7 +637,7 @@ export default function SevenDayChallengePage() {
           </div>
         </section>
 
-        {/* ── 8. Who it is for ── */}
+        {/* ── 9. Who it is for ── */}
         <section aria-labelledby="who-for" className="mx-auto max-w-6xl px-5 py-14 sm:px-6 lg:py-20">
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-14">
             <div>
@@ -697,10 +665,10 @@ export default function SevenDayChallengePage() {
           </div>
         </section>
 
-        {/* ── 9. Who built this ── */}
+        {/* ── 10. Who built this ── */}
         <FounderNote />
 
-        {/* ── 10. Questions ── */}
+        {/* ── 11. Questions ── */}
         <section className="border-t border-black/[0.07] bg-white/60">
           <div className="mx-auto max-w-3xl px-5 py-14 sm:px-6 lg:py-20">
             <h2 className="text-[clamp(1.7rem,4.4vw,2.6rem)] leading-[1.05] font-bold tracking-[-0.04em]">
@@ -742,7 +710,7 @@ export default function SevenDayChallengePage() {
           </div>
         </section>
 
-        {/* ── 11. Closing call to action ── */}
+        {/* ── 12. Closing call to action ── */}
         <section id="final-cta" className="bg-ember-500">
           <div className="mx-auto max-w-6xl px-5 py-14 text-center sm:px-6 lg:py-20">
             <h2 className="mx-auto max-w-3xl text-[clamp(2.1rem,6vw,3.8rem)] leading-[1] font-bold tracking-[-0.05em]">
@@ -763,7 +731,7 @@ export default function SevenDayChallengePage() {
         </section>
       </main>
 
-      {/* ── 12. Footer ── */}
+      {/* ── 13. Footer ── */}
       <footer className="relative overflow-hidden bg-[#0B0B0B] text-white">
         <svg
           aria-hidden
