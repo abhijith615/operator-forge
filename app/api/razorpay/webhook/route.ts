@@ -1,5 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
+
+import { OFFER, OFFER_ROUTE } from "@/lib/constants/offer";
+import { sendMetaEvent } from "@/lib/meta/capi";
 
 import { isSupabaseConfigured, supabaseAnonKey, supabaseUrl } from "@/lib/supabase/config";
 
@@ -28,6 +31,35 @@ const STATUS: Record<string, number> = {
   rejected: 401,
   not_configured: 503,
 };
+
+interface RazorpayEntity {
+  id?: string;
+  amount?: number;
+  currency?: string;
+  email?: string;
+  contact?: string;
+}
+
+/** Reads the payment out of the (already verified) event and tells Meta. */
+async function reportPurchase(rawBody: string, request: NextRequest): Promise<void> {
+  let entity: RazorpayEntity | undefined;
+  try {
+    entity = (JSON.parse(rawBody) as { payload?: { payment?: { entity?: RazorpayEntity } } })?.payload?.payment?.entity;
+  } catch {
+    return;
+  }
+  if (!entity?.id) return;
+
+  await sendMetaEvent({
+    name: "Purchase",
+    eventId: `purchase_${entity.id}`,
+    sourceUrl: new URL(OFFER_ROUTE, request.nextUrl.origin).toString(),
+    user: { email: entity.email ?? undefined, phone: entity.contact ?? undefined },
+    value: typeof entity.amount === "number" ? entity.amount / 100 : OFFER.price,
+    currency: entity.currency ?? OFFER.currency,
+    contentName: OFFER.name,
+  });
+}
 
 export async function POST(request: NextRequest) {
   if (!isSupabaseConfigured) {
@@ -58,6 +90,12 @@ export async function POST(request: NextRequest) {
   }
 
   const status = typeof data === "string" ? data : "error";
+
+  // A matched payment is a confirmed sale: the database accepted the
+  // signature before saying so. Report it to Meta from here — the one place
+  // that knows the money actually arrived — sharing an id with the browser's
+  // Purchase on the thank-you page so the two are counted once.
+  if (status === "matched") after(() => reportPurchase(body, request));
   if (status !== "matched" && status !== "duplicate" && status !== "ignored") {
     console.warn("[razorpay] webhook result:", status);
   }

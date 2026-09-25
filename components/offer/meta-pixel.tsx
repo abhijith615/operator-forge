@@ -38,15 +38,36 @@ const MAX_TRIES = 20;
  * Sends a standard event. The pixel script loads after the page becomes
  * interactive, so an event fired before then waits for it briefly rather
  * than being dropped.
+ *
+ * Pass `eventId` for anything the server also reports through the
+ * Conversions API: Meta keeps whichever arrives first and drops the twin.
  */
-export function track(event: string, params?: Record<string, unknown>, tries = 0): void {
+export function track(
+  event: string,
+  params?: Record<string, unknown>,
+  eventId?: string,
+  tries = 0,
+): void {
   if (typeof window === "undefined" || !PIXEL_ID) return;
   const fbq = window.fbq;
   if (typeof fbq === "function") {
-    fbq("track", event, params);
+    if (eventId) fbq("track", event, params, { eventID: eventId });
+    else fbq("track", event, params);
     return;
   }
-  if (tries < MAX_TRIES) window.setTimeout(() => track(event, params, tries + 1), RETRY_MS);
+  if (tries < MAX_TRIES) window.setTimeout(() => track(event, params, eventId, tries + 1), RETRY_MS);
+}
+
+/** Reads a cookie the pixel set, for passing to the Conversions API. */
+export function pixelCookie(name: "_fbp" | "_fbc"): string {
+  if (typeof document === "undefined") return "";
+  return (
+    document.cookie
+      .split(";")
+      .map((part) => part.trim())
+      .find((part) => part.startsWith(`${name}=`))
+      ?.slice(name.length + 1) ?? ""
+  );
 }
 
 /** PageView for client-side navigations; the base code covers the first load. */

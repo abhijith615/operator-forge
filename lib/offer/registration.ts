@@ -14,7 +14,8 @@ export interface RegistrationFields {
 export type RegistrationErrors = Partial<Record<keyof RegistrationFields, string>>;
 
 export type RegistrationResult =
-  | { status: "ready"; paymentUrl: string }
+  /** leadEventId pairs the browser's Lead with the server's, for deduplication. */
+  | { status: "ready"; paymentUrl: string; leadEventId?: string }
   | { status: "invalid"; errors: RegistrationErrors }
   | { status: "closed"; message: string };
 

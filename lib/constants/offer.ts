@@ -127,7 +127,7 @@ const DAYS: Omit<OfferDay, "date">[] = [
   {
     day: 6,
     title: "Discover Your Operator Profile",
-    body: "Get your personalised Operator Genome and your key strengths.",
+    body: "Get your personalised Operator Profile and your key strengths.",
   },
   {
     day: 7,

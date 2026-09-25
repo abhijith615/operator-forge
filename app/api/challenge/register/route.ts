@@ -7,6 +7,7 @@ import {
   validateRegistration,
   type RegistrationResult,
 } from "@/lib/offer/registration";
+import { newEventId, pixelCookies, requestContext, sendMetaEvent } from "@/lib/meta/capi";
 import { sendRegistrationToSheet } from "@/lib/offer/sheets";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -80,6 +81,14 @@ export async function POST(request: NextRequest) {
   }
   if (String(form.get(HONEYPOT_FIELD) ?? "").trim() !== "") attribution.flag = "trap-field";
 
+  // Meta's click identifiers, kept with the registration so the Purchase the
+  // payment webhook reports later can be matched to the same ad click.
+  const cookies = pixelCookies(request.headers.get("cookie"));
+  const fbp = String(form.get("fbp") ?? "") || cookies.fbp || "";
+  const fbc = String(form.get("fbc") ?? "") || cookies.fbc || "";
+  if (fbp) attribution.fbp = fbp.slice(0, 120);
+  if (fbc) attribution.fbc = fbc.slice(0, 200);
+
   let stored = false;
   const supabase = await getSupabaseServerClient();
   if (supabase) {
@@ -112,5 +121,28 @@ export async function POST(request: NextRequest) {
     }),
   );
 
-  return respond(request, { status: "ready", paymentUrl: OFFER.paymentUrl });
+  // One Lead, reported from both sides under the same id so Meta counts it
+  // once. Sent after the response, so measurement never delays payment.
+  const leadEventId = newEventId("lead");
+  const sourceUrl = request.headers.get("referer") ?? new URL(OFFER_ROUTE, request.url).toString();
+  const context = requestContext(request.headers);
+  after(() =>
+    sendMetaEvent({
+      name: "Lead",
+      eventId: leadEventId,
+      sourceUrl,
+      user: {
+        email: checked.value.email,
+        phone: checked.value.phone,
+        fbp: fbp || undefined,
+        fbc: fbc || undefined,
+        ...context,
+      },
+      value: OFFER.price,
+      currency: OFFER.currency,
+      contentName: OFFER.name,
+    }),
+  );
+
+  return respond(request, { status: "ready", paymentUrl: OFFER.paymentUrl, leadEventId });
 }

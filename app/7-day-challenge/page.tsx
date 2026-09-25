@@ -10,6 +10,7 @@ import {
   ChevronDown,
   Clock,
   Cog,
+  CreditCard,
   FileSearch,
   Fingerprint,
   Laptop,
@@ -25,9 +26,10 @@ import {
 } from "lucide-react";
 
 import { LogoMark } from "@/components/brand/logo";
-import { MetaPixelEvent } from "@/components/offer/meta-pixel";
 import { FounderNote } from "@/components/offer/founder-note";
+import { MetaPixelEvent } from "@/components/offer/meta-pixel";
 import { ProductProof } from "@/components/offer/product-proof";
+import { Testimonials } from "@/components/offer/testimonials";
 import {
   CohortBadge,
   FloatingWhatsApp,
@@ -51,6 +53,10 @@ import { cn } from "@/lib/utils";
  * looks like the ad they tapped. Everything factual comes from
  * `lib/constants/offer.ts`; there are no invented numbers, testimonials or
  * countdowns to a deadline that does not exist.
+ *
+ * Read on a phone, from a cold ad click, so each section earns its place:
+ * what it is, proof it is real, what you leave with, who teaches it, who
+ * built it, and the answers to the questions that stop people buying.
  */
 
 const DESCRIPTION = `Run realistic Q-Commerce scenarios, make operational decisions and discover how you perform. Five live simulations, a personalised Operator Profile and a live industry AMA — ${OFFER.dateLabel}. ${inr(OFFER.price)}.`;
@@ -86,6 +92,14 @@ const PROOF_POINTS: { icon: LucideIcon; label: string; lead?: boolean }[] = [
   { icon: Mic, label: "Live Industry AMA" },
 ];
 
+/** The reassurances that used to be scattered through the page, said once. */
+const TRUST: { icon: LucideIcon; label: string }[] = [
+  { icon: CreditCard, label: "Secure payment via Razorpay — UPI, cards, netbanking" },
+  { icon: Laptop, label: "100% online" },
+  { icon: Smartphone, label: "Works on a phone" },
+  { icon: Award, label: "Certificate of completion" },
+];
+
 /**
  * What you leave with, in the order that matters: the experience, then the
  * profile it produces, then the AMA, then the certificate.
@@ -114,25 +128,6 @@ const BENEFITS: { icon: LucideIcon; title: string; body: string; lead?: boolean 
   },
 ];
 
-/** The arc of the week, in three words. */
-const OUTCOMES: { step: string; title: string; body: string }[] = [
-  {
-    step: "01",
-    title: "Experience",
-    body: "Run five live Q-Commerce shifts and make the calls an operations manager makes before lunch.",
-  },
-  {
-    step: "02",
-    title: "Discover",
-    body: "Your Operator Profile reads back how you decide under pressure — strengths, habits and blind spots.",
-  },
-  {
-    step: "03",
-    title: "Prove",
-    body: "Finish the week with a scorecard for every day and a certificate anyone can verify.",
-  },
-];
-
 const DAY_ICON: LucideIcon[] = [Store, FileSearch, UsersRound, Cog, PackageCheck, BarChart3, MessagesSquare];
 
 type Tone = "yellow" | "cream" | "black";
@@ -144,30 +139,18 @@ const TONE: Record<Tone, { card: string; body: string; meta: string }> = {
   black: { card: "bg-[#0B0B0B] text-white", body: "text-white/70", meta: "text-white/55" },
 };
 
-const VERBS = ["Observe", "Think", "Decide", "Collaborate", "Communicate", "Solve", "Lead"];
-
-const STEPS: { icon: LucideIcon; title: string; body: string }[] = [
-  {
-    icon: ShieldCheck,
-    title: `Register for ${inr(OFFER.price)}`,
-    body: `Enter your name, phone and email, then pay securely on Razorpay for the cohort that starts ${OFFER_DAYS[0]?.date}.`,
-  },
-  {
-    icon: Smartphone,
-    title: "One real problem a day",
-    body: "Days 1 to 5 are live simulations of about 15 minutes each. You decide; the store answers.",
-  },
-  {
-    icon: Mic,
-    title: "Your profile, the AMA, your certificate",
-    body: "Day 6 reads back how you decide. Day 7 puts your questions to an operations leader — and you finish with a certificate of completion.",
-  },
+/** The practical facts that used to need a "How it works" section. */
+const SCHEDULE_FACTS = [
+  "About 15 minutes a day",
+  "Days 1–5 live simulations",
+  "Day 6 Operator Profile",
+  "Day 7 live AMA",
 ];
 
 const INCLUDED = [
   "Five live operations simulations — Days 1 to 5",
   "A scorecard after every day, built from what you actually decided",
-  "Your personalised Operator profile and key strengths — Day 6",
+  "Your personalised Operator Profile and key strengths — Day 6",
   `Live AMA with the ${OFFER.speaker.role} — Day 7`,
   "A cohort that starts the same week as you",
   "A certificate of completion from Operator Forge",
@@ -196,27 +179,27 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "How much time does it take?",
-    a: "About 15 minutes a day for Days 1 to 5, time with your operator profile on Day 6, and the live AMA on Day 7.",
+    a: "About 15 minutes a day for Days 1 to 5, time with your Operator Profile on Day 6, and the live AMA on Day 7.",
   },
   {
     q: "What do I need?",
     a: "A phone or a laptop and a stable internet connection. The simulations run in your browser — there is nothing to install.",
   },
   {
+    q: "What is the Operator Profile?",
+    a: "A read of how you work, built from what you actually did in the simulations — every decision, how long you took, and how deep the queue was behind it. It names your strengths, the habits you repeat and where you lose time. It is a practice assessment, not an employment certification, and it is yours to keep.",
+  },
+  {
     q: "Will I get a certificate?",
-    a: "Yes. Complete all five simulations (Days 1 to 5) and attend the live AMA on Day 7, and your certificate of completion unlocks in your account — with your name, the challenge dates and a verification link — ready to download and add to LinkedIn. It shows you completed the programme; your scorecards and operator profile are a practice assessment, not an employment certification.",
+    a: "Yes. Complete all five simulations (Days 1 to 5) and attend the live AMA on Day 7, and your certificate of completion unlocks in your account — with your name, the challenge dates and a verification link — ready to download and add to LinkedIn. It shows you completed the programme; your scorecards and Operator Profile are a practice assessment, not an employment certification.",
   },
   {
     q: "How do I register and pay?",
-    a: `Enter your name, phone and email in the registration form, and you go straight to a secure Razorpay payment page. The offer price is ${inr(OFFER.price)} for all seven days.`,
+    a: `Enter your name, phone and email in the registration form, and you go straight to a secure Razorpay payment page — UPI, cards or netbanking. The offer price is ${inr(OFFER.price)} for all seven days.`,
   },
   {
     q: "Can I get a refund?",
     a: `${OFFER.refundNote} ${OFFER.refundDetail} Reach us on WhatsApp at ${OFFER.whatsapp.display} or by email at ${OFFER.email}.`,
-  },
-  {
-    q: "What is the Operator Profile?",
-    a: "A read of how you work, built from what you actually did in the simulations — every decision, how long you took, and how deep the queue was behind it. It names your strengths, the habits you repeat and where you lose time. It is a practice assessment, not an employment certification, and it is yours to keep.",
   },
 ];
 
@@ -293,15 +276,11 @@ export default function SevenDayChallengePage() {
       </header>
 
       <main id="main">
-        {/* ── Hero ── */}
+        {/* ── 1. Hero, with the form ── */}
         <section className="overflow-x-clip">
-          <div className="mx-auto grid max-w-6xl gap-10 px-5 pt-9 pb-14 sm:px-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)] lg:gap-12 lg:pt-14 lg:pb-20">
+          <div className="mx-auto grid max-w-6xl gap-10 px-5 pt-8 pb-12 sm:px-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)] lg:gap-12 lg:pt-12 lg:pb-16">
             <div className="min-w-0">
-              <p className="font-mono text-[10.5px] tracking-[0.28em] text-balance text-[#6B6B6B] uppercase">
-                Real operations · Real decisions · A brighter you
-              </p>
-
-              <div className="mt-5 flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-2 rounded-full bg-[#0B0B0B] px-3 py-1.5 text-[12.5px] font-medium text-white">
                   <CalendarDays className="size-3.5 text-ember-500" aria-hidden />
                   {OFFER.dateLabel}
@@ -323,6 +302,10 @@ export default function SevenDayChallengePage() {
               <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-[#3D3D3D] sm:text-[18px]">
                 Run realistic Q-Commerce scenarios, make operational decisions, and discover how you perform.
               </p>
+              <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-[#0B0B0B]">
+                Walk into interviews with real scenarios you&rsquo;ve handled, a profile of how you decide, and a
+                certificate you can show.
+              </p>
 
               {/* The three things you leave with, in the order they matter. */}
               <ul className="mt-6 flex flex-wrap items-center gap-2.5">
@@ -341,6 +324,11 @@ export default function SevenDayChallengePage() {
                   </li>
                 ))}
               </ul>
+
+              {/* The one tagline, where the decorative panel cannot go. */}
+              <p className={cn(hand.className, "mt-5 -rotate-1 text-[22px] leading-tight lg:hidden")}>
+                Same degree. A bigger you.
+              </p>
 
               {/* Above the fold on a phone: price and the way in. */}
               <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-3">
@@ -381,31 +369,17 @@ export default function SevenDayChallengePage() {
                 </div>
                 <WhatsAppButton className="mt-3 w-full" />
 
-                <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 text-[12px] text-[#6B6B6B]">
-                  <li className="flex items-center gap-1.5">
-                    <ShieldCheck className="size-3.5" aria-hidden />
-                    Secure payment via Razorpay
-                  </li>
-                  <li className="flex items-center gap-1.5">
-                    <Laptop className="size-3.5" aria-hidden />
-                    100% online
-                  </li>
-                  <li className="flex items-center gap-1.5">
-                    <Smartphone className="size-3.5" aria-hidden />
-                    Works on a phone
-                  </li>
-                  <li className="flex items-center gap-1.5">
-                    <Award className="size-3.5" aria-hidden />
-                    Completion certificate
-                  </li>
-                </ul>
+                <p className="mt-4 flex items-center gap-1.5 text-[12px] text-[#6B6B6B]">
+                  <ShieldCheck className="size-3.5 shrink-0" aria-hidden />
+                  Secure payment via Razorpay — UPI, cards and netbanking
+                </p>
               </div>
             </div>
 
             {/* The operator panel */}
             <aside
               aria-label="What the challenge builds"
-              className="relative flex min-h-[360px] flex-col justify-end overflow-hidden rounded-[28px] bg-[#0B0B0B] p-7 text-white lg:sticky lg:top-24 lg:min-h-[600px] lg:self-start"
+              className="relative hidden min-h-[320px] flex-col justify-end overflow-hidden rounded-[28px] bg-[#0B0B0B] p-7 text-white lg:sticky lg:top-24 lg:flex lg:min-h-[520px] lg:self-start"
             >
               <span
                 aria-hidden
@@ -421,182 +395,84 @@ export default function SevenDayChallengePage() {
                 <br />
                 A bigger you.
               </p>
-              <ul className="relative mt-24 space-y-1.5">
-                {VERBS.map((verb, index) => (
-                  <li
-                    key={verb}
-                    className={cn(
-                      "font-mono text-[14px] tracking-[0.22em] uppercase",
-                      index === VERBS.length - 1 ? "text-ember-500" : "text-white/85",
-                    )}
-                  >
-                    {verb}
-                  </li>
-                ))}
-              </ul>
-              <p className="relative mt-6 border-t border-white/15 pt-4 text-[13px] leading-relaxed text-white/65">
+              <p className="relative mt-24 text-[clamp(1.4rem,3vw,1.9rem)] leading-[1.15] font-bold tracking-[-0.03em]">
                 Seven days of the calls an operations manager makes before lunch.
+              </p>
+              <p className="relative mt-4 border-t border-white/15 pt-4 text-[13.5px] leading-relaxed text-white/65">
+                You decide. The store answers. Nothing resets while you think.
               </p>
             </aside>
           </div>
         </section>
 
-        {/* ── Product proof ── */}
-        <ProductProof />
-
-        {/* ── Who you learn from ── */}
-        <section aria-labelledby="ama-credibility" className="border-y border-black/[0.07] bg-[#0B0B0B] text-white">
-          <div className="mx-auto max-w-6xl px-5 py-10 sm:px-6 lg:py-12">
-            <div className="grid items-center gap-7 lg:grid-cols-[auto_minmax(0,1fr)_auto]">
-              <div className="flex items-center gap-5">
-                <span
-                  aria-hidden
-                  className="grid size-[76px] shrink-0 place-items-center rounded-2xl bg-ember-500 text-[#0B0B0B]"
-                >
-                  <Mic className="size-9" />
-                </span>
-                <div>
-                  <p className="font-mono text-[10.5px] tracking-[0.24em] text-ember-500 uppercase">
-                    Day 7 · Your live AMA
-                  </p>
-                  <h2 id="ama-credibility" className="mt-2 text-[clamp(1.5rem,3.4vw,2.1rem)] leading-tight font-bold tracking-[-0.03em]">
-                    {OFFER.speaker.role}
-                  </h2>
-                  <p className="mt-1 text-[15px] text-white/70">{OFFER.speaker.experience}</p>
-                </div>
-              </div>
-
-              <ul className="flex flex-wrap gap-2 lg:justify-center">
-                {["10+ years in operations", "Runs a state, not a slide deck", "Open Q&A, one hour"].map((line) => (
-                  <li
-                    key={line}
-                    className="rounded-full border border-white/15 px-3.5 py-2 text-[12.5px] text-white/85"
-                  >
-                    {line}
-                  </li>
-                ))}
-              </ul>
-
-              <RegisterButton size="md" className="w-full lg:w-auto">
-                Register · {inr(OFFER.price)}
-                <ArrowRight />
-              </RegisterButton>
-            </div>
-
-            <p className="mt-7 border-t border-white/10 pt-5 text-[11.5px] leading-relaxed text-white/45">
-              The speaker joins in a personal capacity and shares their own views. Operator Forge is independent: it is
-              not affiliated with, endorsed by, or in partnership with Blinkit or any other company named here, and the
-              company name describes the speaker&rsquo;s own experience only.
-            </p>
-          </div>
-        </section>
-
-        {/* ── What you leave with ── */}
-        <section aria-labelledby="benefits" className="mx-auto max-w-6xl px-5 py-14 sm:px-6 lg:py-20">
-          <h2 id="benefits" className="max-w-2xl text-[clamp(1.7rem,4.4vw,2.6rem)] leading-[1.05] font-bold tracking-[-0.04em]">
-            What you leave with
-          </h2>
-          <div className="mt-8 grid gap-3 md:grid-cols-2 lg:grid-cols-12">
-            {BENEFITS.map(({ icon: Icon, title, body, lead }) => (
-              <article
-                key={title}
-                className={cn(
-                  "flex flex-col rounded-[22px] p-6",
-                  lead
-                    ? "bg-ember-500 text-[#0B0B0B] md:col-span-2 lg:col-span-6 lg:row-span-3 lg:justify-center lg:p-8"
-                    : "border border-black/10 bg-white lg:col-span-6",
-                )}
-              >
-                <span
-                  className={cn(
-                    "grid size-11 place-items-center rounded-full",
-                    lead ? "bg-[#0B0B0B] text-ember-500" : "bg-[#F1ECE1] text-[#0B0B0B]",
-                  )}
-                >
-                  <Icon className="size-5" aria-hidden />
-                </span>
-                <h3
-                  className={cn(
-                    "mt-4 leading-[1.15] font-bold tracking-[-0.02em]",
-                    lead ? "text-[clamp(1.5rem,3.4vw,2rem)]" : "text-[19px]",
-                  )}
-                >
-                  {title}
-                </h3>
-                <p className={cn("mt-2 leading-relaxed", lead ? "text-[16px] text-[#0B0B0B]/80" : "text-[14.5px] text-[#3D3D3D]")}>
-                  {body}
-                </p>
-                {lead ? (
-                  <p className={cn(hand.className, "mt-5 -rotate-2 text-[24px] leading-tight")}>
-                    The part you keep.
-                  </p>
-                ) : null}
-              </article>
-            ))}
-          </div>
-        </section>
-
-        {/* ── Inspired by ── */}
-        <section className="border-y border-black/[0.07] bg-white/60">
-          <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-7 sm:px-6 lg:flex-row lg:items-center">
-            <p className="font-mono text-[10.5px] tracking-[0.24em] text-[#6B6B6B] uppercase">
-              Inspired by real operations in
-            </p>
-            <ul className="flex flex-wrap gap-2">
-              {["Zepto", "Instamart", "Blinkit"].map((name) => (
-                <li
-                  key={name}
-                  className="rounded-full border border-black/10 bg-white px-4 py-1.5 text-[14px] font-semibold text-[#0B0B0B]"
-                >
-                  {name}
+        {/* ── 2. Trust strip, and where the simulations come from ── */}
+        <section aria-label="What is included and where the simulations come from" className="border-y border-black/[0.07] bg-white/60">
+          <div className="mx-auto max-w-6xl px-5 py-7 sm:px-6">
+            <ul className="flex flex-wrap gap-x-6 gap-y-2.5">
+              {TRUST.map(({ icon: Icon, label }) => (
+                <li key={label} className="flex items-center gap-2 text-[13px] font-medium text-[#3D3D3D]">
+                  <Icon className="size-4 shrink-0 text-[#0B0B0B]" aria-hidden />
+                  {label}
                 </li>
               ))}
             </ul>
-            <p className={cn(hand.className, "-rotate-2 text-[22px] leading-tight lg:ml-auto")}>
-              Different brands. Same real-world challenges.
+
+            <div className="mt-6 flex flex-col gap-3 border-t border-black/[0.07] pt-6 lg:flex-row lg:items-center">
+              <p className="font-mono text-[10.5px] tracking-[0.24em] text-[#6B6B6B] uppercase">
+                Inspired by real operations in
+              </p>
+              <ul className="flex flex-wrap gap-2">
+                {["Zepto", "Instamart", "Blinkit"].map((name) => (
+                  <li
+                    key={name}
+                    className="rounded-full border border-black/10 bg-white px-4 py-1.5 text-[14px] font-semibold text-[#0B0B0B]"
+                  >
+                    {name}
+                  </li>
+                ))}
+              </ul>
+              <p className={cn(hand.className, "-rotate-2 text-[22px] leading-tight lg:ml-auto")}>
+                Different brands. Same real-world challenges.
+              </p>
+            </div>
+
+            {/* Said once, for the brand names and the speaker together. */}
+            <p className="mt-4 text-[11px] leading-relaxed text-[#6B6B6B]">
+              Operator Forge is independent: not affiliated with, endorsed by, or in partnership with the companies
+              named here. The simulations are modelled on the kind of operations they run, and the Day 7 speaker
+              joins in a personal capacity, sharing their own views.
             </p>
           </div>
-          <p className="mx-auto max-w-6xl px-5 pb-5 text-[11px] leading-relaxed text-[#6B6B6B] sm:px-6">
-            Operator Forge is independent and is not affiliated with, or endorsed by, the companies named above. Their
-            names describe the kind of operations the simulations are modelled on.
-          </p>
         </section>
 
-        {/* ── Experience → Discover → Prove ── */}
-        <section aria-labelledby="outcomes" className="border-t border-black/[0.07] bg-white/60">
-          <div className="mx-auto max-w-6xl px-5 py-14 sm:px-6 lg:py-20">
-            <h2
-              id="outcomes"
-              className="max-w-2xl text-[clamp(1.7rem,4.4vw,2.6rem)] leading-[1.05] font-bold tracking-[-0.04em]"
-            >
-              Experience → Discover → Prove
-            </h2>
-            <ol className="mt-8 grid gap-3 md:grid-cols-3">
-              {OUTCOMES.map(({ step, title, body }) => (
-                <li key={title} className="rounded-[22px] border border-black/10 bg-white p-6">
-                  <p className="font-mono text-[11px] tracking-[0.2em] text-[#6B6B6B]">{step}</p>
-                  <h3 className="mt-3 text-[22px] leading-tight font-bold tracking-[-0.025em]">{title}</h3>
-                  <p className="mt-2 text-[14.5px] leading-relaxed text-[#3D3D3D]">{body}</p>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </section>
+        {/* ── 3. The product, on video ── */}
+        <ProductProof />
 
-        {/* ── The seven days ── */}
-        <section id="days" className="mx-auto max-w-6xl px-5 py-16 sm:px-6 lg:py-24">
+        {/* ── 4. What people who ran it said (renders only with real data) ── */}
+        <Testimonials />
+
+        {/* ── 5. The seven days ── */}
+        <section id="days" className="mx-auto max-w-6xl px-5 py-14 sm:px-6 lg:py-20">
           <p className="font-mono text-[10.5px] tracking-[0.24em] text-[#6B6B6B] uppercase">
             The 7 days · {OFFER.dateLabel}
           </p>
           <h2 className="mt-3 max-w-3xl text-[clamp(2rem,5.6vw,3.4rem)] leading-[1.02] font-bold tracking-[-0.045em]">
             7 Days. 5 Simulations. 1 Operator Profile. 1 Live AMA.
           </h2>
-          <p className="mt-4 max-w-2xl text-[16px] leading-relaxed text-[#3D3D3D]">
-            Five live simulations where you decide and the store answers, a read on how you think, and a live session
-            with someone who runs this for real.
-          </p>
+          <ul className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[14.5px] text-[#3D3D3D]">
+            {SCHEDULE_FACTS.map((fact, index) => (
+              <li key={fact} className="flex items-center gap-2">
+                {index > 0 ? (
+                  <span aria-hidden className="text-[#C9C2B4]">
+                    ·
+                  </span>
+                ) : null}
+                {fact}
+              </li>
+            ))}
+          </ul>
 
-          <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-9 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {OFFER_DAYS.map((entry, index) => {
               const Icon = DAY_ICON[index] ?? Store;
               const tone = TONE[DAY_TONE[index] ?? "cream"];
@@ -606,120 +482,148 @@ export default function SevenDayChallengePage() {
                     <p className="text-[15px] font-bold">Day {entry.day}</p>
                     <p className={cn("font-mono text-[11px]", tone.meta)}>{entry.date}</p>
                   </div>
-                  <Icon className="mt-5 size-10" strokeWidth={1.6} aria-hidden />
+                  <Icon className="mt-5 hidden size-10 sm:block" strokeWidth={1.6} aria-hidden />
                   <h3 className="mt-4 text-[19px] leading-[1.15] font-bold tracking-[-0.02em]">{entry.title}</h3>
                   <p className={cn("mt-2 text-[14px] leading-relaxed", tone.body)}>{entry.body}</p>
                 </article>
               );
             })}
-            <div className="flex items-center justify-center rounded-[22px] border-2 border-dashed border-black/15 p-6">
-              <p className={cn(hand.className, "-rotate-6 text-center text-[26px] leading-[1.15]")}>
-                Real situations.
-                <br />
-                Real skills.
-                <br />
-                <span className="relative inline-block">
-                  Real opportunities.
-                  <span aria-hidden className="absolute inset-x-0 -bottom-1 h-1 rounded-full bg-ember-500" />
-                </span>
-              </p>
+            <div className="hidden items-center justify-center rounded-[22px] border-2 border-dashed border-black/15 p-6 sm:flex">
+              <RegisterButton size="md">
+                Register · {inr(OFFER.price)}
+                <ArrowRight />
+              </RegisterButton>
             </div>
           </div>
         </section>
 
-        {/* ── The certificate ── */}
-        <section aria-labelledby="certificate-heading" className="mx-auto max-w-6xl px-5 pb-16 sm:px-6 lg:pb-24">
-          <div className="grid items-center gap-10 rounded-[28px] bg-[#0B0B0B] p-6 text-white sm:p-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-            <div>
-              <p className="flex items-center gap-2 font-mono text-[10.5px] tracking-[0.24em] text-ember-500 uppercase">
-                <Award className="size-4" aria-hidden />
-                Completion certificate
-              </p>
-              <h2
-                id="certificate-heading"
-                className="mt-3 text-[clamp(1.9rem,4.8vw,3rem)] leading-[1.02] font-bold tracking-[-0.045em]"
-              >
-                Finish the seven days. Take the certificate with you.
-              </h2>
-              <p className="mt-4 max-w-md text-[16px] leading-relaxed text-white/70">
-                Complete all five simulations and attend the live AMA, and your certificate of completion unlocks in
-                your account — with your name, the challenge dates and a link anyone can use to verify it. Download it, and add it to your CV
-                and LinkedIn in one click.
-              </p>
-              <p className={cn(hand.className, "mt-6 -rotate-2 text-[24px] leading-tight text-ember-500")}>
-                Proof you have done the work, not just read about it.
-              </p>
+        {/* ── 6. What you leave with, including the certificate ── */}
+        <section aria-labelledby="benefits" className="border-t border-black/[0.07] bg-white/60">
+          <div className="mx-auto max-w-6xl px-5 py-14 sm:px-6 lg:py-20">
+            <h2
+              id="benefits"
+              className="max-w-2xl text-[clamp(1.7rem,4.4vw,2.6rem)] leading-[1.05] font-bold tracking-[-0.04em]"
+            >
+              What you leave with
+            </h2>
+            <p className="mt-4 max-w-2xl text-[16px] leading-relaxed text-[#3D3D3D]">
+              Enough to answer &ldquo;tell me about a time you handled pressure&rdquo; with something you actually
+              did, and a profile that says how you did it.
+            </p>
+
+            <div className="mt-8 grid gap-3 md:grid-cols-2 lg:grid-cols-12">
+              {BENEFITS.map(({ icon: Icon, title, body, lead }) => (
+                <article
+                  key={title}
+                  className={cn(
+                    "flex flex-col rounded-[22px] p-6",
+                    lead
+                      ? "bg-ember-500 text-[#0B0B0B] md:col-span-2 lg:col-span-6 lg:row-span-3 lg:justify-center lg:p-8"
+                      : "border border-black/10 bg-white lg:col-span-6",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "grid size-11 place-items-center rounded-full",
+                      lead ? "bg-[#0B0B0B] text-ember-500" : "bg-[#F1ECE1] text-[#0B0B0B]",
+                    )}
+                  >
+                    <Icon className="size-5" aria-hidden />
+                  </span>
+                  <h3
+                    className={cn(
+                      "mt-4 leading-[1.15] font-bold tracking-[-0.02em]",
+                      lead ? "text-[clamp(1.5rem,3.4vw,2rem)]" : "text-[19px]",
+                    )}
+                  >
+                    {title}
+                  </h3>
+                  <p
+                    className={cn(
+                      "mt-2 leading-relaxed",
+                      lead ? "text-[16px] text-[#0B0B0B]/80" : "text-[14.5px] text-[#3D3D3D]",
+                    )}
+                  >
+                    {body}
+                  </p>
+                  {lead ? (
+                    <p className={cn(hand.className, "mt-5 -rotate-2 text-[24px] leading-tight")}>The part you keep.</p>
+                  ) : null}
+                </article>
+              ))}
             </div>
 
-            {/* An illustration of the certificate, not the certificate itself. */}
-            <div aria-hidden className="relative">
-              <div className="absolute -inset-3 rotate-2 rounded-[22px] bg-ember-500" />
-              <div className="relative rounded-[18px] border-[6px] border-double border-[#0B0B0B]/80 bg-[#FAF7F0] px-6 py-8 text-center text-[#0B0B0B] sm:px-10">
-                <div className="mx-auto flex w-fit items-center gap-2">
-                  <span className="grid size-7 place-items-center rounded-lg bg-[#0B0B0B]">
-                    <LogoMark className="size-5" />
-                  </span>
-                  <span className="text-[14px] font-semibold tracking-[-0.01em]">Operator Forge</span>
-                </div>
-                <p className="mt-5 font-mono text-[10px] tracking-[0.3em] text-[#6B6B6B] uppercase">
-                  Certificate of completion
+            {/* Everything included, beside the certificate it ends with. */}
+            <div className="mt-3 grid items-center gap-8 rounded-[28px] bg-[#0B0B0B] p-6 text-white sm:p-9 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)] lg:gap-12">
+              <div>
+                <p className="font-mono text-[10.5px] tracking-[0.24em] text-ember-500 uppercase">
+                  Everything included · {inr(OFFER.price)}
                 </p>
-                <p className="mt-3 text-[13px] text-[#6B6B6B]">This certifies that</p>
-                <p className={cn(hand.className, "mt-1 text-[34px] leading-tight")}>Your Name</p>
-                <div className="mx-auto mt-1 h-px w-3/4 bg-[#0B0B0B]/20" />
-                <p className="mt-3 text-[13px] leading-relaxed text-[#3D3D3D]">has completed the</p>
-                <p className="text-[18px] leading-tight font-bold tracking-[-0.02em]">{OFFER.name}</p>
-                <p className="mt-1 text-[13px] text-[#3D3D3D]">{OFFER.dateLabel}</p>
-                <div className="mt-6 flex items-end justify-between gap-4 text-left">
-                  <div>
-                    <div className="h-px w-24 bg-[#0B0B0B]/30" />
-                    <p className="mt-1 font-mono text-[9px] tracking-[0.2em] text-[#6B6B6B] uppercase">Operator Forge</p>
+                <ul className="mt-5 space-y-3">
+                  {INCLUDED.map((line) => (
+                    <li key={line} className="flex items-start gap-3 text-[15px] leading-relaxed text-white/85">
+                      <Check className="mt-1 size-4 shrink-0 text-ember-500" strokeWidth={2.5} aria-hidden />
+                      {line}
+                    </li>
+                  ))}
+                </ul>
+                <p className={cn(hand.className, "mt-6 -rotate-2 text-[24px] leading-tight text-ember-500")}>
+                  Proof you have done the work, not just read about it.
+                </p>
+              </div>
+
+              {/* An illustration of the certificate, not the certificate itself. */}
+              <div aria-hidden className="relative">
+                <div className="absolute -inset-3 rotate-2 rounded-[22px] bg-ember-500" />
+                <div className="relative rounded-[18px] border-[6px] border-double border-[#0B0B0B]/80 bg-[#FAF7F0] px-5 py-6 text-center text-[#0B0B0B] sm:px-10 sm:py-8">
+                  <div className="mx-auto flex w-fit items-center gap-2">
+                    <span className="grid size-7 place-items-center rounded-lg bg-[#0B0B0B]">
+                      <LogoMark className="size-5" />
+                    </span>
+                    <span className="text-[14px] font-semibold tracking-[-0.01em]">Operator Forge</span>
                   </div>
-                  <span className="grid size-14 place-items-center rounded-full bg-ember-500 ring-4 ring-ember-500/30">
-                    <Award className="size-7" />
-                  </span>
+                  <p className="mt-5 font-mono text-[10px] tracking-[0.3em] text-[#6B6B6B] uppercase">
+                    Certificate of completion
+                  </p>
+                  <p className="mt-3 text-[13px] text-[#6B6B6B]">This certifies that</p>
+                  <p className={cn(hand.className, "mt-1 text-[28px] leading-tight sm:text-[34px]")}>Your Name</p>
+                  <div className="mx-auto mt-1 h-px w-3/4 bg-[#0B0B0B]/20" />
+                  <p className="mt-3 text-[13px] leading-relaxed text-[#3D3D3D]">has completed the</p>
+                  <p className="text-[18px] leading-tight font-bold tracking-[-0.02em]">{OFFER.name}</p>
+                  <p className="mt-1 text-[13px] text-[#3D3D3D]">{OFFER.dateLabel}</p>
+                  <div className="mt-6 flex items-end justify-between gap-4 text-left">
+                    <div>
+                      <div className="h-px w-24 bg-[#0B0B0B]/30" />
+                      <p className="mt-1 font-mono text-[9px] tracking-[0.2em] text-[#6B6B6B] uppercase">
+                        Operator Forge
+                      </p>
+                    </div>
+                    <span className="grid size-14 place-items-center rounded-full bg-ember-500 ring-4 ring-ember-500/30">
+                      <Award className="size-7" />
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* ── How it works ── */}
-        <section className="border-y border-black/[0.07] bg-white/60">
-          <div className="mx-auto max-w-6xl px-5 py-14 sm:px-6 lg:py-20">
-            <h2 className="text-[clamp(1.7rem,4.4vw,2.6rem)] leading-[1.05] font-bold tracking-[-0.04em]">
-              How it works
-            </h2>
-            <ol className="mt-8 grid gap-4 md:grid-cols-3">
-              {STEPS.map(({ icon: Icon, title, body }, index) => (
-                <li key={title} className="rounded-[22px] border border-black/10 bg-white p-6">
-                  <div className="flex items-center gap-3">
-                    <span className="grid size-10 place-items-center rounded-full bg-[#0B0B0B] font-mono text-[14px] font-semibold text-ember-500">
-                      {index + 1}
-                    </span>
-                    <Icon className="size-5 text-[#6B6B6B]" aria-hidden />
-                  </div>
-                  <h3 className="mt-4 text-[18px] font-bold tracking-[-0.02em]">{title}</h3>
-                  <p className="mt-1.5 text-[14.5px] leading-relaxed text-[#3D3D3D]">{body}</p>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </section>
-
-        {/* ── The AMA ── */}
-        <section className="bg-[#0B0B0B] text-white">
-          <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-16 sm:px-6 lg:grid-cols-2 lg:py-24">
+        {/* ── 7. The AMA ── */}
+        <section aria-labelledby="ama" className="bg-[#0B0B0B] text-white">
+          <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-14 sm:px-6 lg:grid-cols-2 lg:py-20">
             <div>
               <p className="font-mono text-[10.5px] tracking-[0.24em] text-ember-500 uppercase">
                 Day 7 · Live AMA · {OFFER_DAYS[6]?.date}
               </p>
-              <h2 className="mt-3 text-[clamp(2rem,5.4vw,3.2rem)] leading-[1.02] font-bold tracking-[-0.045em]">
+              <h2
+                id="ama"
+                className="mt-3 text-[clamp(2rem,5.4vw,3.2rem)] leading-[1.02] font-bold tracking-[-0.045em]"
+              >
                 Ask the person who actually runs it.
               </h2>
               <p className="mt-4 max-w-xl text-[16px] leading-relaxed text-white/70">
-                Learn from a seasoned operations leader who has built and scaled high-performing teams across the
-                Q-Com industry. Bring the questions a job description never answers.
+                An hour with the {OFFER.speaker.role} — {OFFER.speaker.experience.toLowerCase()}. Bring the questions
+                a job description never answers.
               </p>
               <ul className="mt-7 flex flex-wrap gap-2">
                 {AMA_POINTS.map(({ icon: Icon, label }) => (
@@ -732,6 +636,10 @@ export default function SevenDayChallengePage() {
                   </li>
                 ))}
               </ul>
+              <RegisterButton size="md" className="mt-8">
+                Register · {inr(OFFER.price)}
+                <ArrowRight />
+              </RegisterButton>
             </div>
 
             <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-7">
@@ -761,20 +669,22 @@ export default function SevenDayChallengePage() {
           </div>
         </section>
 
-        {/* ── Who it's for, and what you get ── */}
-        <section className="mx-auto grid max-w-6xl gap-10 px-5 py-16 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:py-24">
-          <div>
-            <p className={cn(hand.className, "-rotate-2 text-[30px] leading-tight")}>
-              Same degree.{" "}
-              <span className="relative inline-block">
-                A bigger you.
-                <span aria-hidden className="absolute inset-x-0 -bottom-0.5 h-1 rounded-full bg-ember-500" />
-              </span>
-            </p>
-            <h2 className="mt-5 text-[clamp(1.8rem,4.6vw,2.8rem)] leading-[1.04] font-bold tracking-[-0.04em]">
-              Built for the people who want in.
-            </h2>
-            <ul className="mt-6 space-y-3">
+        {/* ── 8. Who it is for ── */}
+        <section aria-labelledby="who-for" className="mx-auto max-w-6xl px-5 py-14 sm:px-6 lg:py-20">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-14">
+            <div>
+              <h2
+                id="who-for"
+                className="text-[clamp(1.8rem,4.6vw,2.8rem)] leading-[1.04] font-bold tracking-[-0.04em]"
+              >
+                Built for the people who want in.
+              </h2>
+              <p className="mt-4 flex items-center gap-2 text-[14px] text-[#6B6B6B]">
+                <Clock className="size-4" aria-hidden />
+                About 15 minutes a day · {OFFER.dateLabel}
+              </p>
+            </div>
+            <ul className="space-y-3">
               {FOR_WHO.map((line) => (
                 <li key={line} className="flex items-start gap-3 text-[16px] leading-relaxed text-[#3D3D3D]">
                   <span className="mt-1 grid size-5 shrink-0 place-items-center rounded-full bg-ember-500">
@@ -784,52 +694,15 @@ export default function SevenDayChallengePage() {
                 </li>
               ))}
             </ul>
-            <p className="mt-8 flex items-center gap-2 text-[14px] text-[#6B6B6B]">
-              <Clock className="size-4" aria-hidden />
-              About 15 minutes a day · {OFFER.dateLabel}
-            </p>
-          </div>
-
-          <div className="rounded-[28px] border-2 border-[#0B0B0B] bg-white p-6 shadow-[8px_8px_0_0_#0B0B0B] sm:p-8">
-            <p className="font-mono text-[10.5px] tracking-[0.24em] text-[#6B6B6B] uppercase">{OFFER.name}</p>
-            <p className="mt-4 flex flex-wrap items-baseline gap-3">
-              <span className="sr-only">Regular price</span>
-              <span className="text-[20px] text-[#6B6B6B] line-through">{inr(OFFER.listPrice)}</span>
-              <span className="sr-only">Offer price</span>
-              <span className="text-[60px] leading-none font-bold tracking-[-0.04em]">{inr(OFFER.price)}</span>
-              <span className="rounded-full bg-ember-500 px-2.5 py-1 text-[12px] font-semibold">
-                {OFFER.priceLabel}
-              </span>
-            </p>
-            <p className="mt-2 text-[13px] text-[#6B6B6B]">One payment · all seven days · {OFFER.dateLabel}</p>
-            <OfferNotes className="mt-3" />
-
-            <ul className="mt-6 space-y-3 border-t border-black/10 pt-6">
-              {INCLUDED.map((line) => (
-                <li key={line} className="flex items-start gap-3 text-[15px] leading-relaxed">
-                  <Check className="mt-1 size-4 shrink-0 text-[#0B0B0B]" strokeWidth={2.5} aria-hidden />
-                  {line}
-                </li>
-              ))}
-            </ul>
-
-            <RegisterButton className="mt-7 w-full">
-              Register now
-              <ArrowRight />
-            </RegisterButton>
-            <p className="mt-3 flex items-center justify-center gap-1.5 text-[12px] text-[#6B6B6B]">
-              <ShieldCheck className="size-3.5" aria-hidden />
-              Secure checkout via Razorpay
-            </p>
           </div>
         </section>
 
-        {/* ── Who built this ── */}
+        {/* ── 9. Who built this ── */}
         <FounderNote />
 
-        {/* ── Questions ── */}
+        {/* ── 10. Questions ── */}
         <section className="border-t border-black/[0.07] bg-white/60">
-          <div className="mx-auto max-w-3xl px-5 py-16 sm:px-6 lg:py-20">
+          <div className="mx-auto max-w-3xl px-5 py-14 sm:px-6 lg:py-20">
             <h2 className="text-[clamp(1.7rem,4.4vw,2.6rem)] leading-[1.05] font-bold tracking-[-0.04em]">
               Questions, answered
             </h2>
@@ -869,18 +742,15 @@ export default function SevenDayChallengePage() {
           </div>
         </section>
 
-        {/* ── Closing call to action ── */}
+        {/* ── 11. Closing call to action ── */}
         <section id="final-cta" className="bg-ember-500">
-          <div className="mx-auto max-w-6xl px-5 py-16 text-center sm:px-6 lg:py-20">
-            <p className={cn(hand.className, "text-[24px] leading-tight")}>
-              Real situations. Real skills. Real opportunities.
-            </p>
-            <h2 className="mx-auto mt-4 max-w-3xl text-[clamp(2.1rem,6vw,3.8rem)] leading-[1] font-bold tracking-[-0.05em]">
+          <div className="mx-auto max-w-6xl px-5 py-14 text-center sm:px-6 lg:py-20">
+            <h2 className="mx-auto max-w-3xl text-[clamp(2.1rem,6vw,3.8rem)] leading-[1] font-bold tracking-[-0.05em]">
               Step into your first control room.
             </h2>
             <p className="mt-4 text-[16px] text-[#0B0B0B]/75">
               {OFFER.dateLabel} · <span className="line-through">{inr(OFFER.listPrice)}</span>{" "}
-              <strong className="font-bold text-[#0B0B0B]">{inr(OFFER.price)}</strong>
+              <strong className="font-bold text-[#0B0B0B]">{inr(OFFER.price)}</strong> · {OFFER.priceLabel}
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <RegisterButton className="w-full bg-none bg-[#0B0B0B] text-white shadow-none hover:shadow-none hover:brightness-125 sm:w-auto">
@@ -893,7 +763,7 @@ export default function SevenDayChallengePage() {
         </section>
       </main>
 
-      {/* ── Footer ── */}
+      {/* ── 12. Footer ── */}
       <footer className="relative overflow-hidden bg-[#0B0B0B] text-white">
         <svg
           aria-hidden
@@ -940,7 +810,7 @@ export default function SevenDayChallengePage() {
             </div>
           </div>
           <p className="mt-10 border-t border-white/10 pt-5 text-[11.5px] leading-relaxed text-white/45">
-            Scorecards and operator profiles are a practice assessment from simulated shifts, not an employment
+            Scorecards and Operator Profiles are a practice assessment from simulated shifts, not an employment
             certification. Operator Forge is independent and not affiliated with, or endorsed by, Zepto, Swiggy
             Instamart or Blinkit. © 2026 Operator Forge.
           </p>

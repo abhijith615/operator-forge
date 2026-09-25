@@ -42,7 +42,7 @@ const OFFERINGS: Offering[] = [
     accent: "ember",
   },
   {
-    title: "The Operator Genome",
+    title: "The Operator Profile",
     body: "Ten capabilities, scored from what you actually did: every decision, how long you took, how deep the queue was behind it, and every message you sent. Not a questionnaire. Yours to put on a CV.",
     icon: Dna,
     availability: "live",

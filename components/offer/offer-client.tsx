@@ -3,7 +3,7 @@
 import * as React from "react";
 import { ArrowRight, MessageCircle } from "lucide-react";
 
-import { track } from "@/components/offer/meta-pixel";
+import { pixelCookie, track } from "@/components/offer/meta-pixel";
 import { buttonVariants } from "@/components/ui/button";
 import { OFFER, OFFER_DAYS, inr, whatsappUrl } from "@/lib/constants/offer";
 import {
@@ -371,8 +371,13 @@ export function RegistrationForm() {
       return;
     }
     setErrors({});
-    track("Lead", { content_name: OFFER.name, value: OFFER.price, currency: OFFER.currency });
-    track("InitiateCheckout", { content_name: OFFER.name, value: OFFER.price, currency: OFFER.currency });
+
+    // Meta's click cookies travel with the registration, so the server can
+    // report the same person when the payment is confirmed later.
+    for (const name of ["_fbp", "_fbc"] as const) {
+      const value = pixelCookie(name);
+      if (value) data.set(name.slice(1), value);
+    }
 
     startTransition(async () => {
       // Saving the registration must never stop someone paying: whatever goes
@@ -385,6 +390,13 @@ export function RegistrationForm() {
       }
       else if (result?.status === "closed") setMessage(result.message);
       else {
+        // The registration is in: one Lead, sharing its id with the server's
+        // copy, then InitiateCheckout as we hand over to Razorpay. Razorpay
+        // hosts the checkout itself, so this is the last moment we can see.
+        const money = { content_name: OFFER.name, value: OFFER.price, currency: OFFER.currency };
+        track("Lead", money, result?.leadEventId);
+        track("InitiateCheckout", money, result?.leadEventId ? `checkout_${result.leadEventId}` : undefined);
+
         // Stays "Taking you to payment…" while Razorpay loads.
         setLeaving(true);
         window.location.assign(result?.paymentUrl ?? OFFER.paymentUrl);
@@ -401,14 +413,18 @@ export function RegistrationForm() {
       onSubmit={onSubmit}
       className="relative space-y-3.5"
     >
-      {/* A field only bots fill in. */}
-      <div aria-hidden className="absolute -left-[9999px] h-px w-px overflow-hidden">
-        <label htmlFor={HONEYPOT_FIELD}>Leave this empty</label>
+      {/* A field only bots fill in: off-screen, out of the tab order, and
+          hidden from screen readers. */}
+      <div aria-hidden="true" className="pointer-events-none absolute -left-[9999px] h-px w-px overflow-hidden">
+        <label htmlFor={HONEYPOT_FIELD} aria-hidden="true">
+          Leave this empty
+        </label>
         <input
           id={HONEYPOT_FIELD}
           name={HONEYPOT_FIELD}
           type="text"
           tabIndex={-1}
+          aria-hidden="true"
           autoComplete="off"
           data-lpignore="true"
           data-1p-ignore
@@ -451,7 +467,7 @@ export function RegistrationForm() {
         placeholder="you@example.com"
         maxLength={254}
         required
-        hint="Use the email you'll sign in with — it unlocks the challenge."
+        hint="We'll send your challenge access to this email."
         error={errors.email}
       />
 

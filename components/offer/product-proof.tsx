@@ -2,6 +2,7 @@ import { ArrowRight, Gauge, ListChecks, Timer } from "lucide-react";
 
 import { ExplainerVideo } from "@/components/challenge/explainer-video";
 import { RegisterButton } from "@/components/offer/offer-client";
+import { YouTubeFacade } from "@/components/offer/youtube-facade";
 import { CHALLENGE_VIDEOS } from "@/lib/challenge/videos";
 import { DIMENSIONS, DIMENSION_LABEL } from "@/lib/challenge/types";
 import { OFFER, inr } from "@/lib/constants/offer";
@@ -39,6 +40,8 @@ const STEPS = [
 ];
 
 export function ProductProof() {
+  const demo = CHALLENGE_VIDEOS.simulationDemo;
+
   return (
     <section aria-labelledby="product-proof" className="border-b border-black/[0.07] bg-white/60">
       <div className="mx-auto max-w-6xl px-5 py-14 sm:px-6 lg:py-20">
@@ -58,10 +61,16 @@ export function ProductProof() {
           {/* The demo itself */}
           <figure className="min-w-0">
             <div className="rounded-[24px] bg-[#0B0B0B] p-2.5 shadow-[0_28px_70px_-40px_rgba(0,0,0,0.6)] sm:p-3">
-              <ExplainerVideo video={CHALLENGE_VIDEOS.simulationDemo} className="rounded-[16px]" />
+              {/* A thumbnail until it is clicked: the embed is a megabyte of
+                  script that most visitors from an ad never press play on. */}
+              {demo.source.kind === "youtube" ? (
+                <YouTubeFacade id={demo.source.id} title={demo.title} />
+              ) : (
+                <ExplainerVideo video={demo} className="rounded-[16px]" />
+              )}
             </div>
             <figcaption className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-[#6B6B6B]">
-              <span className="font-semibold text-[#0B0B0B]">{CHALLENGE_VIDEOS.simulationDemo.title}</span>
+              <span className="font-semibold text-[#0B0B0B]">{demo.title}</span>
               <span aria-hidden>·</span>
               33 seconds, recorded inside the simulations. Real screens, not mock-ups.
             </figcaption>
