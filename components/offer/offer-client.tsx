@@ -5,8 +5,13 @@ import { ArrowRight, MessageCircle } from "lucide-react";
 
 import { pixelCookie, track } from "@/components/offer/meta-pixel";
 import { buttonVariants } from "@/components/ui/button";
-import { checkCoupon, couponSaving, type Coupon } from "@/lib/constants/coupons";
 import { OFFER, OFFER_DAYS, inr, whatsappUrl } from "@/lib/constants/offer";
+import {
+  COUPON_ENDPOINT,
+  couponRefusal,
+  type AppliedCoupon,
+  type CouponResponse,
+} from "@/lib/offer/coupon";
 import {
   ATTRIBUTION_KEYS,
   FORM_EVENT_ENDPOINT,
@@ -312,9 +317,10 @@ export function RegistrationForm() {
   const [message, setMessage] = React.useState<string | null>(null);
   const [attribution, setAttribution] = React.useState<Record<string, string>>({});
   const [couponInput, setCouponInput] = React.useState("");
-  const [coupon, setCoupon] = React.useState<Coupon | null>(null);
+  const [coupon, setCoupon] = React.useState<AppliedCoupon | null>(null);
   const [couponError, setCouponError] = React.useState<string | null>(null);
   const [couponOpen, setCouponOpen] = React.useState(false);
+  const [couponChecking, setCouponChecking] = React.useState(false);
   const price = coupon?.price ?? OFFER.price;
   const [saving, startTransition] = React.useTransition();
   const [leaving, setLeaving] = React.useState(false);
@@ -346,15 +352,16 @@ export function RegistrationForm() {
     }
     setAttribution(found);
 
-    // A code can arrive in the ad's link: ?coupon=OF50 applies it on arrival.
+    // A code can arrive in a shared link: ?coupon=CODE applies it on arrival.
     const fromLink = params.get("coupon");
     if (fromLink) {
-      const checked = checkCoupon(fromLink);
-      setCouponInput(fromLink.trim().toUpperCase());
+      const typed = fromLink.trim().toUpperCase();
+      setCouponInput(typed);
       setCouponOpen(true);
-      if (checked.status === "valid") setCoupon(checked.coupon);
-      else setCouponError(checked.status === "expired" ? "That code has expired." : "We don't recognise that code.");
+      void submitCoupon(typed);
     }
+    // submitCoupon only touches state setters, which never change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (status?.kind === "ended") {
@@ -368,17 +375,42 @@ export function RegistrationForm() {
     );
   }
 
-  const applyCoupon = () => {
-    const checked = checkCoupon(couponInput);
-    setCoupon(checked.status === "valid" ? checked.coupon : null);
-    setCouponError(
-      checked.status === "valid" || checked.status === "none"
-        ? null
-        : checked.status === "expired"
-          ? "That code has expired."
-          : "We don't recognise that code.",
-    );
-  };
+  /**
+   * Asks the server about a code. The page holds no list of codes — they are
+   * given out by partners, so the only way to learn one is to be given it.
+   */
+  async function submitCoupon(code: string) {
+    const typed = code.trim();
+    if (!typed) {
+      setCoupon(null);
+      setCouponError(null);
+      return;
+    }
+
+    setCouponChecking(true);
+    try {
+      const response = await fetch(COUPON_ENDPOINT, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ code: typed }),
+      });
+      const result = (await response.json()) as CouponResponse;
+      if (result.status === "valid") {
+        setCoupon(result);
+        setCouponError(null);
+      } else {
+        setCoupon(null);
+        setCouponError(couponRefusal(result.status));
+      }
+    } catch {
+      setCoupon(null);
+      setCouponError("We could not check that code. Try again.");
+    } finally {
+      setCouponChecking(false);
+    }
+  }
+
+  const applyCoupon = () => void submitCoupon(couponInput);
 
   const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -506,9 +538,7 @@ export function RegistrationForm() {
       {/* Optional, and out of the way until it is wanted. */}
       {coupon ? (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#128C7E]/30 bg-[#128C7E]/[0.08] px-3.5 py-2.5">
-          <p className="text-[13px] font-semibold text-[#0B0B0B]">
-            <span className="font-mono">{coupon.code}</span> applied — {coupon.label}
-          </p>
+          <p className="text-[13px] font-semibold text-[#0B0B0B]">Coupon applied — {coupon.label}</p>
           <p className="flex items-center gap-2 text-[13px]">
             <span className="text-[#6B6B6B] line-through">{inr(OFFER.price)}</span>
             <strong className="text-[15px] font-bold">{inr(coupon.price)}</strong>
@@ -539,6 +569,7 @@ export function RegistrationForm() {
                   applyCoupon();
                 }
               }}
+              disabled={couponChecking}
               placeholder="Coupon code"
               autoComplete="off"
               autoCapitalize="characters"
@@ -556,12 +587,13 @@ export function RegistrationForm() {
             <button
               type="button"
               onClick={applyCoupon}
+              disabled={couponChecking}
               className={cn(
-                "h-12 shrink-0 rounded-xl border-2 border-[#0B0B0B] px-4 text-[14px] font-semibold text-[#0B0B0B] transition-colors hover:bg-[#0B0B0B] hover:text-white",
+                "h-12 shrink-0 rounded-xl border-2 border-[#0B0B0B] px-4 text-[14px] font-semibold text-[#0B0B0B] transition-colors hover:bg-[#0B0B0B] hover:text-white disabled:opacity-50",
                 FOCUS_RING,
               )}
             >
-              Apply
+              {couponChecking ? "Checking…" : "Apply"}
             </button>
           </div>
           {couponError ? (
@@ -605,9 +637,7 @@ export function RegistrationForm() {
       ) : null}
 
       {coupon ? (
-        <p className="text-[12px] font-medium text-[#128C7E]">
-          You save {inr(couponSaving(coupon))} with {coupon.code}.
-        </p>
+        <p className="text-[12px] font-medium text-[#128C7E]">You save {inr(coupon.saving)}.</p>
       ) : null}
 
       <p className="text-[11.5px] leading-relaxed text-[#6B6B6B]">

@@ -1,3 +1,5 @@
+import "server-only";
+
 import { OFFER } from "@/lib/constants/offer";
 
 /**
@@ -10,8 +12,12 @@ import { OFFER } from "@/lib/constants/offer";
  *
  * To add or change a code, edit this file: the code, the price, the payment
  * link it goes to, when it stops working and (optionally) how many times it
- * may be used. Codes are public by nature — they are printed on posters and
- * forwarded on WhatsApp — so nothing here is secret.
+ * may be used.
+ *
+ * Server-only on purpose. These codes are given to influencers and partners
+ * to hand out, so the landing page must not contain them: anything in the
+ * page source is found and shared. The browser can ask whether one code is
+ * valid (/api/challenge/coupon) and learns nothing else.
  */
 
 export interface Coupon {

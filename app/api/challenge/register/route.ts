@@ -1,6 +1,5 @@
 import { NextResponse, after, type NextRequest } from "next/server";
 
-import { checkCoupon, type Coupon } from "@/lib/constants/coupons";
 import { OFFER, OFFER_ROUTE } from "@/lib/constants/offer";
 import {
   HONEYPOT_FIELD,
@@ -9,6 +8,7 @@ import {
   type RegistrationResult,
 } from "@/lib/offer/registration";
 import { newEventId, pixelCookies, requestContext, sendMetaEvent } from "@/lib/meta/capi";
+import { resolveCoupon } from "@/lib/offer/coupon-server";
 import { sendRegistrationToSheet } from "@/lib/offer/sheets";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -38,27 +38,6 @@ function respond(request: NextRequest, result: RegistrationResult): NextResponse
   back.searchParams.set("form", result.status);
   back.hash = "register";
   return NextResponse.redirect(back, 303);
-}
-
-type SupabaseClient = Awaited<ReturnType<typeof getSupabaseServerClient>>;
-
-/**
- * The coupon a registration may use: a known code, still in date, and under
- * its usage cap. Anything else quietly means full price — a bad code must
- * never stop somebody registering.
- */
-async function resolveCoupon(raw: string, supabase: SupabaseClient): Promise<Coupon | null> {
-  const checked = checkCoupon(raw);
-  if (checked.status !== "valid") return null;
-
-  const { coupon } = checked;
-  if (coupon.maxUses !== null) {
-    if (!supabase) return null;
-    const { data, error } = await supabase.rpc("coupon_use_count", { p_code: coupon.code });
-    // Unable to count is not permission to overspend the cap.
-    if (error || typeof data !== "number" || data >= coupon.maxUses) return null;
-  }
-  return coupon;
 }
 
 export async function POST(request: NextRequest) {
