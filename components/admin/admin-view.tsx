@@ -90,7 +90,7 @@ export function AdminView({ initial }: { initial: AdminSnapshot }) {
         </p>
         <SheetTest />
         <Table
-          head={["Name", "Email", "Phone", "Registered", "Source", "Signed in", "Payment", "AMA"]}
+          head={["Name", "Email", "Phone", "Registered", "Source", "Coupon", "Signed in", "Payment", "AMA"]}
           empty="No registrations yet."
           rowKeys={data.registrations.map((r) => r.id)}
           rows={data.registrations.map((r) => [
@@ -99,6 +99,13 @@ export function AdminView({ initial }: { initial: AdminSnapshot }) {
             <span key="p" className="font-mono text-[11.5px]">{r.phone}</span>,
             when(r.created_at),
             r.attribution?.utm_source ?? <Muted>direct</Muted>,
+            r.attribution?.coupon ? (
+              <span key="c" className="font-mono text-[11.5px] font-semibold text-ember-400">
+                {r.attribution.coupon}
+              </span>
+            ) : (
+              <Muted>—</Muted>
+            ),
             r.has_account ? "Yes" : <Muted>Not yet</Muted>,
             <PaidControl key="paid" registration={r} />,
             <AmaControl key="ama" registration={r} />,

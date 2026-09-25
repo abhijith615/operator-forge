@@ -27,6 +27,8 @@ export interface SheetRegistration {
   phone: string;
   email: string;
   cohort: string;
+  /** The coupon code used, if any. */
+  coupon?: string;
   /** Whether the row also reached Supabase. */
   stored: boolean;
   attribution: Record<string, string>;

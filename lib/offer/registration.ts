@@ -15,7 +15,7 @@ export type RegistrationErrors = Partial<Record<keyof RegistrationFields, string
 
 export type RegistrationResult =
   /** leadEventId pairs the browser's Lead with the server's, for deduplication. */
-  | { status: "ready"; paymentUrl: string; leadEventId?: string }
+  | { status: "ready"; paymentUrl: string; leadEventId?: string; price?: number; coupon?: string }
   | { status: "invalid"; errors: RegistrationErrors }
   | { status: "closed"; message: string };
 

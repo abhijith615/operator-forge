@@ -5,6 +5,7 @@ import { ArrowRight, MessageCircle } from "lucide-react";
 
 import { pixelCookie, track } from "@/components/offer/meta-pixel";
 import { buttonVariants } from "@/components/ui/button";
+import { checkCoupon, couponSaving, type Coupon } from "@/lib/constants/coupons";
 import { OFFER, OFFER_DAYS, inr, whatsappUrl } from "@/lib/constants/offer";
 import {
   ATTRIBUTION_KEYS,
@@ -310,6 +311,11 @@ export function RegistrationForm() {
   const [errors, setErrors] = React.useState<RegistrationErrors>({});
   const [message, setMessage] = React.useState<string | null>(null);
   const [attribution, setAttribution] = React.useState<Record<string, string>>({});
+  const [couponInput, setCouponInput] = React.useState("");
+  const [coupon, setCoupon] = React.useState<Coupon | null>(null);
+  const [couponError, setCouponError] = React.useState<string | null>(null);
+  const [couponOpen, setCouponOpen] = React.useState(false);
+  const price = coupon?.price ?? OFFER.price;
   const [saving, startTransition] = React.useTransition();
   const [leaving, setLeaving] = React.useState(false);
   const pending = saving || leaving;
@@ -339,6 +345,16 @@ export function RegistrationForm() {
       if (value) found[key] = value.slice(0, 200);
     }
     setAttribution(found);
+
+    // A code can arrive in the ad's link: ?coupon=OF50 applies it on arrival.
+    const fromLink = params.get("coupon");
+    if (fromLink) {
+      const checked = checkCoupon(fromLink);
+      setCouponInput(fromLink.trim().toUpperCase());
+      setCouponOpen(true);
+      if (checked.status === "valid") setCoupon(checked.coupon);
+      else setCouponError(checked.status === "expired" ? "That code has expired." : "We don't recognise that code.");
+    }
   }, []);
 
   if (status?.kind === "ended") {
@@ -351,6 +367,18 @@ export function RegistrationForm() {
       </div>
     );
   }
+
+  const applyCoupon = () => {
+    const checked = checkCoupon(couponInput);
+    setCoupon(checked.status === "valid" ? checked.coupon : null);
+    setCouponError(
+      checked.status === "valid" || checked.status === "none"
+        ? null
+        : checked.status === "expired"
+          ? "That code has expired."
+          : "We don't recognise that code.",
+    );
+  };
 
   const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -393,7 +421,11 @@ export function RegistrationForm() {
         // The registration is in: one Lead, sharing its id with the server's
         // copy, then InitiateCheckout as we hand over to Razorpay. Razorpay
         // hosts the checkout itself, so this is the last moment we can see.
-        const money = { content_name: OFFER.name, value: OFFER.price, currency: OFFER.currency };
+        const money = {
+          content_name: OFFER.name,
+          value: result?.price ?? price,
+          currency: OFFER.currency,
+        };
         track("Lead", money, result?.leadEventId);
         track("InitiateCheckout", money, result?.leadEventId ? `checkout_${result.leadEventId}` : undefined);
 
@@ -471,6 +503,85 @@ export function RegistrationForm() {
         error={errors.email}
       />
 
+      {/* Optional, and out of the way until it is wanted. */}
+      {coupon ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#128C7E]/30 bg-[#128C7E]/[0.08] px-3.5 py-2.5">
+          <p className="text-[13px] font-semibold text-[#0B0B0B]">
+            <span className="font-mono">{coupon.code}</span> applied — {coupon.label}
+          </p>
+          <p className="flex items-center gap-2 text-[13px]">
+            <span className="text-[#6B6B6B] line-through">{inr(OFFER.price)}</span>
+            <strong className="text-[15px] font-bold">{inr(coupon.price)}</strong>
+            <button
+              type="button"
+              onClick={() => {
+                setCoupon(null);
+                setCouponInput("");
+                setCouponError(null);
+              }}
+              className={cn("text-[12px] text-[#6B6B6B] underline underline-offset-2 hover:text-[#0B0B0B]", FOCUS_RING)}
+            >
+              Remove
+            </button>
+          </p>
+        </div>
+      ) : couponOpen ? (
+        <div>
+          <div className="flex gap-2">
+            <input
+              id="register-coupon"
+              name="coupon"
+              value={couponInput}
+              onChange={(event) => setCouponInput(event.target.value.toUpperCase())}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  applyCoupon();
+                }
+              }}
+              placeholder="Coupon code"
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              maxLength={24}
+              aria-label="Coupon code"
+              aria-invalid={couponError ? true : undefined}
+              aria-describedby={couponError ? "register-coupon-error" : undefined}
+              className={cn(
+                "h-12 min-w-0 flex-1 rounded-xl border bg-white px-3.5 font-mono text-[15px] tracking-[0.08em] text-[#0B0B0B] uppercase outline-none placeholder:font-sans placeholder:tracking-normal placeholder:text-[#9A9A9A]",
+                "focus-within:ring-2 focus-within:ring-[#0B0B0B] focus-within:ring-offset-1",
+                couponError ? "border-[#B42318]" : "border-black/15 hover:border-black/30",
+              )}
+            />
+            <button
+              type="button"
+              onClick={applyCoupon}
+              className={cn(
+                "h-12 shrink-0 rounded-xl border-2 border-[#0B0B0B] px-4 text-[14px] font-semibold text-[#0B0B0B] transition-colors hover:bg-[#0B0B0B] hover:text-white",
+                FOCUS_RING,
+              )}
+            >
+              Apply
+            </button>
+          </div>
+          {couponError ? (
+            <p id="register-coupon-error" className="mt-1.5 text-[12.5px] font-medium text-[#B42318]">
+              {couponError}
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setCouponOpen(true)}
+          className={cn("text-[13px] font-medium text-[#3D3D3D] underline underline-offset-4 hover:text-[#0B0B0B]", FOCUS_RING)}
+        >
+          Have a coupon code?
+        </button>
+      )}
+
+      {coupon ? <input type="hidden" name="coupon" value={coupon.code} /> : null}
+
       <button
         type="submit"
         disabled={pending}
@@ -480,7 +591,8 @@ export function RegistrationForm() {
           "Taking you to payment…"
         ) : (
           <>
-            Register now · {inr(OFFER.price)}
+            Register now · {inr(price)}
+            {coupon ? <span className="text-[13px] font-medium line-through opacity-60">{inr(OFFER.price)}</span> : null}
             <ArrowRight />
           </>
         )}
@@ -489,6 +601,12 @@ export function RegistrationForm() {
       {message ? (
         <p role="alert" className="text-[13px] font-medium text-[#B42318]">
           {message}
+        </p>
+      ) : null}
+
+      {coupon ? (
+        <p className="text-[12px] font-medium text-[#128C7E]">
+          You save {inr(couponSaving(coupon))} with {coupon.code}.
         </p>
       ) : null}
 

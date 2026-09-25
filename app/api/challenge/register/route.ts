@@ -1,5 +1,6 @@
 import { NextResponse, after, type NextRequest } from "next/server";
 
+import { checkCoupon, type Coupon } from "@/lib/constants/coupons";
 import { OFFER, OFFER_ROUTE } from "@/lib/constants/offer";
 import {
   HONEYPOT_FIELD,
@@ -37,6 +38,27 @@ function respond(request: NextRequest, result: RegistrationResult): NextResponse
   back.searchParams.set("form", result.status);
   back.hash = "register";
   return NextResponse.redirect(back, 303);
+}
+
+type SupabaseClient = Awaited<ReturnType<typeof getSupabaseServerClient>>;
+
+/**
+ * The coupon a registration may use: a known code, still in date, and under
+ * its usage cap. Anything else quietly means full price — a bad code must
+ * never stop somebody registering.
+ */
+async function resolveCoupon(raw: string, supabase: SupabaseClient): Promise<Coupon | null> {
+  const checked = checkCoupon(raw);
+  if (checked.status !== "valid") return null;
+
+  const { coupon } = checked;
+  if (coupon.maxUses !== null) {
+    if (!supabase) return null;
+    const { data, error } = await supabase.rpc("coupon_use_count", { p_code: coupon.code });
+    // Unable to count is not permission to overspend the cap.
+    if (error || typeof data !== "number" || data >= coupon.maxUses) return null;
+  }
+  return coupon;
 }
 
 export async function POST(request: NextRequest) {
@@ -89,8 +111,15 @@ export async function POST(request: NextRequest) {
   if (fbp) attribution.fbp = fbp.slice(0, 120);
   if (fbc) attribution.fbc = fbc.slice(0, 200);
 
-  let stored = false;
+  // The coupon decides which payment page they are sent to. Checked here and
+  // nowhere else: whatever the browser claims, the price is the link's price.
   const supabase = await getSupabaseServerClient();
+  const coupon = await resolveCoupon(String(form.get("coupon") ?? ""), supabase);
+  if (coupon) attribution.coupon = coupon.code;
+  const price = coupon?.price ?? OFFER.price;
+  const paymentUrl = coupon?.paymentUrl ?? OFFER.paymentUrl;
+
+  let stored = false;
   if (supabase) {
     // No `.select()`: the table is insert-only through the API.
     const { error } = await supabase.from("challenge_registrations").insert({
@@ -116,6 +145,7 @@ export async function POST(request: NextRequest) {
       phone: checked.value.phone,
       email: checked.value.email,
       cohort: OFFER.cohort,
+      coupon: coupon?.code,
       stored,
       attribution,
     }),
@@ -138,11 +168,11 @@ export async function POST(request: NextRequest) {
         fbc: fbc || undefined,
         ...context,
       },
-      value: OFFER.price,
+      value: price,
       currency: OFFER.currency,
       contentName: OFFER.name,
     }),
   );
 
-  return respond(request, { status: "ready", paymentUrl: OFFER.paymentUrl, leadEventId });
+  return respond(request, { status: "ready", paymentUrl, leadEventId, price, coupon: coupon?.code });
 }

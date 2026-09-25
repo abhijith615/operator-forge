@@ -47,6 +47,7 @@ const HEADERS = [
   'Phone',
   'Email',
   'Cohort',
+  'Coupon',
   'Saved in database',
   'Flag',
   'utm_source',
@@ -78,6 +79,7 @@ function doPost(e) {
     text_(r.phone),
     text_(r.email),
     text_(r.cohort),
+    text_(r.coupon),
     r.stored === true ? 'Yes' : 'No',
     text_(a.flag),
     text_(a.utm_source),
@@ -128,6 +130,7 @@ function notify_(r, a, receivedIst) {
     ['Source', source],
     ['Saved in database', r.stored === true ? 'Yes' : 'No'],
   ];
+  if (r.coupon) details.splice(4, 0, ['Coupon', plain_(r.coupon)]);
   if (a.flag) details.push(['Flag', plain_(a.flag)]);
 
   const rowsHtml = details
