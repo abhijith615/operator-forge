@@ -99,6 +99,10 @@ export async function POST(request: NextRequest) {
   const paymentUrl = coupon?.paymentUrl ?? OFFER.paymentUrl;
 
   let stored = false;
+  // Someone registering a second time. They still go to payment — the link is
+  // the same one their first registration sent them to — but they are one
+  // person, so they must not become a second row or a second Lead.
+  let repeat = false;
   if (supabase) {
     // No `.select()`: the table is insert-only through the API.
     const { error } = await supabase.from("challenge_registrations").insert({
@@ -108,8 +112,9 @@ export async function POST(request: NextRequest) {
       email: checked.value.email,
       attribution,
     });
-    if (error) console.error("[7-day-challenge] registration not stored:", error.code, error.message);
-    else stored = true;
+    if (!error) stored = true;
+    else if (error.code === "23505") repeat = true;
+    else console.error("[7-day-challenge] registration not stored:", error.code, error.message);
   } else {
     console.error("[7-day-challenge] registration not stored: Supabase is not configured");
   }
@@ -126,32 +131,38 @@ export async function POST(request: NextRequest) {
       cohort: OFFER.cohort,
       coupon: coupon?.code,
       stored,
-      attribution,
+      // Marked in the sheet so a second submission reads as what it is,
+      // rather than as a registration that failed to save.
+      attribution: repeat ? { ...attribution, flag: attribution.flag ?? "repeat-registration" } : attribution,
     }),
   );
 
-  // One Lead, reported from both sides under the same id so Meta counts it
-  // once. Sent after the response, so measurement never delays payment.
-  const leadEventId = newEventId("lead");
+  // One Lead per person, reported from both sides under the same id so Meta
+  // counts it once. Sent after the response, so measurement never delays
+  // payment. A repeat registration gets no id, which is also how the browser
+  // knows not to fire its half: the server decides what counts as a Lead.
+  const leadEventId = repeat ? undefined : newEventId("lead");
   const sourceUrl = request.headers.get("referer") ?? new URL(OFFER_ROUTE, request.url).toString();
   const context = requestContext(request.headers);
-  after(() =>
-    sendMetaEvent({
-      name: "Lead",
-      eventId: leadEventId,
-      sourceUrl,
-      user: {
-        email: checked.value.email,
-        phone: checked.value.phone,
-        fbp: fbp || undefined,
-        fbc: fbc || undefined,
-        ...context,
-      },
-      value: price,
-      currency: OFFER.currency,
-      contentName: OFFER.name,
-    }),
-  );
+  if (leadEventId) {
+    after(() =>
+      sendMetaEvent({
+        name: "Lead",
+        eventId: leadEventId,
+        sourceUrl,
+        user: {
+          email: checked.value.email,
+          phone: checked.value.phone,
+          fbp: fbp || undefined,
+          fbc: fbc || undefined,
+          ...context,
+        },
+        value: price,
+        currency: OFFER.currency,
+        contentName: OFFER.name,
+      }),
+    );
+  }
 
   return respond(request, { status: "ready", paymentUrl, leadEventId, price, coupon: coupon?.code });
 }
