@@ -37,6 +37,9 @@ const HOUR_MS = 3_600_000;
 /** How long payment waits on saving the registration before going anyway. */
 const SAVE_TIMEOUT_MS = 6_000;
 
+/** Shown when somebody submits a form they have not filled in. */
+const EMPTY_FORM_PROMPT = "Fill in your name, phone and email to continue.";
+
 const FIELD_NAMES = ["name", "phone", "email"] as const;
 
 function isAutofilled(input: HTMLInputElement | null): boolean {
@@ -412,6 +415,20 @@ export function RegistrationForm() {
 
   const applyCoupon = () => void submitCoupon(couponInput);
 
+  /** Checks a single field, used when somebody leaves it. */
+  const checkField = (field: keyof RegistrationFields, value: string) => {
+    if (!value.trim()) return;
+    const checked = validateRegistration({ name: "", phone: "", email: "", [field]: value });
+    setErrors((current) => ({ ...current, [field]: checked.ok ? undefined : checked.errors[field] }));
+  };
+
+  /** Clears a field's complaint as soon as it is being fixed. */
+  const clearFieldError = (field: keyof RegistrationFields) => {
+    setErrors((current) => (current[field] ? { ...current, [field]: undefined } : current));
+    // The "fill these in" prompt has served its purpose once typing starts.
+    setMessage((current) => (current === EMPTY_FORM_PROMPT ? null : current));
+  };
+
   const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = event.currentTarget;
@@ -426,8 +443,19 @@ export function RegistrationForm() {
       setErrors(checked.errors);
       const failed = FIELD_NAMES.filter((key) => checked.errors[key]);
       reportFormEvent(form, "invalid", failed);
+
+      // An untouched form is the common case: somebody scrolled here and
+      // pressed the button. Say what is needed rather than marking it wrong.
+      const untouched = FIELD_NAMES.every((key) => !String(data.get(key) ?? "").trim());
+      setMessage(untouched ? EMPTY_FORM_PROMPT : null);
+
       const first = failed[0];
-      if (first) form.querySelector<HTMLInputElement>(`[name="${first}"]`)?.focus();
+      const field = first ? form.querySelector<HTMLInputElement>(`[name="${first}"]`) : null;
+      if (field) {
+        const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        field.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
+        field.focus({ preventScroll: true });
+      }
       return;
     }
     setErrors({});
@@ -507,6 +535,8 @@ export function RegistrationForm() {
         maxLength={80}
         required
         error={errors.name}
+        onChange={() => clearFieldError("name")}
+        onBlur={(event) => checkField("name", event.target.value)}
       />
       <Field
         id="register-phone"
@@ -520,6 +550,8 @@ export function RegistrationForm() {
         maxLength={32}
         required
         error={errors.phone}
+        onChange={() => clearFieldError("phone")}
+        onBlur={(event) => checkField("phone", event.target.value)}
       />
       <Field
         id="register-email"
@@ -533,6 +565,8 @@ export function RegistrationForm() {
         required
         hint="We'll send your challenge access to this email."
         error={errors.email}
+        onChange={() => clearFieldError("email")}
+        onBlur={(event) => checkField("email", event.target.value)}
       />
 
       {/* Optional, and out of the way until it is wanted. */}
@@ -623,7 +657,7 @@ export function RegistrationForm() {
           "Taking you to payment…"
         ) : (
           <>
-            Register now · {inr(price)}
+            Continue to payment · {inr(price)}
             {coupon ? <span className="text-[13px] font-medium line-through opacity-60">{inr(OFFER.price)}</span> : null}
             <ArrowRight />
           </>
