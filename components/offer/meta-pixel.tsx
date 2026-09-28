@@ -15,10 +15,13 @@ import { usePathname } from "next/navigation";
  * logged as InitiateCheckout even though that button only scrolls to the
  * form. That inflates the numbers in Events Manager and, worse, teaches the
  * campaign to buy button-clickers. Every event this site reports is fired
- * explicitly, at the moment the thing actually happens. The landing page adds ViewContent, and its
- * form and WhatsApp buttons send Lead, InitiateCheckout and Contact through
- * `track`. `NEXT_PUBLIC_META_PIXEL_ID` overrides the id; set it to `off` to
- * turn the pixel off entirely.
+ * explicitly, at the moment the thing actually happens: the landing page adds
+ * ViewContent, its form sends Lead and its WhatsApp buttons send Contact,
+ * through `track`. Nothing here sends InitiateCheckout — Lead marks the same
+ * moment and is the one tied to a row in the database, so a checkout event
+ * appearing in Events Manager did not come from this site.
+ * `NEXT_PUBLIC_META_PIXEL_ID` overrides the id; set it to `off` to turn the
+ * pixel off entirely.
  */
 
 const DEFAULT_PIXEL_ID = "1549391803656128";

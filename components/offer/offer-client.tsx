@@ -479,15 +479,17 @@ export function RegistrationForm() {
       else if (result?.status === "closed") setMessage(result.message);
       else {
         // The registration is in: one Lead, sharing its id with the server's
-        // copy, then InitiateCheckout as we hand over to Razorpay. Razorpay
-        // hosts the checkout itself, so this is the last moment we can see.
-        const money = {
+        // copy so Meta counts it once. Lead is the only thing reported here.
+        // InitiateCheckout used to fire on this same line and was removed:
+        // it marked the identical moment, and Meta's own guesswork had filled
+        // the account with checkouts that no registration ever caused — hours
+        // of 30 checkouts against 0 leads. Reporting none of our own makes
+        // any InitiateCheckout in Events Manager provably not this site.
+        track("Lead", {
           content_name: OFFER.name,
           value: result?.price ?? price,
           currency: OFFER.currency,
-        };
-        track("Lead", money, result?.leadEventId);
-        track("InitiateCheckout", money, result?.leadEventId ? `checkout_${result.leadEventId}` : undefined);
+        }, result?.leadEventId);
 
         // Stays "Taking you to payment…" while Razorpay loads.
         setLeaving(true);

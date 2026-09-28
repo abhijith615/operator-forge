@@ -54,7 +54,7 @@ export interface MetaUser {
 }
 
 export interface MetaEvent {
-  name: "Lead" | "Purchase" | "InitiateCheckout";
+  name: "Lead" | "Purchase";
   eventId: string;
   /** The page the person was on, as Meta's event_source_url. */
   sourceUrl?: string;
