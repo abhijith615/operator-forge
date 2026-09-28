@@ -8,7 +8,14 @@ import { usePathname } from "next/navigation";
  * Meta Pixel, site-wide.
  *
  * Loaded once from the root layout: PageView on the first load and on every
- * client-side navigation after it. The landing page adds ViewContent, and its
+ * client-side navigation after it.
+ *
+ * `autoConfig` is switched off deliberately. Left on, Meta guesses events
+ * from the page — a click on a button reading "Register now · ₹499" gets
+ * logged as InitiateCheckout even though that button only scrolls to the
+ * form. That inflates the numbers in Events Manager and, worse, teaches the
+ * campaign to buy button-clickers. Every event this site reports is fired
+ * explicitly, at the moment the thing actually happens. The landing page adds ViewContent, and its
  * form and WhatsApp buttons send Lead, InitiateCheckout and Contact through
  * `track`. `NEXT_PUBLIC_META_PIXEL_ID` overrides the id; set it to `off` to
  * turn the pixel off entirely.
@@ -93,6 +100,7 @@ export function MetaPixel() {
         strategy="afterInteractive"
         dangerouslySetInnerHTML={{
           __html: `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('set','autoConfig',false,'${PIXEL_ID}');
 fbq('init','${PIXEL_ID}');
 fbq('track','PageView');`,
         }}
