@@ -18,6 +18,9 @@ import { capabilities } from "@/lib/constants/site";
 import { easing } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import type { OperatorGenome } from "@/types/genome";
+import type { TimelineEntry } from "@/types/mission-run";
+import type { Achievement } from "@/types/tasks";
+import type { WorldTrace } from "@/types/telemetry";
 
 function nameOf(id: string): string {
   return capabilities.find((capability) => capability.id === id)?.name ?? id;
@@ -27,11 +30,18 @@ export function GenomeReport({
   genome,
   firstName,
   canRunAgain = false,
+  fallbackTraces = [],
+  fallbackTimeline = [],
+  fallbackAchievements = [],
 }: {
   genome: OperatorGenome;
   firstName: string;
   /** Admins, and anyone who has not finished a shift yet. Decided on the server. */
   canRunAgain?: boolean;
+  /** The stored run's replay and badges, for a browser that no longer holds them. */
+  fallbackTraces?: WorldTrace[];
+  fallbackTimeline?: TimelineEntry[];
+  fallbackAchievements?: Achievement[];
 }) {
   const stats = [
     { label: "Tasks handled", value: String(genome.stats.tasksHandled) },
@@ -165,7 +175,7 @@ export function GenomeReport({
 
       {/* ── Achievements ────────────────────────────────────────────────── */}
       <Reveal className="mt-6">
-        <AchievementStrip />
+        <AchievementStrip fallback={fallbackAchievements} />
       </Reveal>
 
       {/* ── Reflection ──────────────────────────────────────────────────── */}
@@ -184,7 +194,7 @@ export function GenomeReport({
         </p>
       </Reveal>
       <div className="mt-6">
-        <Replay />
+        <Replay fallbackTraces={fallbackTraces} fallbackTimeline={fallbackTimeline} />
       </div>
 
       {/* ── Raw numbers ─────────────────────────────────────────────────── */}

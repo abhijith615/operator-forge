@@ -23,20 +23,18 @@ const TONE_DOT: Record<TimelineTone, string> = {
   neutral: "bg-lo",
 };
 
-/** Playback speed: the whole shift in about forty seconds. */
-const REPLAY_RATE = MISSION_DURATION_SECONDS / 40;
-
 function pathFrom(
   traces: WorldTrace[],
   pick: (trace: WorldTrace) => number,
   min: number,
   max: number,
+  duration: number,
 ): string {
   if (traces.length < 2) return "";
   const span = Math.max(0.0001, max - min);
   return traces
     .map((trace, index) => {
-      const x = PAD + (trace.at / MISSION_DURATION_SECONDS) * (WIDTH - PAD * 2);
+      const x = PAD + (trace.at / duration) * (WIDTH - PAD * 2);
       const y =
         HEIGHT - PAD - ((pick(trace) - min) / span) * (HEIGHT - PAD * 2);
       return `${index === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
@@ -49,27 +47,57 @@ function pathFrom(
  * move together — the point is to let an operator see the moment a decision
  * started costing them, rather than being told about it.
  */
-export function Replay() {
-  const traces = useMissionStore((state) => state.traces);
-  const timeline = useMissionStore((state) => state.timeline);
+export function Replay({
+  fallbackTraces = [],
+  fallbackTimeline = [],
+}: {
+  /** The stored run, used when this browser no longer holds the shift. */
+  fallbackTraces?: WorldTrace[];
+  fallbackTimeline?: TimelineEntry[];
+}) {
+  const liveTraces = useMissionStore((state) => state.traces);
+  const liveTimeline = useMissionStore((state) => state.timeline);
 
-  const [at, setAt] = React.useState(MISSION_DURATION_SECONDS);
+  const traces = liveTraces.length > 0 ? liveTraces : fallbackTraces;
+  const timeline = liveTimeline.length > 0 ? liveTimeline : fallbackTimeline;
+
+  // The run's own length, not today's. A shift recorded when the mission was
+  // thirty minutes long still has traces out at minute twenty-eight, and
+  // scaling those against the current fifteen would draw most of the morning
+  // off the right-hand edge of the chart.
+  const duration = React.useMemo(
+    () =>
+      Math.max(
+        MISSION_DURATION_SECONDS,
+        ...traces.map((trace) => trace.at),
+        ...timeline.map((entry) => entry.at),
+      ),
+    [traces, timeline],
+  );
+  /** Playback speed: the whole shift in about forty seconds. */
+  const rate = duration / 40;
+
+  const [at, setAt] = React.useState(duration);
   const [playing, setPlaying] = React.useState(false);
+
+  // Parking the playhead at the end is only right for the run in hand; the
+  // stored one arrives after the first render.
+  React.useEffect(() => setAt(duration), [duration]);
 
   React.useEffect(() => {
     if (!playing) return;
     const id = window.setInterval(() => {
       setAt((current) => {
-        const next = current + REPLAY_RATE / 4;
-        if (next >= MISSION_DURATION_SECONDS) {
+        const next = current + rate / 4;
+        if (next >= duration) {
           setPlaying(false);
-          return MISSION_DURATION_SECONDS;
+          return duration;
         }
         return next;
       });
     }, 250);
     return () => window.clearInterval(id);
-  }, [playing]);
+  }, [playing, rate, duration]);
 
   const ratings = traces.map((trace) => trace.rating);
   const minRating = Math.min(4.6, ...ratings) - 0.1;
@@ -89,7 +117,7 @@ export function Replay() {
     [timeline, at],
   );
 
-  const playheadX = PAD + (at / MISSION_DURATION_SECONDS) * (WIDTH - PAD * 2);
+  const playheadX = PAD + (at / duration) * (WIDTH - PAD * 2);
 
   if (traces.length < 2) {
     return (
@@ -151,11 +179,11 @@ export function Replay() {
           </defs>
 
           <path
-            d={`${pathFrom(traces, (t) => t.rating, minRating, maxRating)} L${WIDTH - PAD},${HEIGHT - PAD} L${PAD},${HEIGHT - PAD} Z`}
+            d={`${pathFrom(traces, (t) => t.rating, minRating, maxRating, duration)} L${WIDTH - PAD},${HEIGHT - PAD} L${PAD},${HEIGHT - PAD} Z`}
             fill="url(#replay-rating)"
           />
           <motion.path
-            d={pathFrom(traces, (t) => t.rating, minRating, maxRating)}
+            d={pathFrom(traces, (t) => t.rating, minRating, maxRating, duration)}
             fill="none"
             stroke="#F5C400"
             strokeWidth="2"
@@ -165,7 +193,7 @@ export function Replay() {
             transition={{ duration: 1.4, ease: easing.outExpo }}
           />
           <motion.path
-            d={pathFrom(traces, (t) => t.openOrders, 0, maxQueue)}
+            d={pathFrom(traces, (t) => t.openOrders, 0, maxQueue, duration)}
             fill="none"
             stroke="#8B7CFF"
             strokeWidth="1.5"
@@ -202,7 +230,7 @@ export function Replay() {
         <input
           type="range"
           min={0}
-          max={MISSION_DURATION_SECONDS}
+          max={duration}
           step={5}
           value={Math.round(at)}
           onChange={(event) => {

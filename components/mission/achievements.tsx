@@ -10,12 +10,21 @@ import { playMessageSound } from "@/lib/sound";
 import { useMissionStore } from "@/stores/mission-store";
 import { useShellStore } from "@/stores/shell-store";
 import { cn } from "@/lib/utils";
+import type { Achievement } from "@/types/tasks";
 
 const DWELL_MS = 5200;
 
 /** Earned marks, kept small. They acknowledge a way of working, not a score. */
-export function AchievementStrip({ className }: { className?: string }) {
-  const achievements = useMissionStore((state) => state.achievements);
+export function AchievementStrip({
+  className,
+  fallback = [],
+}: {
+  className?: string;
+  /** The stored run's badges, for a browser that no longer holds the shift. */
+  fallback?: Achievement[];
+}) {
+  const live = useMissionStore((state) => state.achievements);
+  const achievements = live.length > 0 ? live : fallback;
   if (achievements.length === 0) return null;
 
   return (

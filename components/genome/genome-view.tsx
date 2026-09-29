@@ -6,6 +6,10 @@ import { PageShell } from "@/components/shell/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGenome } from "@/hooks/use-genome";
 import { useMissionHydrated } from "@/hooks/use-mission";
+import type { OperatorGenome } from "@/types/genome";
+import type { TimelineEntry } from "@/types/mission-run";
+import type { Achievement } from "@/types/tasks";
+import type { WorldTrace } from "@/types/telemetry";
 
 const PENDING_CONTENTS = [
   "Ten capabilities on an animated radar — no percentages, no marks",
@@ -17,12 +21,21 @@ const PENDING_CONTENTS = [
 export function GenomeView({
   firstName,
   canRunAgain = false,
+  storedGenome = null,
+  storedTraces = [],
+  storedTimeline = [],
+  storedAchievements = [],
 }: {
   firstName: string;
   canRunAgain?: boolean;
+  /** Rebuilt on the server from `mission_runs`, for a browser that has forgotten. */
+  storedGenome?: OperatorGenome | null;
+  storedTraces?: WorldTrace[];
+  storedTimeline?: TimelineEntry[];
+  storedAchievements?: Achievement[];
 }) {
   const hydrated = useMissionHydrated();
-  const genome = useGenome();
+  const live = useGenome();
 
   if (!hydrated) {
     return (
@@ -39,7 +52,20 @@ export function GenomeView({
     );
   }
 
+  // The browser's own copy first: it is the shift that just ended, and the
+  // snapshot behind it may be a moment old. The stored run is what answers on
+  // a cleared browser or a second device.
+  const genome = live ?? storedGenome;
   if (!genome) return <LockedPanel href="/genome" contents={PENDING_CONTENTS} />;
 
-  return <GenomeReport genome={genome} firstName={firstName} canRunAgain={canRunAgain} />;
+  return (
+    <GenomeReport
+      genome={genome}
+      firstName={firstName}
+      canRunAgain={canRunAgain}
+      fallbackTraces={storedTraces}
+      fallbackTimeline={storedTimeline}
+      fallbackAchievements={storedAchievements}
+    />
+  );
 }
