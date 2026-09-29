@@ -5,13 +5,13 @@ export const FIRST_SHIFT: MissionBlueprint = {
   codename: "M-01",
   name: "The First Shift",
   tagline: "Your manager is stuck in traffic. The store opens in four minutes.",
-  durationMinutes: 30,
+  durationMinutes: 15,
   industry: "Quick Commerce",
   role: "Assistant Store Manager",
   location: "Dark Store 114 · Indiranagar",
   difficulty: "Contested",
   summary:
-    "Thirty minutes on the floor of a ten-minute delivery store. Orders keep arriving, and so does everything else — absences, complaints, suppliers, head office. You will not get through all of it. Nobody will tell you what the right answer is, because on a real morning nobody knows it yet.",
+    "Fifteen minutes on the floor of a ten-minute delivery store. Orders keep arriving, and so does everything else — absences, complaints, suppliers, head office. You will not get through all of it. Nobody will tell you what the right answer is, because on a real morning nobody knows it yet.",
   objectives: [
     "Keep the store open and orders moving",
     "Protect the customer rating you inherited",

@@ -20,7 +20,7 @@ const COLUMNS = [
   {
     title: "Operator",
     links: [
-      { label: "Start Mission", href: "/login" },
+      { label: "Start Trial Mission", href: "/login" },
       { label: "Sign in", href: "/login" },
     ],
   },

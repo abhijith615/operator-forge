@@ -42,7 +42,7 @@ const BEATS: Beat[] = [
   {
     stamp: "09:02",
     title: "The queue never empties",
-    body: "A new task lands every twenty to forty seconds — absences, a stockout, a supplier at the dock, head office wanting a report. Three to eight are always waiting. Some expire while you are dealing with others.",
+    body: "A new task lands every twenty-five to fifty seconds — absences, a stockout, a supplier at the dock, head office wanting a report. Three to eight are always waiting. Some expire while you are dealing with others.",
     icon: CloudRain,
     accent: "warn",
   },
@@ -56,7 +56,7 @@ const BEATS: Beat[] = [
   {
     stamp: "30:00",
     title: "The Genome",
-    body: "No score out of a hundred. A portrait of how you operated — what you reached for first, what you let expire, and how fast you were still deciding at minute twenty-five.",
+    body: "No score out of a hundred. A portrait of how you operated — what you reached for first, what you let expire, and how fast you were still deciding at minute twelve.",
     icon: Dna,
     accent: "ember",
   },
@@ -139,7 +139,7 @@ export function HowItRuns() {
           <div className="lg:sticky lg:top-32 lg:self-start">
             <SectionHeading
               eyebrow="How it runs"
-              title="Thirty minutes, in the order they actually happen."
+              title="Fifteen minutes, in the order they actually happen."
               description="The mission is not a set of questions. It is a morning that keeps moving faster than you can, and a record of what you chose to get to."
             />
             <Reveal delay={0.16} className="mt-8">

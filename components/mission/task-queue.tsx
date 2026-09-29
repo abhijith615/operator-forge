@@ -49,7 +49,7 @@ export function TaskQueue({
   const [filter, setFilter] = React.useState<Filter>("all");
 
   // Selected as four numbers rather than the world, so the cards only re-render
-  // when free capacity actually moves — not on every tick of a 30-minute clock.
+  // when free capacity actually moves — not on every tick of a 15-minute clock.
   const idleRiders = useMissionStore(
     (state) => state.world?.riders.filter((r) => r.status === "idle").length ?? 0,
   );

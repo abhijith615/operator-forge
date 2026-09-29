@@ -216,7 +216,7 @@ function scoreLearningAgility(signals: RunSignals): RawReading {
   if (qualityTrend !== null && qualityTrend > 0.62) {
     moments.push({
       at: last[0]?.at ?? signals.duration,
-      text: "Your calls in the last ten minutes were better than your calls in the first ten.",
+      text: "Your calls in the last five minutes were better than your calls in the first five.",
     });
   } else if (qualityTrend !== null && qualityTrend < 0.4) {
     moments.push({

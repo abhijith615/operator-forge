@@ -5,7 +5,7 @@ import { persist } from "zustand/middleware";
 
 import type { TelemetryEvent, TelemetryKind } from "@/types/telemetry";
 
-/** Enough to describe a 30-minute shift without unbounded growth. */
+/** Enough to describe a 15-minute shift without unbounded growth. */
 const EVENT_CAP = 1500;
 
 interface TelemetryState {

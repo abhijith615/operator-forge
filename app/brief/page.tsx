@@ -33,7 +33,7 @@ const SHAPE = [
   {
     icon: ListChecks,
     title: "Work arrives faster than you can clear it",
-    body: "A new task lands every twenty to forty seconds — absences, a stockout, a supplier at the dock, head office wanting a report. Three to eight sit waiting at any moment. You will not get through all of them, and you are not meant to.",
+    body: "A new task lands every twenty-five to fifty seconds — absences, a stockout, a supplier at the dock, head office wanting a report. Three to eight sit waiting at any moment. You will not get through all of them, and you are not meant to.",
   },
   {
     icon: MessagesSquare,
@@ -159,7 +159,7 @@ export default function BriefPage() {
             There is no mark at the end of this. You get an Operator Genome — a
             portrait of how you worked, drawn from what you reached for first,
             what you let expire, who you asked, and how fast you were still
-            deciding at minute twenty-five.
+            deciding at minute twelve.
           </p>
           <p className="mt-4 text-[15px] leading-relaxed text-mid">
             Ten capabilities, none of them scored out of a hundred. Nothing is

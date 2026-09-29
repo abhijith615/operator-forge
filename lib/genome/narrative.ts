@@ -43,7 +43,7 @@ const HEADLINES: Record<CapabilityId, Record<Tier, string>> = {
   "learning-agility": {
     low: "Your approach at the end of the shift looked like your approach at the start.",
     mid: "You adjusted, though it took the floor telling you twice.",
-    high: "You were visibly better in the last ten minutes than in the first ten.",
+    high: "You were visibly better in the last five minutes than in the first five.",
   },
   ownership: {
     low: "Several things with your name on them got the quickest possible answer.",
@@ -133,7 +133,7 @@ const ARCHETYPES: Archetype[] = [
   {
     pair: ["learning-agility", "stress-handling"],
     name: "The Adapter",
-    blurb: "You are a different operator at minute twenty-five than at minute five.",
+    blurb: "You are a different operator at minute twelve than at minute three.",
   },
   {
     pair: ["ownership", "systems-thinking"],
@@ -196,7 +196,7 @@ const SOLO: Partial<Record<CapabilityId, { name: string; blurb: string }>> = {
   },
   "stress-handling": {
     name: "The Steady Hand",
-    blurb: "Your judgement at minute twenty-five looks like minute five.",
+    blurb: "Your judgement at minute twelve looks like minute three.",
   },
 };
 
@@ -242,7 +242,7 @@ export function summaryFor(
 
   const opener =
     share >= 55
-      ? `You got to ${answered} of the ${total} things that landed on the board — more than most people manage in thirty minutes.`
+      ? `You got to ${answered} of the ${total} things that landed on the board — more than most people manage in fifteen minutes.`
       : share >= 30
         ? `You got to ${answered} of the ${total} things that landed. The rest expired, which is the normal outcome and not by itself a failure.`
         : `${expired} of ${total} items expired unanswered. The board was moving faster than you were.`;

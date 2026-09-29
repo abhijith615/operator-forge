@@ -293,8 +293,8 @@ function VideoStage({ onDone }: { onDone: () => void }) {
         </Button>
         <p className="max-w-sm text-center text-[12px] leading-relaxed text-faint">
           {embedOnly
-            ? "Start the shift when you are ready. Thirty minutes, one attempt, no pause."
-            : "The shift starts the moment the video ends. Thirty minutes, one attempt, no pause."}
+            ? "Start the shift when you are ready. Fifteen minutes, one attempt, no pause."
+            : "The shift starts the moment the video ends. Fifteen minutes, one attempt, no pause."}
         </p>
       </div>
     </motion.div>

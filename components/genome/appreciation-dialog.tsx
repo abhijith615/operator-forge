@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import { useActionState } from "react";
-import { Check, Loader2, Smartphone } from "lucide-react";
-import QRCode from "qrcode";
+import { Check, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +15,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { idleFormState } from "@/lib/auth/form-state";
 import { registerInterest } from "@/lib/support/actions";
-import { isUpiConfigured, upiPaymentUri, upiVpa } from "@/lib/support/upi";
 import { useShellStore } from "@/stores/shell-store";
 
 const SECTORS = [
@@ -46,10 +44,14 @@ const WAITLIST = [
 /**
  * Shown once, after the genome has actually been read.
  *
- * The payment leaves for a UPI app this page never hears back from, so there
- * is no confirmed state to render and none is faked. Skipping sits in the same
- * visual weight as everything else, and the dialog scrolls internally — an ask
- * whose decline button is below the fold is a dark pattern by accident.
+ * It used to open with a UPI QR code and an ask for money. That arrived in the
+ * same breath as someone's first result, which is the worst possible moment to
+ * ask a student for ₹100 — and it made a free trial read as a paywall. The ask
+ * is gone; what is left is what someone might actually want next.
+ *
+ * Skipping sits in the same visual weight as everything else, and the dialog
+ * scrolls internally — an ask whose decline button is below the fold is a dark
+ * pattern by accident.
  */
 export function AppreciationDialog() {
   const seen = useShellStore((state) => state.appreciationSeen);
@@ -102,7 +104,7 @@ export function AppreciationDialog() {
         <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-lg overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              <span aria-hidden>❤️</span> Did You Find This Valuable?
+              <span aria-hidden>❤️</span> That Was the Trial Mission
             </DialogTitle>
             <DialogDescription>
               Operator Forge is currently being built independently, mission by
@@ -111,12 +113,9 @@ export function AppreciationDialog() {
           </DialogHeader>
 
           <p className="mt-3 text-[13px] leading-relaxed text-mid">
-            If this experience gave you a new perspective on business,
-            operations, or your own capabilities, consider supporting the
-            creation of future missions.
+            Your genome is yours to keep. Here is what is coming next, if you
+            want to be told when it lands.
           </p>
-
-          {isUpiConfigured ? <CoffeeBlock /> : null}
 
           <MentorBlock />
 
@@ -140,91 +139,6 @@ export function AppreciationDialog() {
         </DialogContent>
       </Dialog>
     </>
-  );
-}
-
-/* ── Buy Us a Coffee ────────────────────────────────────────────────────── */
-
-function CoffeeBlock() {
-  const [qr, setQr] = React.useState<string | null>(null);
-  const [coarse, setCoarse] = React.useState(false);
-
-  // A phone cannot scan its own screen. Coarse pointer gets a link that opens
-  // the UPI app directly; everything else gets the code.
-  React.useEffect(() => {
-    setCoarse(window.matchMedia("(pointer: coarse)").matches);
-  }, []);
-
-  React.useEffect(() => {
-    if (coarse) return;
-    let alive = true;
-    void QRCode.toDataURL(upiPaymentUri(), {
-      width: 320,
-      margin: 1,
-      color: { dark: "#0d0f14", light: "#ffffff" },
-    })
-      .then((url) => {
-        if (alive) setQr(url);
-      })
-      .catch(() => {
-        /* Falls back to the VPA in text, which is all anyone actually needs. */
-      });
-    return () => {
-      alive = false;
-    };
-  }, [coarse]);
-
-  return (
-    <section className="mt-5 rounded-xl border border-line bg-surface p-5">
-      <h3 className="text-[14.5px] font-medium text-hi">
-        Buy Us a Coffee <span aria-hidden>☕</span>
-      </h3>
-      <p className="mt-2 text-[13px] leading-relaxed text-mid">
-        {coarse
-          ? "Open your UPI app and contribute any amount you feel is fair."
-          : "Scan the QR code below and contribute any amount you feel is fair."}
-      </p>
-
-      <div className="mt-4 flex flex-col items-center gap-3">
-        {coarse ? (
-          <Button asChild variant="primary" size="md" className="w-full">
-            <a href={upiPaymentUri()}>
-              <Smartphone />
-              Open your UPI app
-            </a>
-          </Button>
-        ) : qr ? (
-          // Deliberately not next/image: the source is a data URI generated in
-          // the browser, so there is nothing for the optimizer to fetch or
-          // cache, and routing it through /_next/image would cost a request to
-          // re-encode bytes we already hold.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={qr}
-            alt={`UPI payment code for ${upiVpa}`}
-            width={160}
-            height={160}
-            className="rounded-lg"
-          />
-        ) : (
-          <div className="grid size-40 place-items-center rounded-lg border border-line">
-            <Loader2 className="size-4 animate-spin text-faint" />
-          </div>
-        )}
-
-        <p className="text-center font-mono text-[11.5px] text-lo select-all">
-          {upiVpa}
-        </p>
-      </div>
-
-      <p className="mt-4 text-[12.5px] leading-relaxed text-mid">
-        ₹10, ₹50, ₹100, or more — every contribution helps us create more
-        realistic simulations and learning experiences.
-      </p>
-      <p className="mt-2 text-[12px] leading-relaxed text-faint">
-        No pressure. No paywall. Only if you genuinely found value.
-      </p>
-    </section>
   );
 }
 

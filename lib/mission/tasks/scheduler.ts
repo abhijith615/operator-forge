@@ -5,7 +5,7 @@ import type { TimelineEntry } from "@/types/mission-run";
 import type { MissionTask, TaskDecision, TaskOption } from "@/types/tasks";
 import type { WorldState } from "@/types/world";
 
-import { TASK_TEMPLATES, TEMPLATES_BY_ID } from "./index";
+import { SHIFT_TEMPLATES, TEMPLATES_BY_ID } from "./index";
 import type { TaskTemplate } from "./types";
 
 /**
@@ -16,12 +16,21 @@ import type { TaskTemplate } from "./types";
 export const MIN_PENDING = 3;
 export const MAX_PENDING = 8;
 
-/** How long until the next task lands, given how buried the operator already is. */
+/**
+ * How long until the next task lands, given how buried the operator already is.
+ *
+ * Widened by about a quarter when the shift went from thirty minutes to
+ * fifteen. Halving the clock without touching these would have dealt the same
+ * tasks at nearly double the rate — around three a minute, which is faster
+ * than anyone can read a situation, weigh four options and choose one. The
+ * result is not pressure, it is a wall of text people scroll past, and the
+ * decisions stop meaning anything because nobody read them.
+ */
 function nextGap(pending: number, rand: () => number): number {
-  if (pending <= 2) return 8 + rand() * 7; // starved — refill fast
-  if (pending <= 4) return 18 + rand() * 12;
-  if (pending <= 6) return 28 + rand() * 14;
-  return 45 + rand() * 20; // already drowning — stop piling on
+  if (pending <= 2) return 10 + rand() * 8; // starved — refill fast
+  if (pending <= 4) return 24 + rand() * 14;
+  if (pending <= 6) return 36 + rand() * 18;
+  return 56 + rand() * 24; // already drowning — stop piling on
 }
 
 /** Keep the record bounded; the oldest settled tasks are already in decisions. */
@@ -125,8 +134,9 @@ function drawTemplate(
   rand: () => number,
   lastUsed: Record<string, number>,
   pendingTemplateIds: Set<string>,
+  starved: boolean,
 ): TaskTemplate | null {
-  const applicable = TASK_TEMPLATES.filter((template) => {
+  const applicable = SHIFT_TEMPLATES.filter((template) => {
     if (pendingTemplateIds.has(template.id)) return false;
     if (template.when && !template.when(world)) return false;
     return true;
@@ -146,6 +156,17 @@ function drawTemplate(
 
   // Last resort: whatever has been off the board longest. Better a repeat than
   // an empty queue, which is the one thing this mission must never show.
+  //
+  // Only when the board is genuinely thin, though. Reaching here with four or
+  // five tasks already pending means the catalogue is momentarily blocked —
+  // the remaining templates are pending, or their `when` gate is shut — and
+  // waiting for the next gap costs nothing. Dealing anyway sorts by lastUsed,
+  // which puts the four openers first because they were stamped at second
+  // zero: the operator files the morning report, then gets asked to file it
+  // again. Nothing breaks the illusion faster than a task you have already
+  // answered coming back as if the last ten minutes did not happen.
+  if (!starved) return null;
+
   const stalest = [...applicable].sort(
     (a, b) => (lastUsed[a.id] ?? -Infinity) - (lastUsed[b.id] ?? -Infinity),
   );
@@ -168,7 +189,7 @@ function drawContender(
   lastUsed: Record<string, number>,
   pendingTemplateIds: Set<string>,
 ): TaskTemplate | null {
-  const rivals = TASK_TEMPLATES.filter((template) => {
+  const rivals = SHIFT_TEMPLATES.filter((template) => {
     if (template.id === origin.id) return false;
     if (template.contends !== origin.contends) return false;
     if (pendingTemplateIds.has(template.id)) return false;
@@ -262,7 +283,14 @@ export function advanceTasks(input: AdvanceTasksInput): AdvanceTasksResult {
       tasks.filter((task) => task.status === "pending").map((task) => task.templateId),
     );
 
-    const template = drawTemplate(world, elapsed, rand, templateLastUsed, pendingTemplateIds);
+    const template = drawTemplate(
+      world,
+      elapsed,
+      rand,
+      templateLastUsed,
+      pendingTemplateIds,
+      pending < MIN_PENDING,
+    );
     if (!template) break;
 
     const task = instantiate(template, world, elapsed, rand, busySubjectsOf(tasks));

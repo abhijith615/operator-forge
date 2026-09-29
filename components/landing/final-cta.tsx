@@ -28,7 +28,7 @@ export function FinalCta() {
 
         <Reveal delay={0.12}>
           <p className="mx-auto mt-5 max-w-lg text-[16px] leading-relaxed text-balance text-[#0B0B0B]/75">
-            Thirty minutes, one store, and more work than anyone could finish. Your genome is written from what you
+            Fifteen minutes, one store, and more work than anyone could finish. Your genome is written from what you
             did with it — and it is yours, whatever it says.
           </p>
         </Reveal>
@@ -42,7 +42,7 @@ export function FinalCta() {
                 FOCUS,
               )}
             >
-              Start Mission
+              Start Trial Mission
               <ArrowRight className="size-4" aria-hidden />
             </Link>
             <Link

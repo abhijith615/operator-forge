@@ -39,7 +39,7 @@ shift themselves.
 direct video URL, or a local path like `/handover.mp4`. Local video files are
 gitignored, so a deployment needs a hosted URL.
 
-From there a **30-minute clock** runs. It derives from the run's start
+From there a **15-minute clock** runs. It derives from the run's start
 timestamp, so a refresh, a background tab or a closed laptop all resolve to the
 same truth — the shift kept going without you.
 
@@ -51,7 +51,7 @@ scheduler's job is to keep the operator pleasantly underwater:
 
 - A new task lands every **20–45 seconds**, faster when the board is thin.
 - **3–8 tasks are always pending.** The queue is never empty and never quiet.
-- Roughly **68 tasks** arrive across 30 minutes. Nobody clears them all.
+- Roughly **40 tasks** arrive across 15 minutes. Nobody clears them all.
 - Every task **expires**, and every expiry leaves a mark — a rating hit, a
   worker who walked, phantom stock, or a cascade that puts something worse on
   the board.
@@ -139,7 +139,7 @@ underlying 0–1 score never is.
 `/genome` after handover: an animated ten-axis radar, a signature archetype
 drawn from the two strongest axes, the ten readings each opening onto the actual
 decisions behind them, a story of the shift anchored to real minutes and real
-option labels, and a **replay** — scrub the thirty minutes and watch the rating
+option labels, and a **replay** — scrub the fifteen minutes and watch the rating
 and the queue move against the record.
 
 The Genome is recomputed from the stored decisions rather than saved, so
@@ -203,7 +203,7 @@ GET /api/chat  →  {"configured":true,"model":"gpt-4o-mini"}
 
 ### Running the shift in three minutes
 
-A 30-minute shift is hard to QA. In development only:
+A 15-minute shift is hard to QA. In development only:
 
 ```
 NEXT_PUBLIC_MISSION_TIME_SCALE=10

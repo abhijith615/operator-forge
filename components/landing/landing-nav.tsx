@@ -87,7 +87,7 @@ export function LandingNav() {
             </Button>
             <Button asChild variant="primary" size="sm" className="pr-3.5">
               <Link href="/brief">
-                Start Mission
+                Start Trial Mission
                 <ArrowUpRight className="transition-transform duration-300 ease-out-expo group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
               </Link>
             </Button>
@@ -150,7 +150,7 @@ export function LandingNav() {
             </motion.ul>
             <div className="mt-10 px-6">
               <Button asChild variant="primary" size="lg" className="w-full">
-                <Link href="/brief">Start Mission</Link>
+                <Link href="/brief">Start Trial Mission</Link>
               </Button>
             </div>
           </motion.div>

@@ -3,7 +3,7 @@ export const site = {
   wordmark: "OPERATOR FORGE",
   tagline: "The Flight Simulator for Future Operators.",
   description:
-    "Operator Forge drops you into your first day running a real business. Thirty minutes, more work than you can finish, and three colleagues who answer back in real time.",
+    "Operator Forge drops you into your first day running a real business. Fifteen minutes, more work than you can finish, and three colleagues who answer back in real time.",
   /**
    * Only read server-side, for `metadataBase` and Open Graph tags. Falls back
    * to the Vercel deployment URL so a preview or a production build without

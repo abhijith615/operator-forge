@@ -32,13 +32,13 @@ const STEPS: Step[] = [
   {
     target: "clock",
     title: "Your clock is running",
-    body: "Thirty minutes, counting down, and it does not stop. A refresh will not save you and neither will a background tab.",
+    body: "Fifteen minutes, counting down, and it does not stop. A refresh will not save you and neither will a background tab.",
     place: "below",
   },
   {
     target: "queue",
     title: "This is the work",
-    body: "New tasks land every twenty to forty seconds and every one expires. Pick an option to resolve it. You will not clear them all — deciding what to drop is the job.",
+    body: "New tasks land every twenty-five to fifty seconds and every one expires. Pick an option to resolve it. You will not clear them all — deciding what to drop is the job.",
     place: "left",
     lane: "queue",
   },

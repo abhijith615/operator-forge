@@ -35,7 +35,7 @@ interface Offering {
  */
 const OFFERINGS: Offering[] = [
   {
-    title: "30-minute live missions",
+    title: "15-minute live missions",
     body: "Run a real operation under a real clock. Absences, stockouts, angry customers and head office, arriving faster than anyone can clear them. No multiple choice — only what you get to first.",
     icon: Timer,
     availability: "live",

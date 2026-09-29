@@ -9,7 +9,7 @@
 export const SHIFT_SECONDS = 15 * 60;
 
 /**
- * QA affordance, mirroring NEXT_PUBLIC_MISSION_TIME_SCALE in the 30-minute
+ * QA affordance, mirroring NEXT_PUBLIC_MISSION_TIME_SCALE in the 15-minute
  * mission: `NEXT_PUBLIC_CHALLENGE_TIME_SCALE=20` runs a day in 45 seconds so
  * the whole arc can be exercised. Forced to 1 in production builds — a
  * fifteen-minute day is fifteen minutes.

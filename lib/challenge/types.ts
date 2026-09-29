@@ -8,7 +8,7 @@
  */
 
 /**
- * Streams and priorities are shared with the 30-minute mission so a task reads
+ * Streams and priorities are shared with the 15-minute mission so a task reads
  * the same wherever it appears.
  */
 export type { TaskPriority, TaskStream } from "@/types/tasks";

@@ -20,7 +20,7 @@ const COLUMNS: { title: string; links: { label: string; href: string; external?:
   {
     title: "Operator",
     links: [
-      { label: "Start Mission", href: "/brief" },
+      { label: "Start Trial Mission", href: "/brief" },
       { label: "Sign in", href: "/login" },
       { label: `WhatsApp ${OFFER.whatsapp.display}`, href: whatsappUrl(), external: true },
       { label: OFFER.email, href: mailtoUrl(), external: true },

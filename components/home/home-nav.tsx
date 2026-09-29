@@ -101,7 +101,7 @@ export function HomeNav() {
                 HOME_FOCUS,
               )}
             >
-              Start Mission
+              Start Trial Mission
               <ArrowUpRight className="hidden sm:block" />
             </Link>
             <button
@@ -196,7 +196,7 @@ export function HomeNav() {
                   "w-full rounded-full border-0 bg-[#0B0B0B] text-white shadow-none hover:bg-[#262626]",
                 )}
               >
-                Start Mission
+                Start Trial Mission
               </Link>
             </div>
           </motion.div>

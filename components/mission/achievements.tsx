@@ -45,7 +45,7 @@ export function AchievementStrip({ className }: { className?: string }) {
 /**
  * The moment one is earned.
  *
- * This is the only unambiguously good news in thirty minutes of triage, so it
+ * This is the only unambiguously good news in fifteen minutes of triage, so it
  * is allowed to be the loudest thing on screen — but it is still an instrument
  * panel, not a slot machine. The celebration is carried by timing rather than
  * ornament: a bloom behind the card, the medallion landing on a spring with a

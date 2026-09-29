@@ -17,7 +17,7 @@ async function fetchSnapshot(): Promise<AdminSnapshot> {
   return (await response.json()) as AdminSnapshot;
 }
 
-/** `1830` → `30m 30s`. Drop-off is only legible against the 30-minute shift. */
+/** `830` → `13m 50s`. Drop-off is only legible against the 15-minute shift. */
 function clock(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
@@ -156,7 +156,7 @@ export function AdminView({ initial }: { initial: AdminSnapshot }) {
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           <Stat label="Started" value={s.runs_started} />
           <Stat
-            label="Completed 30 min"
+            label="Completed 15 min"
             value={s.runs_completed}
             tone="ion"
             hint="reached handover"
@@ -206,7 +206,7 @@ export function AdminView({ initial }: { initial: AdminSnapshot }) {
         </SectionTitle>
         <p className="mb-3 text-[12.5px] text-lo">
           Runs that never reached handover. The time is the shift clock they got
-          to, out of 30 minutes — not how long the tab was open.
+          to, out of 15 minutes — not how long the tab was open.
         </p>
         <Table
           head={["Name", "Email", "Stopped at", "Status", "Started", "Last seen"]}

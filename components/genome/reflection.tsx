@@ -25,7 +25,7 @@ export function Reflection({ story }: { story: StoryBeat[] }) {
           What happened
         </h3>
         <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-mid">
-          Six moments from your thirty minutes, in the order they happened.
+          Six moments from your fifteen minutes, in the order they happened.
         </p>
       </Reveal>
 

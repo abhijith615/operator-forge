@@ -36,7 +36,7 @@ function buildResume(genome: OperatorGenome): string {
 
   return [
     "Operator Forge — First Shift (Quick Commerce operations simulation)",
-    `Ran a live dark store for a 30-minute shift: ${stats.tasksHandled} operational decisions under a running clock, across inventory, staffing, customer escalations and head office.`,
+    `Ran a live dark store for a 15-minute shift: ${stats.tasksHandled} operational decisions under a running clock, across inventory, staffing, customer escalations and head office.`,
     `• Operator Rating ${genome.rating} / 1900 · assessed across ten capabilities from the decision record, not a questionnaire`,
     `• Strongest capabilities: ${strengths}`,
     `• Closed the shift at ${otif}% on-time-in-full with a ${stats.ratingAtClose.toFixed(2)} customer rating`,
@@ -49,7 +49,7 @@ function buildLinkedIn(genome: OperatorGenome): string {
   const otif = Math.round(genome.stats.otifAtClose * 100);
 
   return [
-    `I ran a quick-commerce dark store for 30 minutes in Operator Forge — a live operations simulation, not a quiz.`,
+    `I ran a quick-commerce dark store for 15 minutes in Operator Forge — a live operations simulation, not a quiz.`,
     ``,
     `${genome.stats.tasksHandled} decisions under a running clock. Finished at ${otif}% OTIF with an Operator Rating of ${genome.rating}.`,
     ``,
