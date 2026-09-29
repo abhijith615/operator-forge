@@ -26,9 +26,12 @@ function nameOf(id: string): string {
 export function GenomeReport({
   genome,
   firstName,
+  canRunAgain = false,
 }: {
   genome: OperatorGenome;
   firstName: string;
+  /** Admins, and anyone who has not finished a shift yet. Decided on the server. */
+  canRunAgain?: boolean;
 }) {
   const stats = [
     { label: "Tasks handled", value: String(genome.stats.tasksHandled) },
@@ -211,17 +214,19 @@ export function GenomeReport({
         ))}
       </div>
 
-      <Reveal className="mt-12 panel sheen flex flex-wrap items-center justify-between gap-5 p-6">
-        <div className="min-w-0">
-          <p className="text-[15px] font-medium text-hi">Run it again</p>
-          <p className="mt-1.5 max-w-lg text-[13.5px] leading-relaxed text-mid">
-            A second shift is where this gets useful — the readings that were
-            thin here get evidence, and your rating starts to move against
-            something.
-          </p>
-        </div>
-        <RestartShift variant="primary" />
-      </Reveal>
+      {canRunAgain ? (
+        <Reveal className="mt-12 panel sheen flex flex-wrap items-center justify-between gap-5 p-6">
+          <div className="min-w-0">
+            <p className="text-[15px] font-medium text-hi">Run it again</p>
+            <p className="mt-1.5 max-w-lg text-[13.5px] leading-relaxed text-mid">
+              A second shift is where this gets useful — the readings that were
+              thin here get evidence, and your rating starts to move against
+              something.
+            </p>
+          </div>
+          <RestartShift variant="primary" />
+        </Reveal>
+      ) : null}
 
       <p className="mt-8 text-[12.5px] leading-relaxed text-faint">
         Everything above is derived from your own run — every decision, its

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { GenomeView } from "@/components/genome/genome-view";
 import { requireOperator } from "@/lib/auth/session";
+import { canRunShift } from "@/lib/mission/attempts";
 
 export const metadata: Metadata = {
   title: "Genome",
@@ -11,5 +12,5 @@ export const metadata: Metadata = {
 export default async function GenomePage() {
   const operator = await requireOperator();
   const firstName = operator.fullName.split(" ")[0] ?? "Operator";
-  return <GenomeView firstName={firstName} />;
+  return <GenomeView firstName={firstName} canRunAgain={await canRunShift()} />;
 }

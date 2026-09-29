@@ -52,7 +52,7 @@ export function RestartShift({
             <DialogTitle>Run the shift again?</DialogTitle>
             <DialogDescription>
               You will start from the handover with a fresh store and a new
-              thirty-minute clock.
+              fifteen-minute clock.
             </DialogDescription>
           </DialogHeader>
 

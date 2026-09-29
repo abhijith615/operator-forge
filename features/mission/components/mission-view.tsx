@@ -23,9 +23,12 @@ import type { Operator } from "@/types/operator";
 export function MissionView({
   operator,
   chatConfigured,
+  canRunAgain = false,
 }: {
   operator: Operator;
   chatConfigured: boolean;
+  /** Admins, and anyone who has not finished a shift yet. Decided on the server. */
+  canRunAgain?: boolean;
 }) {
   const hydrated = useMissionHydrated();
   const status = useMissionStore((state) => state.status);
@@ -35,7 +38,7 @@ export function MissionView({
   if (status === "live") {
     return <ControlRoom firstName={firstName} chatConfigured={chatConfigured} />;
   }
-  if (status === "complete") return <ShiftComplete />;
+  if (status === "complete") return <ShiftComplete canRunAgain={canRunAgain} />;
 
   return <Briefing operator={operator} firstName={firstName} />;
 }

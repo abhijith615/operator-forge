@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { MissionView } from "@/features/mission/components/mission-view";
 import { isOpenAIConfigured } from "@/lib/agents/config";
 import { requireOperator } from "@/lib/auth/session";
+import { canRunShift } from "@/lib/mission/attempts";
 
 export const metadata: Metadata = {
   title: "Mission",
@@ -11,5 +12,11 @@ export const metadata: Metadata = {
 
 export default async function MissionPage() {
   const operator = await requireOperator();
-  return <MissionView operator={operator} chatConfigured={isOpenAIConfigured} />;
+  return (
+    <MissionView
+      operator={operator}
+      chatConfigured={isOpenAIConfigured}
+      canRunAgain={await canRunShift()}
+    />
+  );
 }

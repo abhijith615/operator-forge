@@ -11,7 +11,7 @@ import { FIRST_SHIFT } from "@/lib/constants/mission";
  * thing the operator was on their way to. The middleware and the guarded pages
  * already append `next`, so the destination is right there in the URL; this
  * reads it and says the matching thing. Arriving from Day 1 and being told
- * about a thirty-minute mission you did not ask for is the small kind of wrong
+ * about a fifteen-minute mission you did not ask for is the small kind of wrong
  * that makes a product feel assembled rather than built.
  */
 

@@ -18,7 +18,7 @@ import { FIRST_SHIFT } from "@/lib/constants/mission";
  * The close-out. Facts only — what the floor looked like when the clock ran
  * out. The reading of it is the Genome, and that is written in Phase 3.
  */
-export function ShiftComplete() {
+export function ShiftComplete({ canRunAgain = false }: { canRunAgain?: boolean }) {
   const world = useMissionStore((state) => state.world);
   const decisions = useMissionStore((state) => state.decisions);
   const achievements = useMissionStore((state) => state.achievements);
@@ -121,7 +121,7 @@ export function ShiftComplete() {
                   <ArrowRight className="transition-transform duration-300 ease-out-expo group-hover/btn:translate-x-0.5" />
                 </Link>
               </Button>
-              <RestartShift />
+              {canRunAgain ? <RestartShift /> : null}
             </div>
           </div>
         </div>

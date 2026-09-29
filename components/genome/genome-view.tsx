@@ -14,7 +14,13 @@ const PENDING_CONTENTS = [
   "What to keep doing, written as advice rather than as a grade",
 ] as const;
 
-export function GenomeView({ firstName }: { firstName: string }) {
+export function GenomeView({
+  firstName,
+  canRunAgain = false,
+}: {
+  firstName: string;
+  canRunAgain?: boolean;
+}) {
   const hydrated = useMissionHydrated();
   const genome = useGenome();
 
@@ -35,5 +41,5 @@ export function GenomeView({ firstName }: { firstName: string }) {
 
   if (!genome) return <LockedPanel href="/genome" contents={PENDING_CONTENTS} />;
 
-  return <GenomeReport genome={genome} firstName={firstName} />;
+  return <GenomeReport genome={genome} firstName={firstName} canRunAgain={canRunAgain} />;
 }
