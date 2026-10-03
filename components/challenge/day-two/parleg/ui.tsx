@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
 import { ScanLine } from "lucide-react";
 
@@ -11,10 +12,16 @@ import { cn } from "@/lib/utils";
 /**
  * Shared pieces for Case 02.
  *
- * The biscuit pack is a generic yellow-and-red pack drawn in CSS, not the
- * brand's artwork — it only has to make two things obvious: that the two
- * sizes look nearly identical, and which one is which when you read the label.
- * That near-identity is the whole mechanism of the case.
+ * The pack is a photograph of the real article, cropped to the packet. It was
+ * drawn in CSS before, which made the point abstractly; a picture makes it
+ * immediately. Both weights use the same photograph on purpose — that is the
+ * mechanism of the whole case. Two SKUs that are indistinguishable on a shelf
+ * get picked interchangeably, and the only thing telling them apart is the
+ * weight printed on the label, which is exactly what a picker in a hurry does
+ * not read.
+ *
+ * So the label badge is not decoration. It is the only difference between
+ * these two objects, and it stays legible at every size.
  */
 
 export function BiscuitPack({
@@ -39,10 +46,12 @@ export function BiscuitPack({
       aria-hidden
       className={cn(
         "relative inline-flex shrink-0 flex-col items-center overflow-hidden rounded-[3px] border transition-[opacity,filter,border-color] duration-200",
+        // Wider than the small chips: at this size the photograph is the
+        // point, and a narrow crop shows half a packet.
         large
           ? forty
-            ? "h-[74px] w-[54px]"
-            : "h-[64px] w-[46px]"
+            ? "h-[74px] w-[76px]"
+            : "h-[64px] w-[64px]"
           : forty
             ? "h-9 w-[25px]"
             : "h-8 w-[21px]",
@@ -50,14 +59,24 @@ export function BiscuitPack({
         dim && "opacity-35 saturate-[0.3]",
         className,
       )}
-      style={{ backgroundImage: "linear-gradient(180deg, #ffe066 0%, #f5c400 55%, #e0a800 100%)" }}
     >
-      <span className="mt-[34%] h-[26%] w-full bg-[#c8352c]" />
+      <Image
+        src="/parleg-pack.png"
+        alt=""
+        fill
+        // The crop is the packet and nothing else, so centring it keeps the
+        // front of the pack in frame at every box size the case uses.
+        className="object-cover object-center"
+        sizes="80px"
+      />
       {hideLabel ? null : (
         <span
           className={cn(
-            "absolute inset-x-0 bottom-[8%] text-center font-mono leading-none font-bold text-[#6d1a10]",
-            large ? "text-[11px]" : "text-[6.5px]",
+            // The weight is the only thing distinguishing the two SKUs, so it
+            // is set over a solid plate rather than over the photograph —
+            // small white-on-busy text is the first thing to become unreadable.
+            "absolute inset-x-0 bottom-0 bg-black/70 text-center font-mono leading-none font-bold text-white",
+            large ? "py-[3px] text-[11px]" : "py-px text-[6.5px]",
           )}
         >
           {forty ? "40g" : "30g"}
