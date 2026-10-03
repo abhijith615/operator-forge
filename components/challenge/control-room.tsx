@@ -104,7 +104,7 @@ export function ControlRoom(props: ControlRoomProps) {
   }, [taskCount, active, tour]);
 
   React.useEffect(() => {
-    if (tour) setLane(tour.pane);
+    if (tour) setLane(tour.pane as Lane);
   }, [tour]);
 
   /** Dim everything the current tour step is not talking about. */
@@ -370,6 +370,7 @@ export function ControlRoom(props: ControlRoomProps) {
         {tour ? (
           <PaneTour
             step={tour}
+            index={TOUR_STEPS.indexOf(tour)}
             total={TOUR_STEPS.length}
             onNext={() => props.onTourNext?.()}
             onSkip={() => props.onTourSkip?.()}

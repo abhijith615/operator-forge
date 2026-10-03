@@ -1,6 +1,11 @@
 "use client";
 
 import * as React from "react";
+
+import { PaneTour, type TourStep } from "@/components/challenge/pane-tour";
+import { useTour } from "@/lib/challenge/use-tour";
+import { HeartHandshake, PackageSearch } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Volume2, VolumeX } from "lucide-react";
 
@@ -45,7 +50,6 @@ import type { ChallengeResult } from "@/lib/challenge/types";
 import { easing } from "@/lib/motion";
 import { playNotificationSound } from "@/lib/sound";
 import { useShellStore } from "@/stores/shell-store";
-import { cn } from "@/lib/utils";
 
 const PHASE_LABEL: Partial<Record<Day5State["phase"], string>> = {
   milk: "Chilled shelf",
@@ -64,6 +68,31 @@ const PHASE_LABEL: Partial<Record<Day5State["phase"], string>> = {
  * next state before setting it — the engine is pure, so an event fires exactly
  * once with the state on either side of it.
  */
+/**
+ * Day 5's introduction, run before the clock.
+ *
+ * Day 5 is one case at a time, so there is less furniture to explain than
+ * elsewhere — which makes the two things always on screen worth naming: the
+ * case asking for a decision, and the four promises underneath that remember
+ * what every earlier decision did to a real person.
+ */
+const DAY_FIVE_TOUR: TourStep[] = [
+  {
+    pane: "case",
+    eyebrow: "Centre",
+    title: "One order, and what is wrong with it",
+    body: "Each case is on time, inside policy and within target — and still fails the person who ordered it. The evidence is here. What the customer actually came for is not written down anywhere.",
+    icon: PackageSearch,
+  },
+  {
+    pane: "promises",
+    eyebrow: "Below",
+    title: "Every promise you have made so far",
+    body: "Four customers, carried through the whole shift. A decision does not end when the case closes — this is where you see what you protected, what you traded away, and who is still waiting on you.",
+    icon: HeartHandshake,
+  },
+];
+
 export function DayFiveSimulation({ operatorName }: { operatorName: string }) {
   const [started, setStarted] = React.useState(false);
   const [initial, setInitial] = React.useState<Day5State | null>(null);
@@ -87,6 +116,7 @@ function Evening({ initial }: { initial: Day5State }) {
   const [state, setState] = React.useState<Day5State>(initial);
   const [now, setNow] = React.useState(() => Date.now());
   const [elapsed, setElapsed] = React.useState(0);
+  const tour = useTour(DAY_FIVE_TOUR);
   const [result, setResult] = React.useState<ChallengeResult | null>(null);
   const soundEnabled = useShellStore((s) => s.soundEnabled);
   const setSoundEnabled = useShellStore((s) => s.setSoundEnabled);
@@ -137,7 +167,7 @@ function Evening({ initial }: { initial: Day5State }) {
   );
 
   /* ── The clock ── */
-  const playing = state.phase !== "done";
+  const playing = state.phase !== "done" && !tour.running;
   React.useEffect(() => {
     if (!playing) return;
     const timer = window.setInterval(() => {
@@ -469,6 +499,9 @@ function Evening({ initial }: { initial: Day5State }) {
 
   return (
     <div className="flex min-h-dvh flex-col bg-obsidian">
+      {tour.step ? (
+        <PaneTour step={tour.step} index={tour.index} total={tour.total} onNext={tour.next} onSkip={tour.skip} />
+      ) : null}
       <header className="sticky top-0 z-30 border-b border-line bg-obsidian/92 backdrop-blur-md">
         <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2">
           <span data-readout className="font-mono text-[14px] leading-none font-semibold text-hi tabular-nums">
@@ -505,14 +538,14 @@ function Evening({ initial }: { initial: Day5State }) {
             animate={{ opacity: 1, y: 0 }}
             exit={reduced ? undefined : { opacity: 0, y: -6 }}
             transition={{ duration: 0.28, ease: easing.outExpo }}
-            className="rounded-card border border-line bg-surface/60 p-4 sm:p-5"
+            className={cn("rounded-card border border-line bg-surface/60 p-4 sm:p-5", tour.spotlight("case"))}
           >
             {moment}
           </motion.div>
         </AnimatePresence>
 
         {/* The four case journeys, always underneath — the day's own progress bar. */}
-        <section aria-label="Customer promises" className="rounded-card border border-line bg-surface p-3">
+        <section aria-label="Customer promises" className={cn("rounded-card border border-line bg-surface p-3", tour.spotlight("promises"))}>
           <p className="font-mono text-[9.5px] tracking-[0.14em] text-faint uppercase">Customer promises</p>
           <ul className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
             {CASE_IDS.map((id) => {

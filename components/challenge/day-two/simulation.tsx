@@ -1,6 +1,10 @@
 "use client";
 
 import * as React from "react";
+
+import { PaneTour, type TourStep } from "@/components/challenge/pane-tour";
+import { useTour } from "@/lib/challenge/use-tour";
+import { BookOpen, ListChecks, Scale } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
@@ -116,6 +120,39 @@ type Chime = "critical" | "warning" | "info" | "positive" | "neutral";
  * The day is stored once, when it ends — on "finish" or at 0:00 — so the
  * scorecard reflects both cases rather than whichever was signed first.
  */
+/**
+ * Day 2's introduction, run before the clock.
+ *
+ * Only the surfaces that are actually on screen at second zero: the queue of
+ * discrepancies, the case in front of you, and the ledger the numbers come
+ * from. The count cage, the tool rail and the evidence tray arrive when a case
+ * is opened, and a spotlight on something that is not mounted yet teaches
+ * nobody anything.
+ */
+const DAY_TWO_TOUR: TourStep[] = [
+  {
+    pane: "queue",
+    eyebrow: "Left",
+    title: "Every discrepancy, waiting",
+    body: "The night's variances, worst first. You choose which to open and in what order — and part of this is deciding which missing money is worth the clock.",
+    icon: ListChecks,
+  },
+  {
+    pane: "case",
+    eyebrow: "Centre",
+    title: "The case in front of you",
+    body: "What the system believes, what the shelf says, and the gap between them. Nothing here tells you which one is wrong. That is the work: establish what is actually true before reasoning about why.",
+    icon: Scale,
+  },
+  {
+    pane: "ledger",
+    eyebrow: "Below",
+    title: "The ledger it came from",
+    body: "Every movement that touched this stock — receipts, picks, returns, adjustments. The cause of a variance is almost always a line in here that somebody read past.",
+    icon: BookOpen,
+  },
+];
+
 export function DayTwoSimulation({ operatorName }: { operatorName: string }) {
   // The brief sits outside the audit so the fifteen minutes start when the
   // operator says so, not when the page happens to finish loading.
@@ -130,6 +167,8 @@ function Audit({ operatorName }: { operatorName: string }) {
   const [pgOpen, setPgOpen] = React.useState(false);
   const [tool, setTool] = React.useState<Day2Tool | null>(null);
   const [elapsed, setElapsed] = React.useState(0);
+  // Introduced before the clock, like every other day.
+  const tour = useTour(DAY_TWO_TOUR);
   const [trayOpen, setTrayOpen] = React.useState(false);
   const [result, setResult] = React.useState<ChallengeResult | null>(null);
   const [showScorecard, setShowScorecard] = React.useState(false);
@@ -204,13 +243,13 @@ function Audit({ operatorName }: { operatorName: string }) {
      until the day ends — not until Case 01 is signed, because Case 02 may
      still be ahead. */
   React.useEffect(() => {
-    if (dayFinished) return;
+    if (dayFinished || tour.running) return;
     const timer = window.setInterval(
       () => setElapsed((v) => v + 1),
       1000 / timeScale(),
     );
     return () => window.clearInterval(timer);
-  }, [dayFinished]);
+  }, [dayFinished, tour.running]);
 
   /* ── Case 01 transitions ── */
 
@@ -417,7 +456,16 @@ function Audit({ operatorName }: { operatorName: string }) {
   const viewKey = pgOpen ? "parleg" : state.stage + (tool ?? "");
 
   return (
-    <div className="flex min-h-dvh flex-col bg-obsidian">
+    <div className="relative flex min-h-dvh flex-col bg-obsidian">
+      {tour.step ? (
+        <PaneTour
+          step={tour.step}
+          index={tour.index}
+          total={tour.total}
+          onNext={tour.next}
+          onSkip={tour.skip}
+        />
+      ) : null}
       <Header
         elapsed={elapsed}
         remaining={remaining}
@@ -449,6 +497,7 @@ function Audit({ operatorName }: { operatorName: string }) {
                 />
               ) : state.stage === "brief" ? (
                 <Brief
+                  spotlight={tour.spotlight}
                   master={master}
                   selectedId={selectedCase}
                   onSelect={setSelectedCase}
@@ -689,6 +738,7 @@ function NextCaseCard({ resumed, onOpen }: { resumed: boolean; onOpen: () => voi
  * records. Both are theirs to choose.
  */
 function Brief({
+  spotlight,
   master,
   selectedId,
   onSelect,
@@ -697,6 +747,7 @@ function Brief({
   parlegSummary,
   recordUnitsCorrected,
 }: {
+  spotlight: (key: string) => string;
   master: MasterLedger;
   selectedId: string;
   onSelect: (id: string) => void;
@@ -738,12 +789,13 @@ function Brief({
       <div className="grid gap-3 xl:grid-cols-[320px_minmax(0,1fr)]">
         <aside
           aria-label="Audit queue"
-          className="self-start rounded-card border border-line bg-surface"
+          className={cn("self-start rounded-card border border-line bg-surface", spotlight("queue"))}
         >
           <AuditQueue selectedId={selectedId} onSelect={onSelect} completedIds={completedIds} />
         </aside>
 
         <div className="min-w-0 space-y-3">
+          <div className={spotlight("case")}>
           <CasePanel
             row={row}
             completed={completedIds.includes(row.id)}
@@ -751,6 +803,8 @@ function Brief({
             onOpen={() => onOpenCase(row.id)}
             onOpenEarbuds={() => onSelect("earbuds")}
           />
+          </div>
+          <div className={spotlight("ledger")}>
           <LedgerBoard
             master={master}
             selectedId={selectedId}
@@ -758,6 +812,7 @@ function Brief({
             completedIds={completedIds}
             recordUnitsCorrected={recordUnitsCorrected}
           />
+          </div>
         </div>
       </div>
     </div>

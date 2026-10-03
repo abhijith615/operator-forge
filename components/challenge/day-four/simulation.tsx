@@ -1,6 +1,11 @@
 "use client";
 
 import * as React from "react";
+
+import { PaneTour, type TourStep } from "@/components/challenge/pane-tour";
+import { useTour } from "@/lib/challenge/use-tour";
+import { ClipboardList, Gauge, Map } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Volume2, VolumeX } from "lucide-react";
 
@@ -65,6 +70,38 @@ function useCompact(): boolean {
  * computes the next state before setting it, so an event fires exactly once
  * with the floor on either side of it.
  */
+/**
+ * Day 4's introduction, run before the clock.
+ *
+ * Two surfaces carry the whole day — the floor you are looking at and the
+ * panel asking you to act on it — plus the flow metrics in the header, which
+ * are the only evidence of a constraint anyone gets. The dock sequencer and
+ * the recovery timeline appear in later phases and are not introduced here.
+ */
+const DAY_FOUR_TOUR: TourStep[] = [
+  {
+    pane: "floor",
+    eyebrow: "Centre",
+    title: "The floor, from above",
+    body: "Three vehicles arrived together and the store has to absorb them. Watch the staging lane, the aisle and the pick face: a store chokes in a place, and that place is visible here before any number moves.",
+    icon: Map,
+  },
+  {
+    pane: "panel",
+    eyebrow: "Right",
+    title: "What the store is asking for",
+    body: "One decision at a time — where it is choking, which vehicle comes off a dock, what moves first. The panel changes as the morning does, and the order you work in is most of what is being read.",
+    icon: ClipboardList,
+  },
+  {
+    pane: "metrics",
+    eyebrow: "Top",
+    title: "The numbers that prove it",
+    body: "Readiness, routes and click-to-dispatch. A bottleneck you can feel is a guess; a bottleneck these confirm is a diagnosis, and only one of the two survives being asked why.",
+    icon: Gauge,
+  },
+];
+
 export function DayFourSimulation({ operatorName }: { operatorName: string }) {
   const [initial, setInitial] = React.useState<Day4State | null>(null);
   if (!initial) {
@@ -85,6 +122,7 @@ function Morning({ initial }: { initial: Day4State }) {
   const [state, setState] = React.useState(initial);
   const [now, setNow] = React.useState(() => Date.now());
   const [elapsed, setElapsed] = React.useState(0);
+  const tour = useTour(DAY_FOUR_TOUR);
   const [zone, setZone] = React.useState<ZoneId | null>(null);
   const [selected, setSelected] = React.useState<BatchId | null>(null);
   const [digest, setDigest] = React.useState<RunDigest | null>(null);
@@ -134,7 +172,7 @@ function Morning({ initial }: { initial: Day4State }) {
   }, []);
 
   /* ── The clock ── */
-  const playing = state.phase !== "execute" && state.phase !== "done";
+  const playing = state.phase !== "execute" && state.phase !== "done" && !tour.running;
   React.useEffect(() => {
     if (!playing) return;
     const timer = window.setInterval(() => {
@@ -492,6 +530,9 @@ function Morning({ initial }: { initial: Day4State }) {
 
   return (
     <div className="flex min-h-dvh flex-col bg-obsidian">
+      {tour.step ? (
+        <PaneTour step={tour.step} index={tour.index} total={tour.total} onNext={tour.next} onSkip={tour.skip} />
+      ) : null}
       <header className="sticky top-0 z-30 border-b border-line bg-obsidian/92 backdrop-blur-md">
         <div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2">
           <span data-readout className="font-mono text-[14px] leading-none font-semibold text-hi tabular-nums">
@@ -499,7 +540,7 @@ function Morning({ initial }: { initial: Day4State }) {
           </span>
           <CountdownPill remaining={remaining} label="remaining in the shift" />
           <span className="hidden text-[11.5px] text-faint md:inline">Clear the Floor · lunch at 11:00</span>
-          <div className="order-last w-full sm:order-none sm:ml-auto sm:w-[440px]">
+          <div className={cn("order-last w-full sm:order-none sm:ml-auto sm:w-[440px]", tour.spotlight("metrics"))}>
             <FlowMetrics metrics={metrics} compact />
           </div>
           <button
@@ -518,7 +559,7 @@ function Morning({ initial }: { initial: Day4State }) {
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_360px]">
           {/* On a phone the floor stays at a readable scale and scrolls sideways
               inside its own box, rather than shrinking until nothing on it can be tapped. */}
-          <div className="min-w-0 overflow-hidden rounded-card border border-line">
+          <div className={cn("min-w-0 overflow-hidden rounded-card border border-line", tour.spotlight("floor"))}>
             <div className="overflow-x-auto">
               <div className="min-w-[620px] sm:min-w-0">{map}</div>
             </div>
@@ -531,7 +572,7 @@ function Morning({ initial }: { initial: Day4State }) {
               exit={reduced ? undefined : { y: -4 }}
               transition={{ duration: 0.22, ease: easing.outExpo }}
               aria-label="Operations panel"
-              className="min-w-0"
+              className={cn("min-w-0", tour.spotlight("panel"))}
             >
               {panel}
             </motion.aside>

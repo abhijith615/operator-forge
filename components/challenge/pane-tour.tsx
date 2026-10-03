@@ -11,11 +11,12 @@ import { cn } from "@/lib/utils";
 export type TourPane = "queue" | "board" | "comms";
 
 export interface TourStep {
-  pane: TourPane;
+  /** Which surface this step is about. Matched against the day's own keys. */
+  pane: string;
   eyebrow: string;
   title: string;
   body: string;
-  icon: typeof ListChecks;
+  icon?: typeof ListChecks;
 }
 
 /**
@@ -57,19 +58,20 @@ export const TOUR_STEPS: TourStep[] = [
 
 export function PaneTour({
   step,
+  index,
   total,
   onNext,
   onSkip,
 }: {
   step: TourStep;
+  index: number;
   total: number;
   onNext: () => void;
   onSkip: () => void;
 }) {
   const reduced = useReducedMotion();
-  const index = TOUR_STEPS.indexOf(step);
   const last = index === total - 1;
-  const Icon = step.icon;
+  const Icon = step.icon ?? ListChecks;
 
   // Enter and the arrow keys are what somebody reaches for in a full-screen
   // overlay; making them work costs nothing and saves a hunt for the button.
@@ -87,7 +89,10 @@ export function PaneTour({
 
   return (
     <div
-      className="absolute inset-0 z-40 flex items-end justify-center p-4 sm:p-6"
+      // Fixed, not absolute: Day 1 is a single viewport but Days 2 to 5
+      // scroll, and an absolute overlay there anchors to the document and puts
+      // the card below the fold.
+      className="fixed inset-0 z-40 flex items-end justify-center p-4 sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="tour-title"
@@ -134,9 +139,9 @@ export function PaneTour({
           </div>
 
           <div className="mt-4 flex gap-1.5" aria-hidden>
-            {TOUR_STEPS.map((entry, i) => (
+            {Array.from({ length: total }).map((_, i) => (
               <span
-                key={entry.pane}
+                key={i}
                 className={cn(
                   "h-[3px] flex-1 rounded-full transition-colors",
                   i <= index ? "bg-ember-500" : "bg-line-strong",

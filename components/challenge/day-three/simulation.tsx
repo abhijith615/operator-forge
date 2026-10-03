@@ -1,6 +1,11 @@
 "use client";
 
 import * as React from "react";
+import { cn } from "@/lib/utils";
+
+import { PaneTour, type TourStep } from "@/components/challenge/pane-tour";
+import { useTour } from "@/lib/challenge/use-tour";
+import { Clock3, LayoutGrid, Users } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Volume2, VolumeX } from "lucide-react";
 
@@ -99,6 +104,38 @@ const PHASE_LABEL: Partial<Record<Day3State["phase"], string>> = {
  * which computes the next state before setting it — the engine is pure, so the
  * event fires exactly once with the state on either side of it.
  */
+/**
+ * Day 3's introduction, run before the clock.
+ *
+ * Three surfaces are mounted at second zero: the people you have, the moment
+ * asking something of you, and the board where the plan actually gets built.
+ * The flex market and the rider board arrive later in the evening, so they are
+ * not introduced here — a spotlight on something unmounted teaches nobody.
+ */
+const DAY_THREE_TOUR: TourStep[] = [
+  {
+    pane: "people",
+    eyebrow: "Left",
+    title: "Everyone you actually have",
+    body: "Thirteen names, what each is trained on, and how fast they pick. Five of the people you were expecting are not coming. Nothing here is a spare part — a strong picker in packing is a strong picker you no longer have on the face.",
+    icon: Users,
+  },
+  {
+    pane: "moment",
+    eyebrow: "Centre",
+    title: "What the evening is asking",
+    body: "The shift arrives one moment at a time — a rota to build, a vehicle inbound, somebody who wants a word. Each one closes when you act on it, and the evening does not wait for you to feel ready.",
+    icon: Clock3,
+  },
+  {
+    pane: "board",
+    eyebrow: "Below",
+    title: "The plan, as the floor will run it",
+    body: "Drag people onto stations and the board shows what that staffing actually produces through the peak. There is no correct roster — what is read is whether the right capacity stood in the right place before the evening needed it.",
+    icon: LayoutGrid,
+  },
+];
+
 export function DayThreeSimulation({ operatorName }: { operatorName: string }) {
   const [started, setStarted] = React.useState(false);
   const [initial, setInitial] = React.useState<Day3State | null>(null);
@@ -122,6 +159,7 @@ function Evening({ initial }: { initial: Day3State }) {
   const [state, setState] = React.useState<Day3State>(initial);
   const [now, setNow] = React.useState(() => Date.now());
   const [elapsed, setElapsed] = React.useState(0);
+  const tour = useTour(DAY_THREE_TOUR);
   const [openId, setOpenId] = React.useState<string | null>(null);
   const [marketOpen, setMarketOpen] = React.useState(false);
   const [peopleOpen, setPeopleOpen] = React.useState(false);
@@ -180,7 +218,7 @@ function Evening({ initial }: { initial: Day3State }) {
   );
 
   /* ── The clock ── */
-  const playing = state.phase !== "peak" && state.phase !== "done";
+  const playing = state.phase !== "peak" && state.phase !== "done" && !tour.running;
   React.useEffect(() => {
     if (!playing) return;
     const timer = window.setInterval(() => {
@@ -796,6 +834,9 @@ function Evening({ initial }: { initial: Day3State }) {
 
   return (
     <div className="flex min-h-dvh flex-col bg-obsidian">
+      {tour.step ? (
+        <PaneTour step={tour.step} index={tour.index} total={tour.total} onNext={tour.next} onSkip={tour.skip} />
+      ) : null}
       <header className="sticky top-0 z-30 border-b border-line bg-obsidian/92 backdrop-blur-md">
         <div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2">
           <span data-readout className="font-mono text-[14px] leading-none font-semibold text-hi tabular-nums">
@@ -831,7 +872,7 @@ function Evening({ initial }: { initial: Day3State }) {
       <div className="mx-auto grid w-full max-w-[1500px] flex-1 gap-3 p-3 lg:grid-cols-[290px_minmax(0,1fr)] lg:p-4">
         <aside
           aria-label="Your team"
-          className="order-3 self-start rounded-card border border-line bg-surface lg:order-none lg:sticky lg:top-[72px] lg:flex lg:max-h-[calc(100dvh-88px)] lg:flex-col"
+          className={cn("order-3 self-start rounded-card border border-line bg-surface lg:order-none lg:sticky lg:top-[72px] lg:flex lg:max-h-[calc(100dvh-88px)] lg:flex-col", tour.spotlight("people"))}
         >
           <PeoplePool state={state} editable={editable} onAssign={assign} onOpen={open} highlight={highlight} />
         </aside>
@@ -844,12 +885,13 @@ function Evening({ initial }: { initial: Day3State }) {
               animate={{ y: 0 }}
               exit={reduced ? undefined : { y: -4 }}
               transition={{ duration: 0.22, ease: easing.outExpo }}
-              className="rounded-card border border-line bg-surface/60 p-4"
+              className={cn("rounded-card border border-line bg-surface/60 p-4", tour.spotlight("moment"))}
             >
               {moment}
             </motion.div>
           </AnimatePresence>
 
+          <div className={tour.spotlight("board")}>
           <ShiftBoard
             state={state}
             world={world}
@@ -867,6 +909,7 @@ function Evening({ initial }: { initial: Day3State }) {
             onMoveAudit={moveAudit}
             onSelectWorker={open}
           />
+          </div>
 
           {laterPhase && state.phase !== "late" && editable ? (
             <details className="rounded-card border border-line bg-surface p-3.5">
