@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { animate, motion, useReducedMotion } from "framer-motion";
 
 import { COVER_LABEL, COVER_SHORT, type CoverLane, type Skill, type Station, type Worker } from "@/lib/challenge/day-three/types";
@@ -182,6 +183,20 @@ export function CoverageMeter({
 
 /* ── People ───────────────────────────────────────────────────────────── */
 
+/**
+ * Who has a portrait. Everybody on the roster does; the manager is the
+ * operator, who gets "YOU" rather than a face they did not choose.
+ *
+ * A missing file falls through to initials rather than breaking the card —
+ * the same two letters this showed before — so adding or renaming somebody
+ * degrades to the old behaviour instead of a hole in the roster.
+ */
+const PORTRAITS = new Set([
+  "arjun", "nikhil", "akhil", "divya", "priya", "varun", "faisal", "sneha",
+  "manu", "lakshmi", "imran", "rahul", "joseph",
+  "akash", "riya", "manoj", "sandeep", "kavya",
+]);
+
 export function Avatar({
   worker,
   size = "md",
@@ -193,6 +208,39 @@ export function Avatar({
 }) {
   const dims =
     size === "sm" ? "size-6 text-[9px]" : size === "lg" ? "size-12 text-[14px]" : "size-9 text-[11px]";
+
+  /**
+   * A face, where there is one.
+   *
+   * Day 3 asks somebody to decide who stays late, who is moved off the station
+   * they are good at, and who gets told their incentive has not been paid.
+   * Those are decisions about people, and two monogrammed letters make them
+   * feel like decisions about tokens. The ring colour still carries the thing
+   * the initials carried — regular, flex, or you.
+   */
+  if (worker.kind !== "manager" && PORTRAITS.has(worker.id)) {
+    return (
+      <span
+        className={cn(
+          "relative shrink-0 overflow-hidden rounded-full",
+          worker.kind === "flex"
+            ? "ring-1 ring-flux-400/60"
+            : "ring-1 ring-line-strong",
+          dims,
+          className,
+        )}
+      >
+        <Image
+          src={`/people/${worker.id}.jpg`}
+          alt=""
+          fill
+          sizes="48px"
+          className="object-cover"
+        />
+      </span>
+    );
+  }
+
   return (
     <span
       aria-hidden
