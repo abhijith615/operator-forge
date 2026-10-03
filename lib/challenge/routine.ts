@@ -616,6 +616,80 @@ const AUTHORED: RoutineTask[] = [
 ];
 
 /**
+ * The third option.
+ *
+ * Every routine task was authored as a pair: the right thing, and the thing
+ * that costs you. Shuffling two options puts the right answer first half the
+ * time, which is exactly what it looked like — and a coin flip is not a
+ * decision. Worse, a pair is answerable without reading it: one option sounds
+ * diligent and the other sounds lazy, so the operator is pattern-matching
+ * rather than running a store.
+ *
+ * So each gains a middle: delegate it, do half of it, or buy time. On a real
+ * floor that is the option most managers actually take, and it is the one that
+ * is genuinely hard to judge — sometimes the best answer available, sometimes
+ * how a small problem survives the morning. A few are as good as doing it
+ * yourself, so "the diligent-sounding one" stops being a reliable tell.
+ *
+ * Metric consequences only. Routine work is texture, and the signals are
+ * stripped from every option below along with the rest.
+ */
+const MIDDLE: Record<string, SceneChoice> = {
+  "r-goods-in": quick("delegate-receipt", "Have the Floor Lead receive it while you stay on the board",
+    { tone: "healthy", headline: "Delegated", body: "Signed, counted and put away by somebody who is not you. The board never loses your eyes." }, {}, {}),
+  "r-break": quick("two-now", "Give her two minutes now, the rest after the peak",
+    { tone: "warning", headline: "Half a break", body: "She takes it, and comes back still tired. Nobody is sure whether that counted." }, {}, { packingQueue: 1 }),
+  "r-temperature": quick("nearest-reads", "Ask whoever is nearest the chiller to read it",
+    { tone: "healthy", headline: "Logged on time", body: "Thirty seconds from somebody already standing there. That is what the sheet is for." }, {}, {}),
+  "r-order-note": quick("note-on-bag", "Write the note on the bag itself",
+    { tone: "warning", headline: "Note on the bag", body: "It reaches the door. The rider reads it after he has knocked." }, {}, {}),
+  "r-handheld": quick("finish-order", "Let him finish this order, then swap at the bench",
+    { tone: "healthy", headline: "Swapped between runs", body: "Six per cent covers one order. Nothing is dropped mid-aisle." }, {}, {}),
+  "r-trolleys": quick("pull-two", "Pull two back yourself",
+    { tone: "warning", headline: "Two trolleys", body: "The face can move again, and you spent ninety seconds off the board to do it." }, {}, { pickingCapacity: 1 }),
+  "r-damaged": quick("quarantine-only", "Quarantine them, skip the supplier claim",
+    { tone: "warning", headline: "Written off quietly", body: "Nobody eats a flattened loaf. Nobody pays for them either, because nothing was filed." }, {}, {}),
+  "r-duplicate": quick("pick-one-hold", "Pick one, hold the second until somebody answers",
+    { tone: "healthy", headline: "One out, one held", body: "The customer gets what they almost certainly wanted, and nobody pays twice." }, {}, {}),
+  "r-rider-parking": quick("ask-next-rider", "Ask the next rider out to move them",
+    { tone: "warning", headline: "One bike moved", body: "He moves his own and leaves the other two. The van still cannot get in." }, {}, {}),
+  "r-zone-swap": quick("swap-after-wave", "Swap him after this wave, not mid-pick",
+    { tone: "healthy", headline: "Swapped cleanly", body: "He finishes what he is holding, then moves. Nothing is abandoned in an aisle." }, {}, {}),
+  "r-short-pick": quick("substitute", "Substitute the nearest equivalent",
+    { tone: "warning", headline: "Substituted", body: "Some customers are delighted by that. This one chose the brand on purpose." }, {}, { ctd: -2 }),
+  "r-new-joiner": quick("borrow-login", "Borrow a device from dispatch and sort the login later",
+    { tone: "warning", headline: "Picking on somebody else's login", body: "He is working in two minutes, and every pick he makes is recorded as another person's." }, {}, { pickingCapacity: 2 }),
+  "r-aisle-block": quick("next-picker", "Ask whoever passes it next to move it",
+    { tone: "warning", headline: "Left to somebody", body: "Everyone assumes somebody else will. It is still there in ten minutes." }, {}, { pickingCapacity: -1 }),
+  "r-label-jam": quick("move-bench", "Move his orders to bench 1 and fix the printer after",
+    { tone: "healthy", headline: "Packing keeps scanning", body: "Labels scan at handover. The jam waits for somebody who is not mid-peak." }, {}, {}),
+  "r-allergy-note": quick("call-customer", "Call the customer to confirm what they need",
+    { tone: "warning", headline: "Four minutes spent confirming", body: "Careful, and the note was already unambiguous. The order was ready to go." }, {}, { ctd: 3 }),
+  "r-rider-late": quick("fleet-chases", "Have the fleet lead chase him, five more minutes",
+    { tone: "healthy", headline: "Chased, with a limit", body: "Somebody else is on the phone, and five minutes is a real deadline rather than a hope." }, {}, {}),
+  "r-stock-count": quick("fast-movers", "Count the fast movers only",
+    { tone: "warning", headline: "Partial count", body: "The lines that move get checked. Shrink lives in the ones that do not." }, {}, {}),
+  "r-bag-shortage": quick("ask-driver", "Ask the next delivery driver to bring a sleeve up",
+    { tone: "warning", headline: "Waiting on a favour", body: "He might. Packing is now betting on somebody else's errand." }, {}, {}),
+  "r-wrong-address": quick("try-next-block", "Have the rider try the neighbouring block",
+    { tone: "warning", headline: "Guessing at doors", body: "Twelve minutes of a rider knocking, and the chilled items warming in the box." }, {}, { ctd: 4 }),
+  "r-fridge-alarm": quick("move-dairy", "Move the dairy out and watch the unit",
+    { tone: "warning", headline: "Dairy out, the rest still in", body: "What you moved is safe. Everything you left is still climbing through 9 degrees." }, {}, { pickingCapacity: -1 }),
+  "r-double-scan": quick("block-sku", "Block picking on that SKU until it is recounted",
+    { tone: "warning", headline: "SKU held", body: "No phantom picks. No real ones either, on a line customers are ordering right now." }, {}, {}),
+  "r-vip-waiting": quick("warn-customer", "Ask support to tell the customer it is running late",
+    { tone: "warning", headline: "Told, and still waiting", body: "Now they know it is late. It is still sitting on the rack with nobody carrying it." }, {}, { ctd: 2 }),
+  "r-new-sku": quick("trolley-at-face", "Put it on a trolley at the face and slot it tonight",
+    { tone: "warning", headline: "On a trolley at the face", body: "Reachable, and one more thing in the walkway. Tonight is when somebody remembers to slot it." }, {}, {}),
+  "r-phone-ringing": quick("newest-answers", "Send the newest person to answer it",
+    { tone: "warning", headline: "Answered, not handled", body: "He is polite and cannot help with a single thing they ask him." }, {}, {}),
+  "r-spill": quick("cone-and-mop", "Cone it and send the nearest picker for a mop",
+    { tone: "healthy", headline: "Cleared in two minutes", body: "Dealt with by somebody whose eyes are not needed on the board." }, {}, { pickingCapacity: -1 }),
+  "r-rider-argument": quick("whoever-loaded", "Give it to whichever of them is loaded and ready",
+    { tone: "healthy", headline: "Settled on something neutral", body: "Nobody wins the argument, and the bay is moving inside thirty seconds." }, {}, {}),
+};
+
+/**
  * What the board actually deals.
  *
  * The authored signals above record which way each option leans, and they used
@@ -634,5 +708,7 @@ const AUTHORED: RoutineTask[] = [
  */
 export const ROUTINE_TASKS: RoutineTask[] = AUTHORED.map((task) => ({
   ...task,
-  choices: task.choices.map((choice) => ({ ...choice, signals: {} })),
+  choices: [...task.choices, MIDDLE[task.id]]
+    .filter((choice): choice is SceneChoice => Boolean(choice))
+    .map((choice) => ({ ...choice, signals: {} })),
 }));
