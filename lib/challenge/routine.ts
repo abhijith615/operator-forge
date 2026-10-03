@@ -42,7 +42,7 @@ const quick = (
   outcome,
 });
 
-export const ROUTINE_TASKS: RoutineTask[] = [
+const AUTHORED: RoutineTask[] = [
   {
     id: "r-goods-in",
     stream: "operations",
@@ -509,4 +509,130 @@ export const ROUTINE_TASKS: RoutineTask[] = [
       quick("double-up", "Double up small bags when they run out", { tone: "warning", headline: "Improvising", body: "Two small bags is slower to pack and worse to carry." }, {}, { packingQueue: 2 }),
     ],
   },
+  {
+    id: "r-wrong-address",
+    stream: "customers",
+    priority: "normal",
+    title: "#5012 — flat number missing",
+    detail: "Rider is at the gate. The customer is not picking up.",
+    source: "Rider 219",
+    ttl: 50,
+    choices: [
+      quick("call-support", "Get support to reach them on the app", { tone: "healthy", headline: "Address confirmed", body: "Flat 3B. The rider is moving again inside a minute." }, {}, { ctd: -2 }),
+      quick("return-it", "Bring it back and mark it undelivered", { tone: "critical", headline: "Order returned", body: "Chilled goods, a round trip, and a customer who was home the whole time." }, {}, { ordersWaiting: 2 }),
+    ],
+  },
+  {
+    id: "r-fridge-alarm",
+    stream: "operations",
+    priority: "high",
+    title: "Chiller 2 is reading 9°C",
+    detail: "Door seal looks fine. It has been climbing for ten minutes.",
+    source: "Temperature alarm",
+    ttl: 45,
+    choices: [
+      quick("move-stock", "Move the stock to Chiller 1 and log it", { tone: "healthy", headline: "Stock protected", body: "Dairy is back under 5°C and the fault is written down for maintenance." }, {}, { pickingCapacity: -2 }),
+      quick("reset-unit", "Reset the unit and carry on", { tone: "critical", headline: "Still climbing", body: "A reset is not a repair. Every minute above 8°C is stock you cannot sell." }, {}, { ctd: 3 }),
+    ],
+  },
+  {
+    id: "r-double-scan",
+    stream: "operations",
+    priority: "normal",
+    title: "Same crate scanned twice at goods-in",
+    detail: "System now shows 80 units of curd. The dock has 40.",
+    source: "Inventory alert",
+    ttl: 55,
+    choices: [
+      quick("correct-now", "Correct it before anyone picks against it", { tone: "healthy", headline: "Count corrected", body: "Forty phantom units removed before they turn into forty Nil Picks." }, {}, {}),
+      quick("fix-later", "Leave it for the evening count", { tone: "warning", headline: "Phantom stock live", body: "Pickers will be sent to a shelf that cannot fill the order." }, {}, { nilPicks: 1 }),
+    ],
+  },
+  {
+    id: "r-vip-waiting",
+    stream: "customers",
+    priority: "high",
+    title: "#4990 has been waiting 19 minutes",
+    detail: "Picked and packed. It is sitting on the staging rack with nobody assigned.",
+    source: "Fulfilment board",
+    ttl: 45,
+    choices: [
+      quick("assign-now", "Put it on the next rider out", { tone: "healthy", headline: "On its way", body: "Nineteen minutes is recoverable. Twenty-five is a refund." }, {}, { ridersWaiting: -1, ctd: -3 }),
+      quick("batch-it", "Wait and batch it with the next one for that block", { tone: "warning", headline: "Still on the rack", body: "Batching saves a trip and costs this customer another eight minutes." }, {}, { ctd: 4 }),
+    ],
+  },
+  {
+    id: "r-new-sku",
+    stream: "operations",
+    priority: "normal",
+    title: "New SKU has no pick-face location",
+    detail: "Forty units of a protein bar nobody has slotted. Orders are already dropping for it.",
+    source: "Picker",
+    ttl: 60,
+    choices: [
+      quick("slot-it", "Slot it into the gap in Zone A and tell the floor", { tone: "healthy", headline: "Slotted", body: "It can be picked like anything else, by anyone." }, {}, {}),
+      quick("bulk-only", "Leave it in bulk and let pickers ask", { tone: "warning", headline: "Pick on request", body: "Every order for it now costs a conversation and a walk to the back." }, {}, { pickingCapacity: -2 }),
+    ],
+  },
+  {
+    id: "r-phone-ringing",
+    stream: "people",
+    priority: "normal",
+    title: "Store phone has rung out four times",
+    detail: "Nobody near the desk. It is almost certainly a customer.",
+    source: "Front desk",
+    ttl: 40,
+    choices: [
+      quick("answer-it", "Pick it up yourself", { tone: "healthy", headline: "Answered", body: "A missed item on an order that went out ten minutes ago. Now fixable." }, {}, {}),
+      quick("let-ring", "Let it go to the support line", { tone: "warning", headline: "Rang out", body: "Support will call back in an hour. The order leaves in six minutes." }, {}, {}),
+    ],
+  },
+  {
+    id: "r-spill",
+    stream: "people",
+    priority: "high",
+    title: "Oil spill in the dry aisle",
+    detail: "Half a litre across the walkway. Two pickers are stepping around it.",
+    source: "Floor",
+    ttl: 40,
+    choices: [
+      quick("clean-now", "Stop and get it cleaned and coned", { tone: "healthy", headline: "Aisle made safe", body: "Ninety seconds of picking lost. Nobody goes to hospital." }, {}, { pickingCapacity: -2 }),
+      quick("step-around", "Cone it and clean after the peak", { tone: "critical", headline: "Still wet", body: "A coned spill in a peak is a fall waiting for the person not looking down." }, {}, {}),
+    ],
+  },
+  {
+    id: "r-rider-argument",
+    stream: "people",
+    priority: "normal",
+    title: "Two riders arguing over a batch",
+    detail: "Both say the three-drop run was assigned to them. It is getting loud at the bay.",
+    source: "Dispatch bay",
+    ttl: 50,
+    choices: [
+      quick("decide-fast", "Decide it on the spot and move them both on", { tone: "healthy", headline: "Settled", body: "Thirty seconds, one decision, and the bay is working again." }, {}, {}),
+      quick("let-sort", "Let them sort it out between themselves", { tone: "warning", headline: "Still arguing", body: "Three orders sit on the rack while two adults negotiate." }, {}, { ctd: 3 }),
+    ],
+  },
 ];
+
+/**
+ * What the board actually deals.
+ *
+ * The authored signals above record which way each option leans, and they used
+ * to be scored — which is how a shift reached 100 on all five dimensions. The
+ * scale in `scoring.ts` is calibrated against the six scored scenarios alone;
+ * routine work is dealt continuously and recycles when the pool runs dry, so
+ * its contribution has no ceiling. Twenty answered deliveries and break
+ * requests were worth more raw signal than the entire assessment, and every
+ * dimension clamped at the top.
+ *
+ * So routine work is exactly what this file always claimed it was: texture.
+ * It carries its metric effects — ignore the small stuff and the board
+ * degrades, which is how a real floor punishes it, and the degraded board is
+ * what the peak and the recovery plan are scored against. It no longer moves
+ * a dimension directly.
+ */
+export const ROUTINE_TASKS: RoutineTask[] = AUTHORED.map((task) => ({
+  ...task,
+  choices: task.choices.map((choice) => ({ ...choice, signals: {} })),
+}));

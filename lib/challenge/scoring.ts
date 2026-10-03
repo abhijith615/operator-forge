@@ -27,19 +27,31 @@ export const DAY_ONE_WEIGHTS: Record<Dimension, number> = {
 
 /**
  * The raw signal range each dimension can reach across a full run, used to map
- * accumulated signal onto 0–100. Derived by walking every path in day-one.ts:
- * `floor` is what a consistently poor run accumulates, `ceiling` what a strong
- * one does. Not a theoretical maximum — hitting the ceiling should be possible.
+ * accumulated signal onto 0–100.
+ *
+ * Measured, not estimated. Every staffing permutation, every packing
+ * configuration and every ordered recovery triple was enumerated, and each
+ * dimension's best and worst single contribution summed across the six scored
+ * scenarios. The previous numbers were walked by hand and were wrong in both
+ * directions: `inventory` had a ceiling of 11 against a reachable maximum of
+ * 8, so a flawless inventory read could never score above 73, while
+ * `priority`, `reasoning` and `team` sat below their true maxima and so hit
+ * 100 before the run was anywhere near perfect.
+ *
+ * These are per-dimension maxima, each reachable on its own. Reaching all five
+ * at once is not possible — the options trade against each other — so a
+ * straight 100 is out of reach by construction. The best simultaneous run the
+ * enumeration can find scores in the mid-nineties, which is what an
+ * exceptional day should look like.
  */
 const BOUNDS: Record<Dimension, { floor: number; ceiling: number }> = {
-  priority: { floor: -16, ceiling: 24 },
-  reasoning: { floor: -22, ceiling: 22 },
-  // Only two decision points feed inventory on Day 1, so the scale is kept
-  // deliberately wide: a 95 off two signals would be more confidence than the
-  // evidence supports.
-  inventory: { floor: -10, ceiling: 11 },
-  team: { floor: -12, ceiling: 19 },
-  customer: { floor: -22, ceiling: 20 },
+  priority: { floor: -19, ceiling: 26 },
+  reasoning: { floor: -22, ceiling: 23 },
+  // Only two decision points feed inventory on Day 1. The narrow range is the
+  // honest consequence: there is not much evidence here either way.
+  inventory: { floor: -8, ceiling: 8 },
+  team: { floor: -7, ceiling: 19 },
+  customer: { floor: -24, ceiling: 19 },
 };
 
 /**

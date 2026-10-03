@@ -5,6 +5,7 @@ import { BookOpen, PackageCheck, Search } from "lucide-react";
 
 import { ActionCard, Consequence } from "@/components/challenge/ui";
 import { Button } from "@/components/ui/button";
+import { dealChoices, shuffle } from "@/lib/challenge/deal";
 import {
   EMPLOYEES,
   INSPECT_TARGETS,
@@ -150,6 +151,9 @@ export function NilPickBoard({
 }) {
   const [sopOpen, setSopOpen] = React.useState(false);
   const found = inspected.includes("replenishment");
+  // Dealt once, on mount: the options must not reorder while somebody is
+  // reading them, and the right one must not always be the top button.
+  const [dealt] = React.useState(() => dealChoices(NIL_PICK_CHOICES));
 
   return (
     <div className="space-y-3">
@@ -215,7 +219,7 @@ export function NilPickBoard({
 
       <p className="pt-1 text-[12px] font-semibold text-hi">Your next move?</p>
       <div className="space-y-2">
-        {NIL_PICK_CHOICES.map((choice) => (
+        {dealt.map((choice) => (
           <ActionCard
             key={choice.id}
             label={choice.label}
@@ -364,6 +368,11 @@ export function RecoveryBoard({
 }) {
   const [chosen, setChosen] = React.useState<string[]>([]);
 
+  // The catalogue is authored in ideal order — idealRank 1, 2, 3, then the
+  // three that cost you. Rendered as authored, the whole scenario reduces to
+  // "tap the first three", which is not a recovery plan, it is reading a list.
+  const [dealt] = React.useState(() => shuffle(RECOVERY_ACTIONS));
+
   function toggle(id: string) {
     setChosen((prev) =>
       prev.includes(id)
@@ -386,7 +395,7 @@ export function RecoveryBoard({
       </p>
 
       <div className="space-y-2">
-        {RECOVERY_ACTIONS.map((action) => {
+        {dealt.map((action) => {
           const position = chosen.indexOf(action.id);
           return (
             <ActionCard

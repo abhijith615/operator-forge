@@ -16,6 +16,7 @@ import {
   readRecovery,
   readStaffing,
 } from "@/lib/challenge/engine";
+import { dealChoices, shuffle } from "@/lib/challenge/deal";
 import { buildResult } from "@/lib/challenge/feedback";
 import { ROUTINE_TASKS } from "@/lib/challenge/routine";
 import {
@@ -66,8 +67,17 @@ function Shift({ operatorName }: { operatorName: string }) {
   const [previous, setPrevious] = React.useState<Metrics | null>(null);
   const [flash, setFlash] = React.useState<Flash | null>(null);
   const [result, setResult] = React.useState<ChallengeResult | null>(null);
-  /** Routine tasks already dealt, so the pool never repeats within a shift. */
-  const usedRoutine = React.useRef<string[]>([]);
+  /**
+   * The routine pool, shuffled once for this shift.
+   *
+   * It used to be taken in array order, which made the filler identical on
+   * every run: the same delivery, the same break request, in the same places.
+   * Replay the day and you are not being measured any more, you are
+   * remembering. Shuffled per shift, and the index only moves forward, so
+   * nothing repeats until the pool is genuinely spent.
+   */
+  const routinePool = React.useRef<typeof ROUTINE_TASKS>(shuffle(ROUTINE_TASKS));
+  const routineAt = React.useRef(0);
   const lastArrival = React.useRef(0);
 
   const finished = result !== null;
@@ -104,7 +114,14 @@ function Shift({ operatorName }: { operatorName: string }) {
       );
       if (due.length === 0) return prev;
       lastArrival.current = elapsed;
-      return [...prev, ...due.map((task) => ({ ...task, landedAt: elapsed }))];
+      return [
+        ...prev,
+        ...due.map((task) => ({
+          ...task,
+          choices: task.choices ? dealChoices(task.choices) : undefined,
+          landedAt: elapsed,
+        })),
+      ];
     });
 
     // Fill the gap. The scored spine above arrives on its own timetable; this
@@ -117,31 +134,32 @@ function Shift({ operatorName }: { operatorName: string }) {
       // plan be the last thing on the board.
       if (elapsed > SHIFT_SECONDS - 90) return prev;
 
-      // Recycle when the pool runs dry. Twelve routine items is roughly nine
-      // minutes of filler; a store does not stop having deliveries and break
-      // requests after nine minutes, and letting the pool empty puts the
-      // original two-and-a-half minute gaps straight back.
-      let pool = ROUTINE_TASKS.filter(
-        (task) =>
-          !usedRoutine.current.includes(task.id) &&
-          !prev.some((open) => open.id === task.id),
-      );
-      if (pool.length === 0) {
-        usedRoutine.current = prev.map((open) => open.id);
-        pool = ROUTINE_TASKS.filter(
-          (task) => !prev.some((open) => open.id === task.id),
+      // Walk the shuffled pool. A store does not stop having deliveries and
+      // break requests, so when it is genuinely spent it is reshuffled rather
+      // than allowed to empty — but the reshuffle keeps whatever is still on
+      // the board out of the next deal, so nothing arrives twice at once.
+      if (routineAt.current >= routinePool.current.length) {
+        const open = new Set(prev.map((task) => task.id));
+        routinePool.current = shuffle(
+          ROUTINE_TASKS.filter((task) => !open.has(task.id)),
         );
+        routineAt.current = 0;
       }
-      const next = pool[0];
-      if (!next) return prev;
 
-      usedRoutine.current = [...usedRoutine.current, next.id];
+      const next = routinePool.current[routineAt.current];
+      if (!next) return prev;
+      routineAt.current += 1;
+      if (prev.some((open) => open.id === next.id)) return prev;
+
       lastArrival.current = elapsed;
       return [
         ...prev,
         {
           ...next,
           kind: "choice" as const,
+          // Dealt here rather than read from the catalogue, so the right
+          // answer is not always the first button.
+          choices: dealChoices(next.choices),
           releaseAt: elapsed,
           landedAt: elapsed,
         },
