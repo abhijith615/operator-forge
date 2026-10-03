@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { GuideNote, RecordState, recordCardClass, recordIconClass } from "@/components/challenge/day-two/record-card";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
@@ -77,6 +78,12 @@ export function PickTrace({
         sub="The records are all here. Open what you think matters."
       />
 
+      <GuideNote storageKey="parleg-trace">
+        Three records, all open to you from the start. Opening one does not close
+        another, and nothing here marks the one that matters — that is what you
+        are being asked to work out.
+      </GuideNote>
+
       <div role="tablist" aria-label="Evidence" className="grid grid-cols-3 gap-2">
         {TABS.map(({ id, label, hint, icon: Icon }) => {
           const active = tab === id;
@@ -88,19 +95,11 @@ export function PickTrace({
               role="tab"
               aria-selected={active}
               onClick={() => select(id)}
-              className={cn(
-                "flex min-h-[64px] flex-col items-start gap-1 rounded-card border px-3 py-2.5 text-left transition-colors",
-                "focus-visible:ring-2 focus-visible:ring-ember-500 focus-visible:outline-none",
-                active
-                  ? "border-ember-500/60 bg-ember-500/[0.09]"
-                  : "border-line bg-surface hover:border-line-bright",
-              )}
+              className={cn("min-h-[64px] gap-1", recordCardClass(active, seen))}
             >
               <span className="flex w-full items-center gap-1.5">
-                <Icon className={cn("size-4", active ? "text-ember-400" : "text-lo")} aria-hidden />
-                {seen && !active ? (
-                  <span className="ml-auto text-[9.5px] text-faint">Seen</span>
-                ) : null}
+                <Icon className={recordIconClass(active, seen)} aria-hidden />
+                <RecordState active={active} opened={seen} />
               </span>
               <span className="text-[12.5px] leading-tight font-medium text-hi">{label}</span>
               <span className="hidden text-[10.5px] leading-tight text-faint sm:block">{hint}</span>

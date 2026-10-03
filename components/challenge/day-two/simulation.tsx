@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { GuideNote, RecordState, recordCardClass, recordIconClass } from "@/components/challenge/day-two/record-card";
 
 import { PaneTour, type TourStep } from "@/components/challenge/pane-tour";
 import { useTour } from "@/lib/challenge/use-tour";
@@ -893,6 +894,13 @@ function Investigation({
         ) : null}
       </section>
 
+      <GuideNote storageKey="earbuds-records">
+        Each box below is a record you can open, and every one of them is
+        available from the start. What you keep goes in the evidence tray on the
+        right — and what you never account for stays on the report as
+        unexplained.
+      </GuideNote>
+
       {/* Tool rail — desktop. Order is the learner's, never suggested. */}
       <nav aria-label="Investigation tools" className="hidden lg:block">
         <ul className="grid grid-cols-3 gap-2 xl:grid-cols-6">
@@ -906,18 +914,12 @@ function Investigation({
                   type="button"
                   onClick={() => onSelectTool(id)}
                   aria-pressed={active}
-                  className={cn(
-                    "flex w-full flex-col items-start gap-1.5 rounded-card border px-3 py-2.5 text-left transition-colors",
-                    "focus-visible:ring-2 focus-visible:ring-ember-500 focus-visible:outline-none",
-                    active
-                      ? "border-ember-500/60 bg-ember-500/[0.09]"
-                      : "border-line bg-surface hover:border-ember-500/40",
-                  )}
+                  className={recordCardClass(active, seen)}
                 >
-                  <Icon
-                    className={cn("size-4", active ? "text-ember-400" : seen ? "text-mid" : "text-lo")}
-                    aria-hidden
-                  />
+                  <span className="flex w-full items-center gap-1.5">
+                    <Icon className={recordIconClass(active, seen)} aria-hidden />
+                    <RecordState active={active} opened={seen} />
+                  </span>
                   <span className="text-[12px] leading-tight font-medium text-hi">
                     {TOOL_META[id].label}
                   </span>
