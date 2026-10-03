@@ -67,7 +67,7 @@ export function CommsPanel({ onAsk }: { onAsk?: (question: string) => void }) {
       // `flex-1` so it fills its column like they do. It sized to its
       // transcript before, which read as a short card on a flat background and
       // reads as a hole in the floor now that there is one behind it.
-      className="flex min-h-0 flex-1 flex-col rounded-card border border-line bg-surface/60 backdrop-blur-2xl"
+      className="flex min-h-0 flex-1 flex-col rounded-card border border-line/80 bg-surface/40 shadow-[0_30px_70px_-28px_rgba(0,0,0,0.9)] ring-1 ring-white/[0.04] backdrop-blur-2xl"
       aria-label="Communications"
     >
       <header className="flex shrink-0 items-center gap-2 border-b border-line px-4 py-3">

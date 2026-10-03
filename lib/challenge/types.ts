@@ -85,7 +85,15 @@ export type DecisionTag =
   | "maintained_scan_discipline"
   | "skipped_scan_discipline"
   | "solved_true_bottleneck"
-  | "coordinated_riders";
+  | "coordinated_riders"
+  /* Earned on the phone. A call is answered or it is not, and both leave a
+     mark the feedback can name. */
+  | "answered_the_floor"
+  | "let_it_ring"
+  | "reported_from_the_board"
+  | "escalated_appropriately"
+  | "proportionate_recovery"
+  | "left_customer_waiting";
 
 /** SOP breaches are tracked separately: they can outweigh a fast shift. */
 export interface SopViolation {

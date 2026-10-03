@@ -45,13 +45,18 @@ export const DAY_ONE_WEIGHTS: Record<Dimension, number> = {
  * exceptional day should look like.
  */
 const BOUNDS: Record<Dimension, { floor: number; ceiling: number }> = {
-  priority: { floor: -19, ceiling: 26 },
-  reasoning: { floor: -22, ceiling: 23 },
-  // Only two decision points feed inventory on Day 1. The narrow range is the
-  // honest consequence: there is not much evidence here either way.
+  // Scored spine, plus what the three phone calls can add or cost. A call is
+  // scored, so it has to be inside the scale — the alternative is the bug
+  // routine work used to have, where something unbounded fed a bounded scale
+  // and every dimension clamped at the top.
+  priority: { floor: -22, ceiling: 34 },
+  reasoning: { floor: -29, ceiling: 32 },
+  // Nothing on the phone touches inventory, and only two decision points feed
+  // it elsewhere. The narrow range is the honest consequence: there is not
+  // much evidence here either way.
   inventory: { floor: -8, ceiling: 8 },
-  team: { floor: -7, ceiling: 19 },
-  customer: { floor: -24, ceiling: 19 },
+  team: { floor: -9, ceiling: 22 },
+  customer: { floor: -30, ceiling: 26 },
 };
 
 /**

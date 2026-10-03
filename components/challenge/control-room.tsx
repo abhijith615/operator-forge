@@ -9,12 +9,14 @@ import {
   ChevronLeft,
   ListChecks,
   UserRound,
+  TriangleAlert,
   Users,
   type LucideIcon,
 } from "lucide-react";
 
 import { CommsPanel } from "@/components/challenge/comms";
 import { FloorBackdrop } from "@/components/challenge/floor-backdrop";
+import { PaneTour, TOUR_STEPS, type TourStep } from "@/components/challenge/pane-tour";
 import {
   FloorBoard,
   NilPickBoard,
@@ -61,6 +63,17 @@ export interface ControlRoomProps {
   ) => void;
   onRecovery: (actions: RecoveryAction[]) => void;
   flash: { headline: string; body: string; tone: "healthy" | "warning" | "critical" } | null;
+  /**
+   * The introduction step currently being shown, or null once the shift is
+   * running. The board underneath stays real throughout — the operator is
+   * reading the store they are about to take over, not a diagram of one.
+   */
+  tour?: TourStep | null;
+  onTourNext?: () => void;
+  onTourSkip?: () => void;
+  /** A critical task that has just landed, announced over the board. */
+  alert?: OpenTask | null;
+  onAlertDismiss?: () => void;
 }
 
 type Lane = "queue" | "board" | "comms";
@@ -79,12 +92,28 @@ export function ControlRoom(props: ControlRoomProps) {
   const reduced = useReducedMotion();
   const active = props.tasks.find((task) => task.id === props.activeId) ?? null;
 
+  const tour = props.tour ?? null;
+
   // A task arriving pulls the operator to the queue on small screens, but only
-  // if they are not mid-decision on something else.
+  // if they are not mid-decision on something else. During the tour the step
+  // owns the lane instead, so the panel being described is the one on screen.
   const taskCount = props.tasks.length;
   React.useEffect(() => {
+    if (tour) return;
     if (taskCount > 0 && !active) setLane("queue");
-  }, [taskCount, active]);
+  }, [taskCount, active, tour]);
+
+  React.useEffect(() => {
+    if (tour) setLane(tour.pane);
+  }, [tour]);
+
+  /** Dim everything the current tour step is not talking about. */
+  function spotlight(pane: Lane): string {
+    if (!tour) return "";
+    return tour.pane === pane
+      ? "relative z-30 ring-2 ring-ember-500/60 ring-offset-2 ring-offset-void/40"
+      : "opacity-35 blur-[1px] saturate-50";
+  }
 
   const urgent = props.remaining <= 120;
 
@@ -170,7 +199,12 @@ export function ControlRoom(props: ControlRoomProps) {
       </header>
 
       {/* ── Panels ── */}
-      <div className="relative z-10 mx-auto grid w-full max-w-[1600px] min-h-0 flex-1 gap-3 p-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,0.9fr)]">
+      {/* The panels used to meet the viewport on every edge with a 12px
+          gutter, so the floor behind them survived only as four thin seams.
+          A wider margin and a real gap give the photograph somewhere to be —
+          the operator is standing in a building, and the frame should say so
+          without the panels giving up any of the room they need for work. */}
+      <div className="relative z-10 mx-auto grid w-full max-w-[1560px] min-h-0 flex-1 gap-4 px-4 pt-4 pb-5 sm:px-6 sm:pb-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,0.9fr)]">
         {/* Task queue */}
         <section
           aria-label="Task queue"
@@ -181,9 +215,12 @@ export function ControlRoom(props: ControlRoomProps) {
             // the LED strips stop being bright pixels behind small text. The
             // blurred backdrop's 99th percentile lands near `elevated` — a
             // grey this design already sets text on.
-            "min-h-0 flex-col rounded-card border border-line bg-surface/60 backdrop-blur-2xl",
+            "min-h-0 flex-col rounded-card border border-line/80 bg-surface/40 backdrop-blur-2xl",
+            // Lifted off the photograph rather than pasted onto it.
+            "shadow-[0_30px_70px_-28px_rgba(0,0,0,0.9)] ring-1 ring-white/[0.04]",
             lane === "queue" ? "flex" : "hidden",
             "xl:flex",
+            spotlight("queue"),
           )}
         >
           <header className="flex shrink-0 items-center gap-2 border-b border-line px-4 py-3">
@@ -234,9 +271,12 @@ export function ControlRoom(props: ControlRoomProps) {
             // the LED strips stop being bright pixels behind small text. The
             // blurred backdrop's 99th percentile lands near `elevated` — a
             // grey this design already sets text on.
-            "min-h-0 flex-col rounded-card border border-line bg-surface/60 backdrop-blur-2xl",
+            "min-h-0 flex-col rounded-card border border-line/80 bg-surface/40 backdrop-blur-2xl",
+            // Lifted off the photograph rather than pasted onto it.
+            "shadow-[0_30px_70px_-28px_rgba(0,0,0,0.9)] ring-1 ring-white/[0.04]",
             lane === "board" ? "flex" : "hidden",
             "xl:flex",
+            spotlight("board"),
           )}
         >
           <header className="flex shrink-0 items-center gap-2 border-b border-line px-4 py-3">
@@ -289,12 +329,60 @@ export function ControlRoom(props: ControlRoomProps) {
           </div>
         </section>
 
+        <AnimatePresence>
+          {props.alert && !tour ? (
+            <motion.div
+              key={props.alert.id}
+              initial={reduced ? false : { opacity: 0, y: -16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3, ease: easing.outExpo }}
+              role="alert"
+              className="pointer-events-none absolute inset-x-0 top-3 z-40 flex justify-center px-4"
+            >
+              <div className="pointer-events-auto flex w-full max-w-lg items-center gap-3 rounded-card border border-alert-500/50 bg-obsidian/95 px-4 py-3 shadow-[0_30px_70px_-25px_rgba(0,0,0,0.95)] backdrop-blur-xl">
+                <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-alert-500/15 text-alert-500">
+                  <TriangleAlert className="size-3.5" aria-hidden />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-mono text-[9.5px] tracking-[0.18em] text-alert-500 uppercase">
+                    Critical · {props.alert.source}
+                  </p>
+                  <p className="mt-1 truncate text-[13.5px] font-semibold text-hi">
+                    {props.alert.title}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    props.onOpen(props.alert!.id);
+                    props.onAlertDismiss?.();
+                  }}
+                  className="shrink-0 rounded-full bg-ember-500 px-3.5 py-1.5 text-[12.5px] font-semibold text-void transition-colors hover:bg-ember-400 focus-visible:ring-2 focus-visible:ring-ember-500 focus-visible:outline-none"
+                >
+                  Open
+                </button>
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+
+        {tour ? (
+          <PaneTour
+            step={tour}
+            total={TOUR_STEPS.length}
+            onNext={() => props.onTourNext?.()}
+            onSkip={() => props.onTourSkip?.()}
+          />
+        ) : null}
+
         {/* Comms */}
         <div
           className={cn(
             "min-h-0",
             lane === "comms" ? "flex flex-col" : "hidden",
             "xl:flex xl:flex-col",
+            spotlight("comms"),
           )}
         >
           <CommsPanel />

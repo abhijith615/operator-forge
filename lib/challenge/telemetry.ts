@@ -24,6 +24,10 @@ export type ChallengeEventName =
   | "recovery_plan_executed"
   | "simulation_completed"
   | "scorecard_viewed"
+  /* ── Day 1 · the phone ── */
+  | "call_incoming"
+  | "call_answered"
+  | "call_completed"
   /* ── Day 2 · inventory forensics ── */
   | "day2_started"
   | "earbuds_case_opened"

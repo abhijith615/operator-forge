@@ -16,9 +16,12 @@ import {
   readRecovery,
   readStaffing,
 } from "@/lib/challenge/engine";
+import { CallOverlay } from "@/components/challenge/call-overlay";
+import { callDueAt, type CallOption, type IncomingCall } from "@/lib/challenge/calls";
 import { dealChoices, shuffle } from "@/lib/challenge/deal";
 import { buildResult } from "@/lib/challenge/feedback";
 import { ROUTINE_TASKS } from "@/lib/challenge/routine";
+import { TOUR_STEPS } from "@/components/challenge/pane-tour";
 import {
   MAX_PENDING,
   MIN_PENDING,
@@ -80,6 +83,20 @@ function Shift({ operatorName }: { operatorName: string }) {
   const routineAt = React.useRef(0);
   const lastArrival = React.useRef(0);
 
+  /**
+   * The introduction runs before the clock. The board behind it is already
+   * live and already holding the first task, so the operator reads the real
+   * store rather than a picture of one — but no second is spent until they
+   * close the last step.
+   */
+  const [tourAt, setTourAt] = React.useState(0);
+  /** The phone, when it is ringing or in hand. */
+  const [ringing, setRinging] = React.useState<
+    { call: IncomingCall; from: number; answered: boolean } | null
+  >(null);
+  const [handledCalls, setHandledCalls] = React.useState<string[]>([]);
+  const tour = TOUR_STEPS[tourAt] ?? null;
+
   const finished = result !== null;
   const remaining = Math.max(0, SHIFT_SECONDS - elapsed);
 
@@ -89,13 +106,13 @@ function Shift({ operatorName }: { operatorName: string }) {
 
   /* ── The clock ── */
   React.useEffect(() => {
-    if (finished) return;
+    if (finished || tour) return;
     const timer = window.setInterval(
       () => setElapsed((value) => value + 1),
       1000 / timeScale(),
     );
     return () => window.clearInterval(timer);
-  }, [finished]);
+  }, [finished, tour]);
 
   /* ── Task release and ambient drift ── */
   const openCount = released.length;
@@ -174,6 +191,53 @@ function Shift({ operatorName }: { operatorName: string }) {
     }
   }, [elapsed, finished, resolved, openCount]);
 
+  /**
+   * A critical task announces itself.
+   *
+   * Everything lands in the same queue, so a chemical in a food bag and a
+   * driver wanting a signature arrive looking alike — the operator finds the
+   * important one by reading all of them, which is not the skill being
+   * measured. Critical work now interrupts, once, and then goes back to being
+   * a row like everything else. It does not open itself: deciding what to
+   * look at is still theirs.
+   */
+  const [alert, setAlert] = React.useState<OpenTask | null>(null);
+  const announced = React.useRef<string[]>([]);
+  React.useEffect(() => {
+    if (finished || tour) return;
+    const fresh = released.find(
+      (task) => task.priority === "critical" && !announced.current.includes(task.id),
+    );
+    if (!fresh) return;
+    announced.current = [...announced.current, fresh.id];
+    setAlert(fresh);
+    const timer = window.setTimeout(
+      () => setAlert((current) => (current?.id === fresh.id ? null : current)),
+      8000,
+    );
+    return () => window.clearTimeout(timer);
+  }, [released, finished, tour]);
+
+  /* ── The phone ── */
+  React.useEffect(() => {
+    if (finished || tour || ringing) return;
+    const due = callDueAt(elapsed, handledCalls);
+    if (!due) return;
+    logEvent("call_incoming", { call: due.id, at: elapsed });
+    setRinging({ call: due, from: elapsed, answered: false });
+  }, [elapsed, finished, tour, ringing, handledCalls]);
+
+  /** Rang out. The floor kept moving, and so did the consequence. */
+  React.useEffect(() => {
+    if (!ringing || ringing.answered) return;
+    if (elapsed - ringing.from < ringing.call.ringFor) return;
+    closeCall(ringing.call, ringing.call.ignored.signals, ringing.call.ignored.tags, {
+      tone: "warning",
+      headline: `Missed call — ${ringing.call.caller}`,
+      body: ringing.call.ignored.note,
+    });
+  }, [elapsed, ringing]);
+
   /* ── Expiry ── */
   React.useEffect(() => {
     if (finished) return;
@@ -246,6 +310,33 @@ function Shift({ operatorName }: { operatorName: string }) {
     const allDone = spineDone && released.length === 0;
     if (remaining === 0 || allDone) finish();
   }, [remaining, resolved, released.length, finished, finish]);
+
+  /**
+   * One exit for every way a call can end — answered, declined or rung out.
+   * The signals differ; the bookkeeping must not, or a missed call quietly
+   * fails to be recorded as a decision at all.
+   */
+  function closeCall(
+    call: IncomingCall,
+    signals: Parameters<typeof commitDecision>[1]["signals"],
+    tags: Parameters<typeof commitDecision>[1]["tags"],
+    next: Flash,
+  ) {
+    setRinging(null);
+    setHandledCalls((prev) => (prev.includes(call.id) ? prev : [...prev, call.id]));
+    setState((s) =>
+      commitDecision(s, {
+        scene: "flow",
+        decisionId: call.id,
+        chosenAction: next.headline,
+        simulatedTime: storeClock(elapsed),
+        signals,
+        tags,
+        metricEffect: {},
+      }),
+    );
+    setFlash(next);
+  }
 
   /* ── Resolution helpers ── */
   function close(taskId: string, next: Flash) {
@@ -398,7 +489,54 @@ function Shift({ operatorName }: { operatorName: string }) {
   }
 
   return (
-    <ControlRoom
+    <>
+      {ringing ? (
+        <CallOverlay
+          call={ringing.call}
+          ringFrom={ringing.from}
+          elapsed={elapsed}
+          answered={ringing.answered}
+          onAnswer={() => {
+            logEvent("call_answered", { call: ringing.call.id });
+            setRinging((current) => (current ? { ...current, answered: true } : current));
+          }}
+          onDecline={() =>
+            closeCall(
+              ringing.call,
+              ringing.call.ignored.signals,
+              ringing.call.ignored.tags,
+              {
+                tone: "warning",
+                headline: `Declined — ${ringing.call.caller}`,
+                body: ringing.call.ignored.note,
+              },
+            )
+          }
+          onFinish={(answers: CallOption[]) => {
+            // One decision for the call, carrying everything that was said on
+            // it. Three separate records would let a single conversation
+            // outweigh a scored scenario just by having more questions in it.
+            const signals = answers.reduce<Record<string, number>>((total, option) => {
+              for (const [key, value] of Object.entries(option.signals)) {
+                total[key] = (total[key] ?? 0) + (value ?? 0);
+              }
+              return total;
+            }, {});
+            const tags = answers.flatMap((option) => option.tags);
+            logEvent("call_completed", {
+              call: ringing.call.id,
+              answers: answers.map((option) => option.id),
+            });
+            closeCall(ringing.call, signals, [...tags, "answered_the_floor"], {
+              tone: "healthy",
+              headline: `Call handled — ${ringing.call.caller}`,
+              body: `${ringing.call.role} has what they needed. The board moved while you were on it.`,
+            });
+          }}
+        />
+      ) : null}
+
+      <ControlRoom
       remaining={remaining}
       elapsed={elapsed}
       metrics={state.metrics}
@@ -423,6 +561,12 @@ function Shift({ operatorName }: { operatorName: string }) {
       onPacking={submitPacking}
       onRecovery={executeRecovery}
       flash={flash}
-    />
+      tour={tour}
+      onTourNext={() => setTourAt((at) => at + 1)}
+        onTourSkip={() => setTourAt(TOUR_STEPS.length)}
+        alert={alert}
+        onAlertDismiss={() => setAlert(null)}
+      />
+    </>
   );
 }
