@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+
+import { shuffle } from "@/lib/challenge/deal";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, ArrowUp, PackageCheck, ShieldAlert, Snowflake, Thermometer } from "lucide-react";
 
@@ -446,6 +448,9 @@ const QC_ACTIONS: { id: QcAction; label: string; detail: string; tone: "safe" | 
 ];
 
 export function QualityHold({ onResolve }: { onResolve: (action: QcAction) => void }) {
+  // Authored safe-first, risky-last. Dealt once on mount: a quality call that
+  // is answered by taking the top button is not a quality call.
+  const [dealtQc] = React.useState(() => shuffle(QC_ACTIONS));
   const reduced = useReducedMotion();
   return (
     <motion.div
@@ -472,7 +477,7 @@ export function QualityHold({ onResolve }: { onResolve: (action: QcAction) => vo
         </div>
       </div>
       <div className="mt-3 grid gap-1.5 sm:grid-cols-2">
-        {QC_ACTIONS.map((action) => (
+        {dealtQc.map((action) => (
           <button
             key={action.id}
             type="button"
@@ -567,6 +572,7 @@ const AISLE_ACTIONS: { id: AisleAction; label: string }[] = [
 ];
 
 function AisleRecovery({ state, routeSeconds, onAisle }: { state: Day4State; routeSeconds: number; onAisle: (action: AisleAction) => void }) {
+  const [dealtAisle] = React.useState(() => shuffle(AISLE_ACTIONS));
   const spill = state.batches.C1;
   const inAisle = spill.location === "aisle" && spill.onFloor > 0;
   if (!inAisle) {
@@ -583,7 +589,7 @@ function AisleRecovery({ state, routeSeconds, onAisle }: { state: Day4State; rou
         {Math.round(spill.onFloor)} cartons in the route · current {routeSeconds}s, normal 38s
       </p>
       <div className="mt-2 grid grid-cols-2 gap-1.5">
-        {AISLE_ACTIONS.map((action) => {
+        {dealtAisle.map((action) => {
           const reason = whyNotAisle(state, action.id);
           const chosen = state.aisle.action === action.id;
           return (

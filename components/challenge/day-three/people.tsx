@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+
+import { shuffle } from "@/lib/challenge/deal";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Check, ShieldCheck, X } from "lucide-react";
 
@@ -329,6 +331,11 @@ export function ArjunIssuePanel({
   onAnswer: () => void;
   onFinish: () => void;
 }) {
+  // Authored best-first. Dealt once on mount so what somebody says to a
+  // colleague is a judgement rather than a reflex to take the top line.
+  const [dealtAck] = React.useState(() => shuffle(ACKNOWLEDGE));
+  const [dealtClarify] = React.useState(() => shuffle(CLARIFY));
+  const [dealtRequest] = React.useState(() => shuffle(REQUEST));
   const arjun = state.people.arjun;
   const withOt = React.useMemo(
     () => coverageOver(evaluate(asOutcome(state, "extended"), world), ARJUN.rotaEnd, ARJUN.otEnd).picking,
@@ -408,19 +415,19 @@ export function ArjunIssuePanel({
         <Step number={3} title="What you say.">
           <Slot
             label="Acknowledge"
-            options={ACKNOWLEDGE}
+            options={dealtAck}
             value={arjun.response.acknowledge}
             onSelect={(id) => onSelect("acknowledge", id)}
           />
           <Slot
             label="Clarify"
-            options={CLARIFY}
+            options={dealtClarify}
             value={arjun.response.clarify}
             onSelect={(id) => onSelect("clarify", id)}
           />
           <Slot
             label="Request"
-            options={REQUEST}
+            options={dealtRequest}
             value={arjun.response.request}
             onSelect={(id) => onSelect("request", id)}
           />
@@ -614,6 +621,9 @@ export function RiyaReviewPanel({
   onToggle: (action: RiyaAction) => void;
   onApply: () => void;
 }) {
+  // Authored best-first. Dealt once on mount so what somebody says to a
+  // colleague is a judgement rather than a reflex to take the top line.
+  const [dealtRiya] = React.useState(() => shuffle(RIYA_ACTIONS));
   const riya = state.people.riya;
   const window = windowOf(state, world, RIYA_WORKER);
   const until = Math.min(window?.end ?? RIYA.prepaidUntil, PEAK_TO);
@@ -665,7 +675,7 @@ export function RiyaReviewPanel({
           <span className="ml-auto text-faint">{riya.interventions.length} of 2</span>
         </p>
         <div className="mt-1.5 grid gap-1" role="group" aria-label="Interventions for Riya">
-          {RIYA_ACTIONS.map((action) => {
+          {dealtRiya.map((action) => {
             const on = riya.interventions.includes(action.id);
             return (
               <button

@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+
+import { shuffle } from "@/lib/challenge/deal";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Boxes, Camera, Snowflake } from "lucide-react";
 
@@ -42,6 +44,10 @@ export function BatchCase({
   onAction: (action: BatchAction) => void;
   onConfirm: () => void;
 }) {
+  // Authored best-first, like every option list in the challenge. Dealt once
+  // on mount, so the right answer is not always the top row and the order
+  // cannot move under a cursor mid-decision.
+  const [dealt] = React.useState(() => shuffle(ACTIONS));
   const batch = state.batch;
   const reduced = useReducedMotion();
   const outcome = batchOutcome(batch);
@@ -167,7 +173,7 @@ export function BatchCase({
       <div>
         <p className="font-mono text-[9.5px] tracking-[0.14em] text-faint uppercase">Available actions</p>
         <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
-          {ACTIONS.map((action) => {
+          {dealt.map((action) => {
             const spec = BATCH.actions[action];
             const taken = batch.actions.includes(action);
             const order = batch.actions.indexOf(action) + 1;

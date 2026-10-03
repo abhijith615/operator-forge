@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+
+import { shuffle } from "@/lib/challenge/deal";
 import { ArrowRight, Check } from "lucide-react";
 
 import { Avatar, Shift, TONE_TEXT, coverTone } from "@/components/challenge/day-three/ui";
@@ -54,6 +56,10 @@ export function FaisalReview({
   onToggle: (action: FaisalAction) => void;
   onApply: () => void;
 }) {
+  // Authored best-first, like every option list in the challenge. Dealt once
+  // on mount, so the right answer is not always the top row and the order
+  // cannot move under a cursor mid-decision.
+  const [dealt] = React.useState(() => shuffle(ACTIONS));
   const faisal = REGULARS.find((worker) => worker.id === FAISAL.id)!;
   const base: Day3State = { ...state, faisal: [] };
   const off = state.faisal.includes("remove") || state.faisal.includes("packing");
@@ -103,7 +109,7 @@ export function FaisalReview({
       </div>
 
       <div className="grid gap-1.5 sm:grid-cols-2" role="group" aria-label="Interventions for Faisal">
-        {ACTIONS.map((action) => {
+        {dealt.map((action) => {
           const on = state.faisal.includes(action.id);
           return (
             <button
