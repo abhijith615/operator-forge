@@ -41,6 +41,10 @@ export const CHALLENGE_VIDEOS = {
     title: "Day 2 — introduction",
     source: resolveVideo(process.env.NEXT_PUBLIC_DAY2_INTRO_VIDEO_URL, "https://youtu.be/3Pqbx8979Lw"),
   },
+  dayThreeIntro: {
+    title: "Day 3 intro video",
+    source: resolveVideo(process.env.NEXT_PUBLIC_DAY3_INTRO_VIDEO_URL, "https://youtu.be/g5XRK-4AujY"),
+  },
   /**
    * The proof on the landing page: a short run through the simulations. On
    * YouTube, which streams it adaptively and keeps ad traffic off the

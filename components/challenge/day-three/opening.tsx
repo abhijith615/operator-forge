@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { ExplainerVideo } from "@/components/challenge/explainer-video";
+import { CHALLENGE_VIDEOS } from "@/lib/challenge/videos";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 
@@ -98,13 +100,21 @@ export function DayThreeOpening({ onStart }: { onStart: () => void }) {
           </div>
         </motion.div>
 
+        {/* The brief, before the clock. It appears with the last reveal rather
+            than at the top: somebody who already knows the day should reach
+            "Build the shift" without scrolling past a player, and somebody who
+            does not has it immediately above the button. */}
+        <motion.div {...rise(step >= 5)} className="mt-8">
+          <ExplainerVideo video={CHALLENGE_VIDEOS.dayThreeIntro} />
+        </motion.div>
+
         <AnimatePresence>
           {step >= 5 ? (
             <motion.div
               initial={reduced ? false : { opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, ease: easing.outExpo }}
-              className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center"
+              className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center"
             >
               <Button variant="primary" size="lg" className="w-full sm:w-auto" onClick={onStart} autoFocus>
                 Build the shift
