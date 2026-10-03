@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { DayOneSimulation } from "@/components/challenge/simulation";
-import { requireChallengeAccess } from "@/lib/challenge/access";
-import { readOwnRun } from "@/lib/challenge/runs";
+import { replayBlocked, requireChallengeAccess } from "@/lib/challenge/access";
 
 export const metadata: Metadata = {
   title: "Day 1 · The 180-Second Shift",
@@ -20,11 +19,10 @@ export default async function DayOnePage() {
   // the challenge is for the people who signed up for it.
   const operator = await requireChallengeAccess("/challenge/day-1");
 
-  // Day 1 is played once. A shift you can retake until the score flatters you
-  // is not an assessment, and the leaderboard is only worth reading if every
-  // row on it is somebody's first attempt. Coming back shows the scorecard.
-  const existing = await readOwnRun(1);
-  if (existing) redirect("/challenge/day-1/scorecard");
+  // Day 1 is played once — coming back shows the scorecard. Admins are the
+  // exception, because they are testing the day rather than competing on it;
+  // `replayBlocked` is where that rule lives.
+  if (await replayBlocked(1)) redirect("/challenge/day-1/scorecard");
 
   return <DayOneSimulation operatorName={operator.fullName} />;
 }

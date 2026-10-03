@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { DayFiveSimulation } from "@/components/challenge/day-five/simulation";
-import { requireChallengeAccess } from "@/lib/challenge/access";
-import { readOwnRun } from "@/lib/challenge/runs";
+import { replayBlocked, requireChallengeAccess } from "@/lib/challenge/access";
 
 export const metadata: Metadata = {
   title: "Day 5 · Protect the Promise",
@@ -17,8 +16,7 @@ export default async function DayFivePage() {
   const operator = await requireChallengeAccess("/challenge/day-5");
 
   // Played once, like every other day.
-  const existing = await readOwnRun(5);
-  if (existing) redirect("/challenge/day-5/scorecard");
+  if (await replayBlocked(5)) redirect("/challenge/day-5/scorecard");
 
   return <DayFiveSimulation operatorName={operator.fullName} />;
 }

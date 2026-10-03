@@ -4,11 +4,14 @@ import { cache } from "react";
 
 import { redirect } from "next/navigation";
 
+import { isAdmin } from "@/lib/admin/queries";
 import { getOperator } from "@/lib/auth/session";
 import { OFFER } from "@/lib/constants/offer";
 import { LOGIN_ROUTE, ONBOARDING_ROUTE } from "@/lib/constants/routes";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { Operator } from "@/types/operator";
+
+import { readOwnRun } from "./runs";
 
 export const CHALLENGE_ACCESS_ROUTE = "/challenge/access";
 
@@ -46,6 +49,23 @@ export const readChallengeAccess = cache(async (): Promise<ChallengeAccessStatus
 
 export async function hasChallengeAccess(): Promise<boolean> {
   return (await readChallengeAccess()) === "granted";
+}
+
+/**
+ * Has this operator already used up their one attempt at a day?
+ *
+ * A day is played once. A shift you can retake until the score flatters you is
+ * not an assessment, and the leaderboard is only worth reading if every row on
+ * it is somebody's first attempt.
+ *
+ * Admins are outside that rule, because they are not competing — they are
+ * testing. Content changes between cohorts, and the only way to know a day
+ * still reads correctly is to play it again. The same exemption the trial
+ * mission makes, for the same reason.
+ */
+export async function replayBlocked(day: number): Promise<boolean> {
+  if (await isAdmin()) return false;
+  return (await readOwnRun(day)) !== null;
 }
 
 /**

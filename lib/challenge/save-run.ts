@@ -1,5 +1,6 @@
 "use server";
 
+import { isAdmin } from "@/lib/admin/queries";
 import { getOperator } from "@/lib/auth/session";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { hasChallengeAccess } from "./access";
@@ -33,11 +34,16 @@ export async function saveChallengeRun(
   // rule: if a second run does finish — two tabs, a race, a reload caught
   // mid-shift — the first score stands. Overwriting would quietly turn the
   // leaderboard into best-of-many-retries, which is a different product.
+  //
+  // An admin replaying to test the content is the exception, and has to
+  // overwrite: ignoring their rerun would send them back to a scorecard from
+  // the version of the day they just replaced.
+  const admin = await isAdmin();
   const { error } = await supabase
     .from("challenge_runs")
     .upsert(toRow(operator.id, result, decisions, day), {
       onConflict: "operator_id,day",
-      ignoreDuplicates: true,
+      ignoreDuplicates: !admin,
     });
 
   return { ok: !error };

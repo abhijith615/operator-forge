@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { DayThreeSimulation } from "@/components/challenge/day-three/simulation";
-import { requireChallengeAccess } from "@/lib/challenge/access";
-import { readOwnRun } from "@/lib/challenge/runs";
+import { replayBlocked, requireChallengeAccess } from "@/lib/challenge/access";
 
 export const metadata: Metadata = {
   title: "Day 3 · Onam Eve — Build the Shift",
@@ -16,8 +15,7 @@ export default async function DayThreePage() {
   const operator = await requireChallengeAccess("/challenge/day-3");
 
   // Played once, like every other day: the first plan is the one assessed.
-  const existing = await readOwnRun(3);
-  if (existing) redirect("/challenge/day-3/scorecard");
+  if (await replayBlocked(3)) redirect("/challenge/day-3/scorecard");
 
   return <DayThreeSimulation operatorName={operator.fullName} />;
 }

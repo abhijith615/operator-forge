@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { DayTwoSimulation } from "@/components/challenge/day-two/simulation";
-import { requireChallengeAccess } from "@/lib/challenge/access";
-import { readOwnRun } from "@/lib/challenge/runs";
+import { replayBlocked, requireChallengeAccess } from "@/lib/challenge/access";
 import { DAY_TWO_TOTAL_VARIANCE, rupees } from "@/lib/challenge/day-two/ledger";
 
 export const metadata: Metadata = {
@@ -19,8 +18,7 @@ export default async function DayTwoPage() {
 
   // Same rule as Day 1: an audit you can re-run until the numbers flatter you
   // is not an assessment.
-  const existing = await readOwnRun(2);
-  if (existing) redirect("/challenge/day-2/scorecard");
+  if (await replayBlocked(2)) redirect("/challenge/day-2/scorecard");
 
   return <DayTwoSimulation operatorName={operator.fullName} />;
 }

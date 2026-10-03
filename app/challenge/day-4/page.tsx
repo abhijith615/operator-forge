@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { DayFourSimulation } from "@/components/challenge/day-four/simulation";
-import { requireChallengeAccess } from "@/lib/challenge/access";
-import { readOwnRun } from "@/lib/challenge/runs";
+import { replayBlocked, requireChallengeAccess } from "@/lib/challenge/access";
 
 export const metadata: Metadata = {
   title: "Day 4 · Clear the Floor",
@@ -16,8 +15,7 @@ export default async function DayFourPage() {
   const operator = await requireChallengeAccess("/challenge/day-4");
 
   // Played once, like every other day.
-  const existing = await readOwnRun(4);
-  if (existing) redirect("/challenge/day-4/scorecard");
+  if (await replayBlocked(4)) redirect("/challenge/day-4/scorecard");
 
   return <DayFourSimulation operatorName={operator.fullName} />;
 }
