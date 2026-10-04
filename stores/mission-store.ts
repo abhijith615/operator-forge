@@ -31,6 +31,7 @@ import type {
   TimelineEntry,
 } from "@/types/mission-run";
 import { recordTelemetry, useTelemetryStore } from "@/stores/telemetry-store";
+import { useShellStore } from "@/stores/shell-store";
 import type { Achievement, MissionTask, TaskDecision } from "@/types/tasks";
 import type { WorldTrace } from "@/types/telemetry";
 import type { WorldState } from "@/types/world";
@@ -144,6 +145,13 @@ export const useMissionStore = create<MissionState>()(
 
         // Telemetry is scoped to the run, so it starts clean alongside it.
         useTelemetryStore.getState().start(runId);
+
+        // So is the walkthrough. It used to be remembered per browser, which
+        // meant the second run of the trial opened straight onto a moving
+        // floor with no orientation — and since the clock now waits for the
+        // walkthrough, "already seen" was the one state where it waited for
+        // something that was never going to appear.
+        useShellStore.getState().setWalkthroughSeen(false);
 
         set({
           ...initialSlice(),

@@ -38,7 +38,7 @@ const STEPS: Step[] = [
   {
     target: "queue",
     title: "This is the work",
-    body: "New tasks land every twenty-five to fifty seconds and every one expires. Pick an option to resolve it. You will not clear them all — deciding what to drop is the job.",
+    body: "A new one lands every fifteen to thirty seconds and every one expires. You will not clear them all — deciding what to drop is the job.",
     place: "left",
     lane: "queue",
   },
@@ -51,8 +51,8 @@ const STEPS: Step[] = [
   },
   {
     target: "messages",
-    title: "Three people who answer",
-    body: "Your store manager, the inventory lead, and a customer who is waiting. Messages live here, and anything new interrupts you wherever you are. How you ask is part of your record.",
+    title: "Two people who answer",
+    body: "Your store manager and your inventory lead. Messages live here and anything new interrupts you wherever you are. How you ask is part of your record.",
     place: "right",
   },
   {
