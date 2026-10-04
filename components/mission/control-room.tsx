@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { CallOverlay } from "@/components/mission/call-overlay";
 import { MissionFloorBackdrop } from "@/components/mission/floor-backdrop";
 import { motion } from "framer-motion";
 
@@ -114,7 +113,7 @@ export function ControlRoom({
             </div>
 
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              <span data-tour="intake">
+              <span data-tour="intake" className="inline-flex">
                 <HubControls />
               </span>
               <AchievementStrip />
@@ -139,9 +138,6 @@ export function ControlRoom({
           <Timeline className="h-[13rem] shrink-0" />
         </div>
       </div>
-
-      {/* Over everything, including the lane switcher. */}
-      <CallOverlay />
     </div>
   );
 }
