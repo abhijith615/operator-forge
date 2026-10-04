@@ -38,29 +38,35 @@ export const TEMPLATES_BY_ID = new Map(
  * consequence.
  */
 const SHIFT_TEMPLATE_IDS = new Set([
-  // The fifteen from `SOP.md` — the set pieces the shift is built around.
-  // Weighted far above everything below them, so most of what an operator
-  // answers is one of these and the rest is the floor carrying on around it.
-  "sop-barcode-corruption",
-  "sop-shelf-life-blockade",
-  "sop-high-value-shortage",
-  "sop-wildcat-strike",
-  "sop-absenteeism-cascade",
-  "sop-metric-gaming",
-  "sop-phase-failure",
-  "sop-routing-discrepancy",
-  "sop-aisle-congestion",
-  "sop-convergence",
-  "sop-staging-backlog",
-  "sop-flash-sale-cutover",
-  "sop-infant-formula",
-  "sop-cloudburst",
-  "sop-allergen-breach",
+  // Straight off "Information and General SOP Dark Store" — a documented rule
+  // at the moment it bites. Weighted above everything below them, so most of
+  // what an operator answers is one of these and the rest is the floor
+  // carrying on around it.
+  "sop-chilled-probe",
+  "sop-grn-clock",
+  "sop-milk-run-held",
+  "sop-short-shelf-bread",
+  "sop-high-ppi",
+  "sop-nil-pick-window",
+  "sop-repeat-nil-pick",
+  "sop-bin-not-scanned",
+  "sop-ctd-breach",
+  "sop-rider-dwell",
+  "sop-rider-shortage",
+  "sop-manpower-gap",
+  "sop-retention-bonus",
+  "sop-zone-dispute",
+  "sop-cage-short",
+  "sop-daily-variance",
+  "sop-weight-mismatch",
+  "sop-expired-on-rack",
+  "sop-chiller-drift",
+  "sop-packer-defects",
 
   // Operations — the floor stops, or something spoils.
   "ops-stock-threshold",
   "ops-dispatch-stall",
-  // ("ops-cold-chain" is covered by sop-phase-failure.)
+  // ("ops-cold-chain" is covered by sop-chiller-drift.)
   "ops-fire-exit",
   "ops-item-not-found",
   "ops-mispick",
@@ -87,7 +93,7 @@ const SHIFT_TEMPLATE_IDS = new Set([
 
   // Customers — the rating is on the line and they are watching.
   "cust-vip",
-  // ("cust-allergen" is covered by sop-allergen-breach.)
+  "cust-allergen",
   "cust-late-delivery",
   "cust-refund",
   "cust-wrong-item",
@@ -101,7 +107,7 @@ const SHIFT_TEMPLATE_IDS = new Set([
 
   // Head office — someone senior wants an answer now.
   "mgmt-promo-warning",
-  // ("mgmt-inspector" is covered by sop-convergence.)
+  "mgmt-inspector",
   "mgmt-manager-call",
   "mgmt-handover",
   "mgmt-press",

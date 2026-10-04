@@ -1,879 +1,961 @@
 import type { TaskTemplate } from "./types";
 
 /**
- * The fifteen.
+ * The floor, as the SOP describes it.
  *
- * `SOP.md` sets out fifteen high-stakes simulations for a dark store manager,
- * each one an acute situation with four courses of action, exactly one of which
- * a strong operator takes, and a weighted rubric saying what the choice is
- * evidence of. They are the backbone of the trial shift: the rest of the
- * catalogue is texture around them, because a shift made only of set pieces
- * stops reading as a job and a shift made only of texture stops reading as a
- * test.
+ * Built from "Information and General SOP Dark Store" — the architecture and
+ * procedure sections, the manager's daily routine, the KPI framework, and the
+ * interview with a working Blinkit store manager at the top of it. Every
+ * scenario below is a documented rule being tested at the moment it bites:
  *
- * Three things are carried over from the document exactly, because changing
- * them would change what is being measured:
+ *  - Chilled intake refused above 6°C, frozen above −15°C.
+ *  - Ambient needs 60% shelf life left at the dock, dairy and fresh 70–80%.
+ *  - GRN posted within 45 minutes of docking; milk-run and frozen vehicles
+ *    released inside the hour.
+ *  - Nil pick never cancelled by the picker — the Floor Lead gets 45 seconds
+ *    to find it before the SKU is de-listed.
+ *  - PPI of 10–15 seconds per item; anything above is engaged with, not posted.
+ *  - Click-to-dispatch at or under 180 seconds. Rider bay dwell under 90.
+ *  - Stock variance over 0.2% triggers a root-cause investigation.
+ *  - Chilled above 5°C for thirty continuous minutes means transfer, now.
+ *  - Short manpower is solved through the on-demand picker app, or riders from
+ *    a nearby store inside the 3 km cluster — not by pushing the people here.
  *
- *  - **The optimal option.** Each scenario's rubric names one. It scores 0.95
- *    here. The others are graded by how much of the rubric they miss, not by
- *    how obviously wrong they look — the plausible wrong answer is the whole
- *    point, and several of these are the thing a real manager under pressure
- *    actually does.
- *  - **The rubric's weights.** Each parameter maps to the capability it is
- *    evidence for, heaviest first, so the genome reads the scenario the way the
- *    document scores it.
- *  - **The escalation.** Every one of these ends with somebody senior on the
- *    phone wanting a decision now. That line is the task's `detail`, and the
- *    caller is its `source`, because the pressure in these scenarios is as much
- *    about who is waiting as about what is broken.
+ * Written short on purpose. A card is read in the two seconds between two other
+ * things going wrong, so the situation is one line and each option is a handful
+ * of words. The pressure should come from what is being asked, not from how
+ * much there is to read.
  *
- * Options are authored in the document's A–D order. The scheduler shuffles them
- * on the way to the screen — see `shuffleOptions` — so the position of the
- * right answer carries no information.
- *
- * Times of day in the source range across a whole trading day. The trial shift
- * is fifteen minutes of one morning, so the clock references are dropped rather
- * than contradicted; everything else is the scenario as written.
+ * Options are authored best-first; the scheduler shuffles them on the way to
+ * the screen, so position carries no information.
  */
 export const SOP_TASKS: TaskTemplate[] = [
-  /* ── Inventory ────────────────────────────────────────────────────────── */
+  /* ── Inbound: the dock, the clock, the thermometer ────────────────────── */
 
   {
-    id: "sop-barcode-corruption",
+    id: "sop-chilled-probe",
     stream: "operations",
     priority: "critical",
-    weight: 44,
+    weight: 36,
     cooldown: 10_000,
-    ttl: 115,
+    ttl: 70,
     build: () => ({
-      title: "Milk barcodes are rejecting on every handheld",
-      detail:
-        "420 units came in with a transposed digit in the printed EAN-13. Pickers are stuck in Aisle 1 and 42 orders are stacking up. Manual entry is blocked by central security policy. City Ops Head: “Click-to-dispatch is at 7.8 minutes. At 8.0 the load balancer shuts your store off the app. Your decision, now.”",
-      source: "City Operations Head",
+      title: "Dairy truck probes at 7.2°C",
+      detail: "Chilled intake is refused above 6°C. The dairy bay is near empty.",
+      source: "Inbound Lead",
       options: [
         {
-          id: "pause-and-relabel",
-          label: "Pause the store for fifteen minutes and re-label all 420 cartons",
-          outcome:
-            "Correct in the end, and fifteen minutes of closure during the peak is the one thing the SLA cannot absorb.",
-          quality: 0.45,
-          capabilities: ["systems-thinking", "decision-making"],
-          effects: [{ kind: "throttle", status: "closed" }],
-        },
-        {
-          id: "nil-pick",
-          label: "Have pickers mark the milk “damaged/nil pick” and dispatch the orders short",
-          outcome:
-            "The queue clears and 42 customers get a partial order and a refund voucher. The stock was on the shelf the whole time.",
-          quality: 0.2,
-          capabilities: ["prioritization"],
-          effects: [{ kind: "rating", delta: -0.25 }],
-        },
-        {
-          id: "packing-override",
-          label:
-            "Batch-pick without scanning, verify at packing against printed legacy barcodes, re-label during lulls",
-          outcome:
-            "Flow holds, no order goes out short, and the catalogue error gets fixed at the second checkpoint instead of on the aisle.",
+          id: "refuse",
+          label: "Refuse it. Log a gate rejection",
+          outcome: "The right call. The bay stays empty and the vendor carries the loss.",
           quality: 0.95,
-          capabilities: [
-            "prioritization",
-            "customer-thinking",
-            "systems-thinking",
-            "stress-handling",
-          ],
-          effects: [{ kind: "count-sku", sku: "CHL-4101" }],
+          capabilities: ["ownership", "decision-making"],
         },
         {
-          id: "cancel-and-deactivate",
-          label: "Cancel every affected order and deactivate the dairy category until a replacement arrives",
-          outcome:
-            "You have solved a labelling problem by removing your highest-volume category on a weekday morning.",
+          id: "chill-down",
+          label: "Unload fast and chill it down",
+          outcome: "The breach already happened in transit. Cooling it now hides it, nothing more.",
           quality: 0.1,
-          capabilities: ["decision-making"],
-          effects: [{ kind: "rating", delta: -0.4 }],
-        },
-      ],
-    }),
-    onExpire: {
-      note: "Click-to-dispatch crossed 8.0 minutes. The load balancer took the store off the app.",
-      effects: [{ kind: "throttle", status: "closed" }],
-    },
-  },
-
-  {
-    id: "sop-shelf-life-blockade",
-    stream: "operations",
-    priority: "high",
-    weight: 40,
-    cooldown: 10_000,
-    ttl: 110,
-    build: () => ({
-      title: "Vendor truck blocking the dock over a rejected yogurt line",
-      detail:
-        "400 units of Greek yogurt at 35% remaining shelf life against a mandatory 70% threshold. The driver refuses a partial rejection and has parked across the only inbound dock, holding up a line-haul. Demurrage is running at ₹5,000 every fifteen minutes. Regional Category Manager: “That line is on the app home banner today. Sign the waiver or give me your alternative.”",
-      source: "Regional Category Manager",
-      options: [
-        {
-          id: "sign-waiver",
-          label: "Sign the shelf-life waiver and inward the whole shipment",
-          outcome:
-            "The banner stays funded. In four days it is spoilage complaints, and your signature is on the exception.",
-          quality: 0.15,
-          capabilities: ["decision-making"],
+          capabilities: ["prioritization"],
           effects: [{ kind: "rating", delta: -0.2 }],
         },
         {
-          id: "gate-reject-all",
-          label: "Gate-reject the entire vehicle and have the truck towed off the dock",
-          outcome:
-            "Food safety holds. So does the dairy stockout, and you have thrown away compliant butter and paneer with it.",
+          id: "call-vendor",
+          label: "Hold the truck, call the vendor",
+          outcome: "Defensible, and the dock is blocked while you wait for a callback.",
           quality: 0.5,
-          capabilities: ["ownership", "stress-handling"],
+          capabilities: ["communication", "curiosity"],
         },
         {
-          id: "partial-reject",
-          label:
-            "Unload the compliant butter and paneer, formally reject the yogurt, move the truck to the holding area, escalate to the vendor's logistics director",
-          outcome:
-            "Dock clears, the compliant stock lands, the rejection is documented, and the commercial pressure goes to the people who can actually settle it.",
-          quality: 0.95,
-          capabilities: ["ownership", "prioritization", "communication", "decision-making"],
-        },
-        {
-          id: "quarantine-transfer",
-          label: "Take the yogurt into a quarantined bin and push it to a flagship store to sell within 48 hours",
-          outcome:
-            "You have not rejected short-dated stock, you have moved it to somebody else's shelf with your name on the transfer.",
-          quality: 0.3,
-          capabilities: ["systems-thinking"],
-        },
-      ],
-    }),
-    onExpire: {
-      note: "The dock stayed blocked through the inbound window. Demurrage, and the line-haul turned back.",
-    },
-  },
-
-  {
-    id: "sop-high-value-shortage",
-    stream: "management",
-    priority: "critical",
-    weight: 42,
-    cooldown: 10_000,
-    ttl: 110,
-    build: () => ({
-      title: "Eight smartwatches missing from the secure cage",
-      detail:
-        "Physical count finds zero units against a system record of eight — ₹24,000 unreconciled. Two were picked and dispatched this morning; the system still shows eight available and an order for one has just landed. Biometric access is limited to three people, but eight associates and two contractors worked the cage perimeter. Loss Prevention Head: “Unauthorised transfer, or an active theft issue on your shift? And what are you doing with that live order?”",
-      source: "Internal Audit & Loss Prevention",
-      options: [
-        {
-          id: "write-off",
-          label: "Mark the order damaged, write the ₹24,000 off to shrinkage, raise it at the weekly meeting",
-          outcome:
-            "The shift ends, the stock does not come back, and whoever took it learns exactly how much they can take.",
-          quality: 0.1,
+          id: "accept",
+          label: "Take it. Sell it today",
+          outcome: "Short-dated dairy on your shelf, with your name on the acceptance.",
+          quality: 0.05,
           capabilities: ["decision-making"],
-        },
-        {
-          id: "freeze-and-search",
-          label:
-            "Clear the order as item-not-found, freeze cage access, search the morning shift before 15:30, pull CCTV on access timestamps, file an asset incident report",
-          outcome:
-            "The order stops compounding, the stock cannot leave with the shift, and the investigation starts on evidence rather than suspicion.",
-          quality: 0.95,
-          capabilities: ["ownership", "prioritization", "curiosity", "communication"],
-        },
-        {
-          id: "assume-misplaced",
-          label: "Call it a stowing error, stow an empty carton to let the order clear, search the floor after closing",
-          outcome:
-            "You have falsified a pick to clear a queue and lost the only window in which the stock was still in the building.",
-          quality: 0.05,
-          capabilities: ["prioritization"],
-          effects: [{ kind: "rating", delta: -0.2 }],
-        },
-        {
-          id: "suspend-and-interrogate",
-          label: "Hold the order, suspend all outbound picking, interview every associate one by one",
-          outcome:
-            "The whole floor stops for one bin, and informal interrogations are the fastest way to lose both the evidence and the team.",
-          quality: 0.25,
-          capabilities: ["curiosity", "stress-handling"],
-        },
-      ],
-    }),
-    onExpire: {
-      note: "The shift went home before anything was secured. The cage discrepancy is now an audit finding.",
-    },
-  },
-
-  /* ── People ───────────────────────────────────────────────────────────── */
-
-  {
-    id: "sop-wildcat-strike",
-    stream: "people",
-    priority: "critical",
-    weight: 44,
-    cooldown: 10_000,
-    ttl: 110,
-    build: () => ({
-      title: "Riders have blocked the exit ramp and stopped taking orders",
-      detail:
-        "A packer and a delivery partner argued over a torn bag. Twenty-five riders have switched off their bikes and blocked the ramp; sixty packed bags are stacking on the staging tables, chilled and frozen among them. You have no authority over third-party riders. Fleet Director: “Eighty orders trapped, a hundred more in queue, and they are talking about union reps. Twelve minutes before auto-cancellation. Your plan?”",
-      source: "Regional Logistics Fleet Director",
-      options: [
-        {
-          id: "threaten-deactivation",
-          label: "Threaten platform deactivation, have security clear the bikes, call the police",
-          outcome:
-            "A labour dispute becomes a public one, on camera, outside your store. The bags are still on the table.",
-          quality: 0.05,
-          capabilities: ["stress-handling"],
           effects: [{ kind: "rating", delta: -0.3 }],
         },
+      ],
+    }),
+    onExpire: { note: "The probe reading went unanswered and the load was stowed." },
+  },
+
+  {
+    id: "sop-grn-clock",
+    stream: "operations",
+    priority: "high",
+    weight: 34,
+    cooldown: 10_000,
+    ttl: 65,
+    build: () => ({
+      title: "GRN is at forty minutes. SLA is forty-five",
+      detail: "Half the consignment is still unscanned and unsellable on the app.",
+      source: "Inbound Lead",
+      options: [
         {
-          id: "de-escalate",
-          label:
-            "Pull the packer off the floor, go to the bay yourself, meet the rider lead and fleet coordinator, replace the bag without penalty, review CCTV after the peak, put supervisors on the backlog",
-          outcome:
-            "The source of the argument is gone, the people who can actually end the standoff are in it, and the cold stock comes off the table while you talk.",
+          id: "pull-two",
+          label: "Pull two off putaway to scan-verify",
+          outcome: "GRN posts inside the window. Stock goes live and putaway catches up after.",
           quality: 0.95,
-          capabilities: ["stress-handling", "prioritization", "communication", "systems-thinking"],
+          capabilities: ["prioritization", "decision-making"],
         },
         {
-          id: "close-and-divert",
-          label: "Lock the gates, halt order processing, divert the queue to the store four km away",
-          outcome:
-            "Safe, and it concedes the evening. The sister store cannot absorb your peak and the standoff is unresolved tomorrow.",
+          id: "post-blind",
+          label: "Post the GRN without verifying",
+          outcome: "You hit the SLA and seeded a variance nobody will trace for a week.",
+          quality: 0.1,
+          capabilities: ["prioritization"],
+        },
+        {
+          id: "run-over",
+          label: "Run over. Finish it properly",
+          outcome: "Clean numbers, and the stock sits in crates while the app shows it out.",
+          quality: 0.55,
+          capabilities: ["ownership"],
+        },
+        {
+          id: "turn-away",
+          label: "Send the rest back unloaded",
+          outcome: "You have solved a paperwork deadline by rejecting good stock.",
+          quality: 0.05,
+          capabilities: ["decision-making"],
+        },
+      ],
+    }),
+    onExpire: { note: "The dock SLA blew past forty-five minutes with stock still in crates." },
+  },
+
+  {
+    id: "sop-milk-run-held",
+    stream: "operations",
+    priority: "high",
+    weight: 32,
+    cooldown: 10_000,
+    ttl: 65,
+    build: () => ({
+      title: "Milk run has been on the dock seventy minutes",
+      detail: "Milk-run vehicles release inside the hour. The grocery line-haul is waiting behind it.",
+      source: "Dock",
+      options: [
+        {
+          id: "clear-now",
+          label: "Clear the milk run first, release it",
+          outcome: "The shorter clock gets priority. The grocery vehicle docks six minutes later.",
+          quality: 0.95,
+          capabilities: ["prioritization", "systems-thinking"],
+        },
+        {
+          id: "finish-order",
+          label: "Finish in the order they arrived",
+          outcome: "Fair, and the vehicle with the one-hour release is the one you held.",
           quality: 0.35,
           capabilities: ["decision-making"],
-          effects: [{ kind: "throttle", status: "closed" }],
         },
         {
-          id: "pay-cash",
-          label: "Pay the protesting riders out of petty cash and write up the packer",
-          outcome:
-            "Deliveries resume in ten minutes and you have taught twenty-five people exactly how to stop your store again.",
+          id: "both",
+          label: "Split the team across both vehicles",
+          outcome: "Two half-speed unloads. Neither clears and both clocks keep running.",
+          quality: 0.25,
+          capabilities: ["prioritization"],
+        },
+        {
+          id: "park-grocery",
+          label: "Send the grocery truck away",
+          outcome: "Tomorrow's ambient stock just left your catchment.",
+          quality: 0.1,
+          capabilities: ["decision-making"],
+        },
+      ],
+    }),
+    onExpire: { note: "Both vehicles sat on the dock. Demurrage on one, a missed slot on the other." },
+  },
+
+  {
+    id: "sop-short-shelf-bread",
+    stream: "operations",
+    priority: "high",
+    weight: 32,
+    cooldown: 10_000,
+    ttl: 65,
+    build: () => ({
+      title: "Bread arrives with fifty-five percent shelf life",
+      detail: "Fresh lines need seventy. Bread is a top-twenty SKU and you are nearly out.",
+      source: "Inbound QC",
+      options: [
+        {
+          id: "reject-log",
+          label: "Gate-reject it, raise a vendor debit",
+          outcome: "The threshold holds. You are short on bread and the vendor pays for it.",
+          quality: 0.95,
+          capabilities: ["ownership", "decision-making"],
+        },
+        {
+          id: "accept-mark",
+          label: "Accept it, sell it down fast today",
+          outcome: "The threshold exists because “sell it fast” is what everyone intends.",
           quality: 0.15,
+          capabilities: ["prioritization"],
+        },
+        {
+          id: "part-accept",
+          label: "Take half, reject the rest",
+          outcome: "Half a breach is still a breach, and now the paperwork is ambiguous too.",
+          quality: 0.25,
+          capabilities: ["decision-making"],
+        },
+        {
+          id: "ask-cluster",
+          label: "Ask the cluster manager to decide",
+          outcome: "The rule is already written. Escalating it costs you the dock slot.",
+          quality: 0.4,
+          capabilities: ["communication"],
+        },
+      ],
+    }),
+    onExpire: { note: "The bread went to shelf unchecked at fifty-five percent." },
+  },
+
+  /* ── Picking: PPI, nil picks, the handheld ────────────────────────────── */
+
+  {
+    id: "sop-high-ppi",
+    stream: "people",
+    priority: "normal",
+    weight: 34,
+    cooldown: 10_000,
+    ttl: 75,
+    build: () => ({
+      title: "Arun's PPI is twenty-six seconds. Normal is ten to fifteen",
+      detail: "He is four weeks in and his zone is the deepest on the floor.",
+      source: "Picker dashboard",
+      options: [
+        {
+          id: "walk-with-him",
+          label: "Walk his zone with him once",
+          outcome: "You find it in four minutes: two bins mislabelled and a route he never learned.",
+          quality: 0.95,
+          capabilities: ["curiosity", "communication", "ownership"],
+        },
+        {
+          id: "post-group",
+          label: "Post his number in the group",
+          outcome: "The group is for motivation. Naming the slowest picker in it does the opposite.",
+          quality: 0.2,
+          capabilities: ["communication"],
+        },
+        {
+          id: "move-off",
+          label: "Move him off picking today",
+          outcome: "Your UPH recovers and the reason his PPI is high is still on your floor.",
+          quality: 0.35,
+          capabilities: ["prioritization"],
+        },
+        {
+          id: "leave-it",
+          label: "Leave it. He is new",
+          outcome: "Four weeks in is exactly when the habit sets.",
+          quality: 0.25,
+          capabilities: ["stress-handling"],
+        },
+      ],
+    }),
+  },
+
+  {
+    id: "sop-nil-pick-window",
+    stream: "operations",
+    priority: "critical",
+    weight: 36,
+    cooldown: 10_000,
+    ttl: 55,
+    build: () => ({
+      title: "Nil pick raised on Aisle C. Forty-five seconds to find it",
+      detail: "The picker cannot cancel it. After the window the SKU de-lists itself.",
+      source: "Outbound Floor Lead",
+      options: [
+        {
+          id: "check-overstock",
+          label: "Check overstock and the drop bins",
+          outcome: "Found behind the replenishment pallet. The order ships whole and the SKU stays live.",
+          quality: 0.95,
+          capabilities: ["curiosity", "prioritization", "systems-thinking"],
+        },
+        {
+          id: "authorise-now",
+          label: "Authorise the nil pick immediately",
+          outcome: "Fast, and you de-listed a SKU that was two metres from the bin.",
+          quality: 0.3,
+          capabilities: ["decision-making"],
+        },
+        {
+          id: "let-picker",
+          label: "Let the picker cancel the line",
+          outcome: "Pickers never cancel. That is the rule the whole nil-pick count depends on.",
+          quality: 0.05,
+          capabilities: ["prioritization"],
+        },
+        {
+          id: "hold-order",
+          label: "Hold the order until someone looks",
+          outcome: "The window exists so an order is never held. This one now is.",
+          quality: 0.2,
           capabilities: ["decision-making"],
         },
       ],
     }),
     onExpire: {
-      note: "Customer service began auto-cancelling. The staged chilled stock had been out for over fifteen minutes.",
-      effects: [{ kind: "cold-chain-loss", units: 40 }],
+      note: "The window closed. The SKU de-listed itself and the cart went out short.",
+      effects: [{ kind: "rating", delta: -0.15 }],
     },
   },
 
   {
-    id: "sop-absenteeism-cascade",
-    stream: "people",
-    priority: "critical",
-    weight: 42,
+    id: "sop-repeat-nil-pick",
+    stream: "operations",
+    priority: "high",
+    weight: 34,
     cooldown: 10_000,
-    ttl: 115,
+    ttl: 70,
     build: () => ({
-      title: "Seven of eighteen associates have shown up on a festival morning",
-      detail:
-        "A 61% absenteeism rate against a day projected at 3,200 orders. Four hundred pre-scheduled breakfast deliveries drop at 07:00. Agency cannot supply temps before 11:30, throttling needs central approval and carries a revenue penalty, and overtime is capped by statute. Staffing Partner: “How are you re-engineering this to avoid a total collapse in forty-five minutes?”",
-      source: "City Staffing Partner",
+      title: "Same SKU nil-picked four times this morning",
+      detail: "System says eleven in stock. Four pickers have stood at that bin and found nothing.",
+      source: "Nil-pick log",
       options: [
         {
-          id: "push-harder",
-          label: "Run the normal workflow with seven people at double speed and threaten the absentees with dismissal",
-          outcome:
-            "Pick errors climb, two people are unusable by ten, and the ones who did turn up remember being threatened.",
+          id: "count-the-bin",
+          label: "Count the bin now, correct the system",
+          outcome: "Four pickers told you the same thing. The count makes it a number you can act on.",
+          quality: 0.95,
+          capabilities: ["curiosity", "systems-thinking", "ownership"],
+          effects: [{ kind: "count-sku", sku: "DRY-1088" }],
+        },
+        {
+          id: "block-sku",
+          label: "Block the SKU and move on",
+          outcome: "No more nil picks, no idea why, and eleven units unaccounted for.",
+          quality: 0.45,
+          capabilities: ["decision-making"],
+          effects: [{ kind: "block-sku", sku: "DRY-1088" }],
+        },
+        {
+          id: "retrain",
+          label: "Tell the pickers to look harder",
+          outcome: "Four people, one bin, same answer. The variance is not in their eyes.",
+          quality: 0.1,
+          capabilities: ["communication"],
+        },
+        {
+          id: "wait-cycle",
+          label: "Wait for the scheduled cycle count",
+          outcome: "That is seven days away and the SKU nil-picks all week.",
+          quality: 0.2,
+          capabilities: ["prioritization"],
+        },
+      ],
+    }),
+  },
+
+  {
+    id: "sop-bin-not-scanned",
+    stream: "operations",
+    priority: "normal",
+    weight: 30,
+    cooldown: 10_000,
+    ttl: 70,
+    build: () => ({
+      title: "A picker is scanning items but skipping the bin",
+      detail: "Bin-then-item is what keeps the shelf and the system agreeing.",
+      source: "HHT audit",
+      options: [
+        {
+          id: "correct-now",
+          label: "Correct him at the pick face now",
+          outcome: "Thirty seconds, in the place it happens. He has not done it since.",
+          quality: 0.95,
+          capabilities: ["communication", "ownership"],
+        },
+        {
+          id: "raise-later",
+          label: "Raise it at tomorrow's standup",
+          outcome: "A shift of untraceable picks before the message lands.",
+          quality: 0.4,
+          capabilities: ["communication"],
+        },
+        {
+          id: "ignore-speed",
+          label: "Leave it. His UPH is excellent",
+          outcome: "His UPH is excellent because of the step he is skipping.",
           quality: 0.05,
+          capabilities: ["prioritization"],
+        },
+        {
+          id: "write-up",
+          label: "Write him up before speaking to him",
+          outcome: "A formal notice for something nobody has yet told him is wrong.",
+          quality: 0.25,
+          capabilities: ["decision-making"],
+        },
+      ],
+    }),
+  },
+
+  /* ── Outbound: CTD, the bay, the riders ───────────────────────────────── */
+
+  {
+    id: "sop-ctd-breach",
+    stream: "operations",
+    priority: "critical",
+    weight: 38,
+    cooldown: 10_000,
+    ttl: 60,
+    build: () => ({
+      title: "Click-to-dispatch has climbed to 240 seconds",
+      detail: "Target is 180. Every second over eats the rider's half of the ten minutes.",
+      source: "Fulfilment board",
+      options: [
+        {
+          id: "second-packer",
+          label: "Put a second packer on the stations",
+          outcome: "Packing was the stage holding it. CTD is back under 180 in four minutes.",
+          quality: 0.95,
+          capabilities: ["prioritization", "systems-thinking"],
+        },
+        {
+          id: "throttle",
+          label: "Throttle intake until it recovers",
+          outcome: "It works, and it costs revenue for a bottleneck one person could have cleared.",
+          quality: 0.55,
+          capabilities: ["decision-making"],
+          effects: [{ kind: "throttle", status: "throttled" }],
+        },
+        {
+          id: "push-pickers",
+          label: "Tell the pickers to move faster",
+          outcome: "The pickers are not the stage that is backed up.",
+          quality: 0.15,
+          capabilities: ["communication"],
+          effects: [{ kind: "worker-fatigue", workerId: "all-active", delta: 0.15 }],
+        },
+        {
+          id: "wait-peak",
+          label: "Ride it out. The peak ends soon",
+          outcome: "At 240 seconds the platform starts extending your delivery window for you.",
+          quality: 0.1,
+          capabilities: ["stress-handling"],
+        },
+      ],
+    }),
+    onExpire: {
+      note: "CTD stayed above target. The app pushed the promise from ten minutes to twenty-five.",
+      effects: [{ kind: "rating", delta: -0.2 }],
+    },
+  },
+
+  {
+    id: "sop-rider-dwell",
+    stream: "operations",
+    priority: "high",
+    weight: 32,
+    cooldown: 10_000,
+    ttl: 65,
+    build: () => ({
+      title: "Riders are waiting four minutes at the bay",
+      detail: "Bay dwell should be under ninety seconds. Two riders have already logged off.",
+      source: "Dispatch console",
+      options: [
+        {
+          id: "stage-ahead",
+          label: "Stage the next ten into numbered bays",
+          outcome: "Riders scan and go. Dwell drops under ninety and nobody else logs off.",
+          quality: 0.95,
+          capabilities: ["systems-thinking", "prioritization"],
+        },
+        {
+          id: "ask-wait",
+          label: "Ask the riders to be patient",
+          outcome: "They are paid per delivery. Patience costs them money and you riders.",
+          quality: 0.1,
+          capabilities: ["communication"],
+        },
+        {
+          id: "call-more",
+          label: "Call more riders to the bay",
+          outcome: "More people waiting on the same bottleneck.",
+          quality: 0.15,
+          capabilities: ["decision-making"],
+        },
+        {
+          id: "escalate-fleet",
+          label: "Escalate the dwell to the fleet lead",
+          outcome: "Correct to flag it. The bags are still not in the bays.",
+          quality: 0.4,
+          capabilities: ["communication"],
+        },
+      ],
+    }),
+    onExpire: { note: "Dwell stayed over four minutes. Three riders logged off the zone." },
+  },
+
+  {
+    id: "sop-rider-shortage",
+    stream: "people",
+    priority: "high",
+    weight: 34,
+    cooldown: 10_000,
+    ttl: 70,
+    build: () => ({
+      title: "Three riders short going into the evening peak",
+      detail: "Two stores inside the three-kilometre cluster did bulk hiring last week.",
+      source: "Last-Mile Fleet Lead",
+      options: [
+        {
+          id: "borrow-cluster",
+          label: "Pull spare riders from the nearby store",
+          outcome: "They are already onboarded and twelve minutes away. Covered before the peak.",
+          quality: 0.95,
+          capabilities: ["systems-thinking", "decision-making", "communication"],
+        },
+        {
+          id: "morning-riders",
+          label: "Call this morning's riders back in",
+          outcome: "Workable. They have already done a shift and the bonus maths is against you.",
+          quality: 0.7,
+          capabilities: ["decision-making", "ownership"],
+        },
+        {
+          id: "longer-window",
+          label: "Extend the promised window on the app",
+          outcome: "Honest, and it depresses conversion across the whole catchment.",
+          quality: 0.45,
+          capabilities: ["customer-thinking"],
+        },
+        {
+          id: "overload",
+          label: "Give each rider more drops",
+          outcome: "Longer routes, colder bags, and the bonus threshold slips out of reach.",
+          quality: 0.2,
+          capabilities: ["prioritization"],
+        },
+      ],
+    }),
+    onExpire: { note: "The peak started three riders down. Bay congestion did the rest." },
+  },
+
+  /* ── Manpower ─────────────────────────────────────────────────────────── */
+
+  {
+    id: "sop-manpower-gap",
+    stream: "people",
+    priority: "critical",
+    weight: 38,
+    cooldown: 10_000,
+    ttl: 70,
+    build: () => ({
+      title: "Four pickers absent. Peak starts in forty minutes",
+      detail: "The on-demand picker app can list a four-hour job in under a minute.",
+      source: "Roll call",
+      options: [
+        {
+          id: "list-on-demand",
+          label: "List a four-hour job on the app",
+          outcome: "Three accept inside fifteen minutes. You are staffed before the first wave.",
+          quality: 0.95,
+          capabilities: ["decision-making", "learning-agility", "systems-thinking"],
+        },
+        {
+          id: "overtime",
+          label: "Hold the night shift on overtime",
+          outcome: "It covers the gap with people who have already worked eight hours.",
+          quality: 0.55,
+          capabilities: ["decision-making"],
+          effects: [{ kind: "worker-fatigue", workerId: "all-active", delta: 0.2 }],
+        },
+        {
+          id: "push-seven",
+          label: "Run the peak with who turned up",
+          outcome: "Pick errors climb, PPI doubles, and the people who came in resent it.",
+          quality: 0.15,
           capabilities: ["stress-handling"],
           effects: [{ kind: "worker-fatigue", workerId: "all-active", delta: 0.3 }],
         },
         {
-          id: "throttle-and-rebuild",
-          label:
-            "Throttle intake 40% until 11:30, rebuild the seven into batch-pick (4 pick, 2 pack, 1 staging), suspend cycle counts and putaway, call the afternoon shift in two hours early on approved overtime",
-          outcome:
-            "Capacity is matched to the people in the building instead of the forecast, and the relief is already moving.",
-          quality: 0.95,
-          capabilities: ["decision-making", "systems-thinking", "learning-agility", "ownership"],
-          effects: [{ kind: "throttle", status: "throttled" }],
-        },
-        {
-          id: "dairy-only",
-          label: "Suspend ambient and high-value fulfilment and run as a dairy and fresh node until relief arrives",
-          outcome:
-            "A defensible simplification that throws away the basket size on the busiest morning of the quarter.",
-          quality: 0.45,
-          capabilities: ["prioritization", "decision-making"],
-        },
-        {
-          id: "riders-pack",
-          label: "Put all seven on picking and let delivery riders pack and bag their own orders",
-          outcome:
-            "Unbadged, untrained people handling food on the pack bench. It is quick, and it is the finding that closes a store.",
-          quality: 0.1,
+          id: "throttle-hard",
+          label: "Throttle intake for the whole peak",
+          outcome: "Safe, expensive, and it was solvable with a two-minute job listing.",
+          quality: 0.4,
           capabilities: ["decision-making"],
+          effects: [{ kind: "throttle", status: "throttled" }],
         },
       ],
     }),
-    onExpire: {
-      note: "The breakfast drop landed on seven people and the standard workflow. The queue never recovered.",
-    },
+    onExpire: { note: "Nobody was called. The peak landed on the pickers who turned up." },
   },
 
   {
-    id: "sop-metric-gaming",
+    id: "sop-retention-bonus",
+    stream: "people",
+    priority: "normal",
+    weight: 28,
+    cooldown: 10_000,
+    ttl: 75,
+    build: () => ({
+      title: "Your best picker wants his retention bonus a month early",
+      detail: "The ₹10,000 is paid at three months. He is at two and has an offer.",
+      source: "Pick face",
+      options: [
+        {
+          id: "name-the-date",
+          label: "Name the exact date, in writing",
+          outcome: "He stays. What he actually wanted was to know the number was real.",
+          quality: 0.95,
+          capabilities: ["communication", "ownership", "decision-making"],
+        },
+        {
+          id: "pay-early",
+          label: "Pay it early, keep him happy",
+          outcome: "He stays a month. Every picker on the floor now knows the terms are negotiable.",
+          quality: 0.3,
+          capabilities: ["decision-making"],
+        },
+        {
+          id: "let-go",
+          label: "Tell him the policy and move on",
+          outcome: "Policy is correct and you have said nothing he could not read himself.",
+          quality: 0.4,
+          capabilities: ["ownership"],
+        },
+        {
+          id: "promise-vague",
+          label: "Tell him you will look into it",
+          outcome: "The thing that loses pickers is not the rule, it is the vague answer.",
+          quality: 0.15,
+          capabilities: ["communication"],
+        },
+      ],
+    }),
+  },
+
+  {
+    id: "sop-zone-dispute",
     stream: "people",
     priority: "high",
-    weight: 40,
+    weight: 30,
     cooldown: 10_000,
-    ttl: 110,
+    ttl: 65,
     build: () => ({
-      title: "Your fastest picker is faking nil-picks to protect their rate",
-      detail:
-        "Item-not-found has gone from 0.18% to 0.85% in a week. CCTV confirms your top picker — 165 UPH against a store average of 115 — scans the bin and flags “nil pick” whenever an item needs a step-ladder. Confronted, they say the afternoon shift walks out with them. That shift starts in an hour. HR Business Partner: “What actions are you taking right now?”",
-      source: "HR Business Partner",
+      title: "Two pickers arguing over zone allocation at the pick face",
+      detail: "Zone D is deeper and slower. Both say they had it yesterday.",
+      source: "Floor",
       options: [
         {
-          id: "overlook",
-          label: "Let it go to keep the evening shift intact",
-          outcome:
-            "Phantom stockouts keep corrupting the inventory record and demand forecast, and the whole floor now knows the rules are negotiable.",
-          quality: 0.05,
-          capabilities: ["stress-handling"],
-        },
-        {
-          id: "terminate-on-spot",
-          label: "Terminate on the spot, escort them out, tell the floor complaints will be met the same way",
-          outcome:
-            "The falsification stops. So does any chance of the walkout not happening, and you have skipped every step HR needs.",
-          quality: 0.25,
-          capabilities: ["ownership", "decision-making"],
-        },
-        {
-          id: "reassign-and-document",
-          label:
-            "Name it as a compliance breach, move them to inbound under direct supervision for the shift, brief the afternoon leads on standards pre-shift, raise a formal written notice with HR after the shift",
-          outcome:
-            "The data stops being corrupted today, the floor is staffed tonight, and the record is clean enough to stand up later.",
+          id: "rotate-publicly",
+          label: "Rotate zones daily, post the rota",
+          outcome: "The argument was never about today. A visible rota ends it for good.",
           quality: 0.95,
-          capabilities: ["ownership", "stress-handling", "decision-making", "communication"],
+          capabilities: ["systems-thinking", "communication", "ownership"],
         },
         {
-          id: "informal-promotion",
-          label: "Offer them a shift-lead role to stop quietly and keep it off the record",
-          outcome:
-            "You have promoted the person who gamed the metric, and bought their silence with the job.",
-          quality: 0.05,
-          capabilities: ["communication"],
-        },
-      ],
-    }),
-    onExpire: {
-      note: "Nothing was said before the shift change. The nil-pick rate held and the afternoon shift came in unbriefed.",
-    },
-  },
-
-  /* ── Logical and critical thinking ────────────────────────────────────── */
-
-  {
-    id: "sop-phase-failure",
-    stream: "operations",
-    priority: "critical",
-    weight: 44,
-    cooldown: 10_000,
-    ttl: 110,
-    build: () => ({
-      title: "Chiller down in 41°C heat and the generator will not pick up the circuit",
-      detail:
-        "The walk-in has gone from 3.8°C to 8.5°C in twenty minutes with ₹3,50,000 of dairy, poultry and produce inside; three freezers holding ₹1,20,000 are warming. HVAC is seventy-five minutes out. You have four insulated boxes, sixty gel pads, dry ice, and a sister store 2.8 km away with 30% spare capacity. Cluster Ops Head: “Unmanaged breach means total disposal under FSSAI. Your plan.”",
-      source: "Cluster Operations Head",
-      options: [
-        {
-          id: "wait-it-out",
-          label: "Keep the doors shut to hold the cold and wait for the technician",
-          outcome:
-            "Seventy-five minutes above threshold. Everything in the room is legally unsellable by the time he parks.",
-          quality: 0.1,
-          capabilities: ["stress-handling"],
-          effects: [{ kind: "cold-chain-loss", units: 120 }],
-        },
-        {
-          id: "thermal-evacuation",
-          label:
-            "Pause chilled and frozen on the app, pack high-value frozen into insulated boxes with dry ice, van the bulk dairy to the sister store, seal the walk-in on the rest",
-          outcome:
-            "The most vulnerable, highest-value stock moves first, nothing compromised reaches a customer, and the network absorbs what you cannot hold.",
-          quality: 0.95,
-          capabilities: ["prioritization", "ownership", "systems-thinking", "decision-making"],
-          effects: [{ kind: "throttle", status: "throttled" }],
-        },
-        {
-          id: "flash-sale",
-          label: "Run an 80% clearance flash sale to move the dairy and frozen before it spoils",
-          outcome:
-            "You have sold temperature-abused food to your own catchment, at speed, with a promotion attached to it.",
-          quality: 0.05,
-          capabilities: ["decision-making"],
-          effects: [{ kind: "rating", delta: -0.5 }],
-        },
-        {
-          id: "portable-ac",
-          label: "Borrow portable air conditioners from the shops nearby and run them in on extension cords",
-          outcome:
-            "Domestic units cannot pull a walk-in down, and you have put trailing cables through a wet room on a failed phase.",
-          quality: 0.1,
-          capabilities: ["curiosity"],
-        },
-      ],
-    }),
-    onExpire: {
-      note: "The breach went unmanaged past the hour. Under FSSAI the whole room is a disposal.",
-      effects: [{ kind: "cold-chain-loss", units: 140 }],
-    },
-  },
-
-  {
-    id: "sop-routing-discrepancy",
-    stream: "management",
-    priority: "high",
-    weight: 38,
-    cooldown: 10_000,
-    ttl: 110,
-    build: () => ({
-      title: "The line-haul on your dock belongs to the North Zone store",
-      detail:
-        "400 totes, ₹6,00,000, and the WMS returns “PO mismatch — document routing error”. The paper challan carries your facility ID; the electronic pallet IDs are North Zone's. The driver wants to unload and leave in twenty minutes. Receiving another store's goods breaks GST and the ledger; turning it away undocumented loses it in transit. Central Supply Chain Planning: “North Zone is stocking out. Are you receiving it or not?”",
-      source: "Central Supply Chain Planning",
-      options: [
-        {
-          id: "keep-it",
-          label: "Inward it as a miscellaneous delivery and stow it for your own weekend",
-          outcome:
-            "Your weekend looks good. North Zone stocks out, and the tax invoice does not match anything in either ledger.",
-          quality: 0.05,
-          capabilities: ["decision-making"],
-        },
-        {
-          id: "refuse-outright",
-          label: "Endorse the challan “wrong facility”, send the driver away, return to normal receiving",
-          outcome:
-            "Correct on paper and ₹6 lakh is now moving with no owner and no destination confirmed.",
+          id: "pick-one",
+          label: "Assign it to one of them now",
+          outcome: "The floor moves again, and you have the same argument tomorrow.",
           quality: 0.45,
-          capabilities: ["ownership"],
-        },
-        {
-          id: "three-way-reroute",
-          label:
-            "Hold unloading, check pallet labels against the ASN, get Central Planning and the North Zone manager on a three-way, locate your own consignment, reroute the truck with valid paperwork",
-          outcome:
-            "The paperwork error is found rather than absorbed, the stock reaches the store that needs it, and both ledgers survive the audit.",
-          quality: 0.95,
-          capabilities: ["systems-thinking", "ownership", "curiosity", "communication"],
-        },
-        {
-          id: "hold-hostage",
-          label: "Unload it into staging and hold it until your own consignment is dispatched",
-          outcome:
-            "Leverage, in a network where the only thing you have actually blocked is another manager's morning.",
-          quality: 0.15,
-          capabilities: ["decision-making"],
-        },
-      ],
-    }),
-    onExpire: {
-      note: "The driver left on his own schedule. Neither store can say where the consignment is.",
-    },
-  },
-
-  {
-    id: "sop-aisle-congestion",
-    stream: "operations",
-    priority: "high",
-    weight: 38,
-    cooldown: 10_000,
-    ttl: 115,
-    build: () => ({
-      title: "450 new SKUs have strangled Aisle 2",
-      detail:
-        "A corporate assortment expansion put beauty, cosmetics and seasonal lines into the same 2,500 sq ft. Pick times have gone from 65 to 125 seconds and five or six pickers regularly jam the three-foot aisle. Walls cannot move without a multi-day shutdown and the catalogue cannot be trimmed — national vendor promotions. VP Operations: “Productivity is down 45%. The SKUs stay. Fix the aisle.”",
-      source: "VP Operations",
-      options: [
-        {
-          id: "shutdown-reshelf",
-          label: "Shut the store for two days, pull every second shelving unit, halve capacity for width",
-          outcome:
-            "Two days of zero fulfilment and half the stock, to solve a problem that is about where things sit, not how much room there is.",
-          quality: 0.1,
           capabilities: ["decision-making"],
         },
         {
-          id: "reslot-and-zone",
-          label:
-            "Re-slot fast-moving oils and flour to end-caps and floor bays by packing, push slow lines into deep shelving, split the floor into two pick zones with consolidated packing",
-          outcome:
-            "Velocity-based slotting takes the traffic out of the aisle and zone picking stops pickers crossing each other. No wall moves.",
-          quality: 0.95,
-          capabilities: ["systems-thinking", "learning-agility", "prioritization", "decision-making"],
-        },
-        {
-          id: "one-picker-rule",
-          label: "One picker per aisle — everyone else queues outside Aisle 2",
-          outcome:
-            "The jam becomes a queue. The same pickers wait for the same aisle and the clock keeps running.",
-          quality: 0.3,
-          capabilities: ["prioritization"],
-        },
-        {
-          id: "no-carts",
-          label: "Leave the carts at the entrance and have pickers carry items by hand",
-          outcome:
-            "Fewer obstructions, many more trips. Pick times go up, not down, and the team is exhausted by noon.",
-          quality: 0.2,
-          capabilities: ["decision-making"],
-          effects: [{ kind: "worker-fatigue", workerId: "all-active", delta: 0.2 }],
-        },
-      ],
-    }),
-    onExpire: {
-      note: "The aisle stayed as it was. Dispatch queues are spilling into the street.",
-    },
-  },
-
-  /* ── Time management ──────────────────────────────────────────────────── */
-
-  {
-    id: "sop-convergence",
-    stream: "management",
-    priority: "critical",
-    weight: 44,
-    cooldown: 10_000,
-    ttl: 115,
-    build: () => ({
-      title: "An inspector, a broken-down truck and an executive's order, all at once",
-      detail:
-        "An FSSAI officer is at the counter wanting cold rooms, sanitation logs and medical files. A 3PL reefer has died across the only dock and wardens are threatening to tow. And an order from an executive in the catchment is eight minutes past SLA on a missing coffee SKU. The inspector cannot be left unescorted. City Ops Manager: “Fifteen minutes. How are you spending your staff and your attention?”",
-      source: "City Operations Manager",
-      options: [
-        {
-          id: "chase-the-order",
-          label: "Find the executive's coffee yourself and hand-deliver it, then deal with the rest",
-          outcome:
-            "The store manager spent the inspection window walking an aisle for one order. The warden had the truck hooked up by then.",
-          quality: 0.1,
-          capabilities: ["customer-thinking"],
-        },
-        {
-          id: "inspector-only",
-          label: "Sit with the inspector for the full fifteen minutes and let the other two run",
-          outcome:
-            "Defensible and incomplete. The dock is towed, the escalation lands upstairs, and you delegated nothing.",
-          quality: 0.35,
-          capabilities: ["ownership"],
-        },
-        {
-          id: "delegate-in-phases",
-          label:
-            "0–2 min: seat the officer with the Deputy and the compliance binder. 2–4: Inbound Supervisor and security on the truck and the warden. 4–7: Outbound Lead runs an approved substitution and a priority rider. 7–15: you take the inspector's walkthrough yourself",
-          outcome:
-            "Three problems, three owners, and the one that can close the store gets the store manager — in that order.",
-          quality: 0.95,
-          capabilities: ["prioritization", "ownership", "decision-making", "customer-thinking"],
-        },
-        {
-          id: "refuse-entry",
-          label: "Refuse the inspector entry until legal counsel arrives, put the floor on the truck and the order",
-          outcome:
-            "Non-cooperation is its own citation, and you have made an inspection into an incident.",
-          quality: 0.05,
-          capabilities: ["decision-making"],
-        },
-      ],
-    }),
-    onExpire: {
-      note: "Fifteen minutes passed with nothing delegated. The truck was towed and the inspector logged non-cooperation.",
-    },
-  },
-
-  {
-    id: "sop-staging-backlog",
-    stream: "operations",
-    priority: "high",
-    weight: 40,
-    cooldown: 10_000,
-    ttl: 110,
-    build: () => ({
-      title: "Forty-five minutes to clear a backlog before the evening surge",
-      detail:
-        "Printer failures have left 65 unpicked orders, 40 picked-but-unpacked totes across the stations, and tote drop-offs blocked so pickers cannot close routes. Eight pallets of beverages are still unstowed on the dock — and live on the app. Twelve associates, frustrated. GM Operations: “Fifty orders a minute at 18:00. Give me your exact forty-five-minute recovery schedule.”",
-      source: "GM Operations",
-      options: [
-        {
-          id: "all-on-stow",
-          label: "Put all twelve on stowing the beverage pallets for forty-five minutes",
-          outcome:
-            "The dock is clear and you enter the surge with 105 orders already behind you.",
+          id: "both-off",
+          label: "Move them both to packing",
+          outcome: "Two pickers off the pick face during a peak, over a rota question.",
           quality: 0.15,
           capabilities: ["prioritization"],
         },
         {
-          id: "phased-recovery",
-          label:
-            "0–15: halt putaway, four clear the 40 totes across two stations, two clear dispatch staging. 15–30: six batch-pick the 65 backlogged orders. 30–45: four cross-dock the beverages to end-caps, then a floor sweep",
-          outcome:
-            "The bottleneck is cleared before the work that feeds it, and the beverages land where a picker can reach them in the surge.",
-          quality: 0.95,
-          capabilities: ["prioritization", "systems-thinking", "decision-making", "ownership"],
-        },
-        {
-          id: "cancel-the-queue",
-          label: "Ask the control tower to cancel all 105 backlogged orders and start the peak clean",
-          outcome:
-            "A clean queue at 18:00, bought with 105 customers who ordered hours ago and get nothing.",
+          id: "ignore",
+          label: "Let them sort it out",
+          outcome: "They sort it out loudly, in the aisle, for another six minutes.",
           quality: 0.1,
-          capabilities: ["decision-making"],
-          effects: [{ kind: "rating", delta: -0.4 }],
-        },
-        {
-          id: "pack-in-aisles",
-          label: "Have pickers pack in the aisles with manual supplies and leave the dock for later",
-          outcome:
-            "Packing in a pick aisle blocks the aisle. The dock is still loaded and the beverages are still live on the app.",
-          quality: 0.2,
-          capabilities: ["learning-agility"],
+          capabilities: ["stress-handling"],
         },
       ],
     }),
-    onExpire: {
-      note: "The surge arrived on top of the backlog. Fulfilment is running twenty minutes late across the board.",
-    },
   },
 
+  /* ── Inventory, shrinkage, quality ────────────────────────────────────── */
+
   {
-    id: "sop-flash-sale-cutover",
+    id: "sop-cage-short",
     stream: "management",
-    priority: "high",
-    weight: 38,
-    cooldown: 10_000,
-    ttl: 115,
-    build: () => ({
-      title: "Forty-three minutes to a midnight flash sale, and the cash is ₹1,500 short",
-      detail:
-        "Four things at once: stage 500 units of party stock on end-caps; inward 400 kg of gourmet ice that arrived late and is already melting on the dock; brief eight incoming night associates; and reconcile ₹45,000 of COD showing a ₹1,500 shortage. The 00:01 go-live is hardcoded. Commercial Director: “Biggest campaign of the quarter. How are you spending the next forty-three minutes?”",
-      source: "Platform Commercial Director",
-      options: [
-        {
-          id: "chase-the-cash",
-          label: "Find the ₹1,500 first and postpone the launch if you have to",
-          outcome:
-            "₹1,500 of exposure resolved. 400 kg of ice gone, and the quarter's campaign launched to an empty end-cap.",
-          quality: 0.1,
-          capabilities: ["ownership"],
-        },
-        {
-          id: "triage",
-          label:
-            "0–15: four outgoing associates move the ice into freezers, temperatures logged. 15–30: two night staff stage the party lines and scan-verify. 30–40: seal ₹43,500 under dual signature, raise a ₹1,500 discrepancy ticket, brief the shift. 40–43: confirm readiness",
-          outcome:
-            "The thing that is melting moves first, the deadline is met, and the shortage is documented rather than quietly absorbed.",
-          quality: 0.95,
-          capabilities: ["prioritization", "decision-making", "ownership", "communication"],
-        },
-        {
-          id: "reject-and-lock",
-          label: "Reject the late ice, lock the cash box unbalanced, let the night shift stage it themselves",
-          outcome:
-            "Three problems deferred onto people who have just walked in, and an unbalanced safe with your name on it.",
-          quality: 0.05,
-          capabilities: ["decision-making"],
-        },
-        {
-          id: "delegate-outside",
-          label: "Hand staging and ice receiving to the delivery drivers waiting outside",
-          outcome:
-            "Unbadged people receiving stock and touching the cold chain, with no scan trail on either.",
-          quality: 0.1,
-          capabilities: ["decision-making"],
-        },
-      ],
-    }),
-    onExpire: {
-      note: "Midnight came. The ice was water, the end-caps were empty, and the safe was never balanced.",
-    },
-  },
-
-  /* ── Customer-first ───────────────────────────────────────────────────── */
-
-  {
-    id: "sop-infant-formula",
-    stream: "customers",
     priority: "critical",
-    weight: 44,
+    weight: 36,
     cooldown: 10_000,
-    ttl: 110,
+    ttl: 70,
     build: () => ({
-      title: "Punctured foil seal on a tin of infant formula",
-      detail:
-        "A customer reports powder residue around the rim of a Stage-1 formula tin delivered twenty minutes ago and is threatening a police report and social media. A picker has just found a second punctured tin from the same batch on the shelf. Four orders with tins from that batch are at the packing counter. VP Customer Experience: “The child has not consumed it. The parents are furious. Your resolution for this family, and for that stock?”",
-      source: "VP Customer Experience",
+      title: "High-value cage is two smartwatches short on the daily count",
+      detail: "You issue those yourself. Only three people hold cage access.",
+      source: "ICQA Lead",
       options: [
         {
-          id: "app-credit",
-          label: "Issue a ₹200 app credit, let the four staged orders go, inspect the shelf tomorrow",
-          outcome:
-            "Four more tins from a suspect batch went out to four more households tonight, for ₹200.",
-          quality: 0.05,
-          capabilities: ["customer-thinking"],
-          effects: [{ kind: "rating", delta: -0.5 }],
-        },
-        {
-          id: "containment",
-          label:
-            "Stop the four orders at dispatch, quarantine the batch, de-list the SKU across the catchment, call the family yourself, send a verified replacement by supervisor, offer to cover a paediatric consult, file a food safety incident report",
-          outcome:
-            "The exposure stops at four orders, the family hears from the person responsible, and the manufacturer's quality team gets what they need.",
+          id: "freeze-and-pull",
+          label: "Freeze the cage, pull CCTV and access logs",
+          outcome: "Both named in six minutes. The evidence exists only while the shift is still here.",
           quality: 0.95,
-          capabilities: ["customer-thinking", "ownership", "systems-thinking", "communication"],
-          effects: [{ kind: "block-sku", sku: "BAB-8501" }],
+          capabilities: ["ownership", "curiosity", "prioritization"],
         },
         {
-          id: "deflect-to-brand",
-          label: "Point the customer at the manufacturer and have packers tape over minor punctures",
-          outcome:
-            "You have instructed a team to conceal a packaging defect on infant nutrition. In writing, on a terminal.",
-          quality: 0.0,
-          capabilities: ["communication"],
-          effects: [{ kind: "rating", delta: -0.6 }],
-        },
-        {
-          id: "allege-fraud",
-          label: "Tell support the claim looks fraudulent and refuse a recall without lab results",
-          outcome:
-            "A furious parent, a second punctured tin on your own shelf, and a store that called them a liar.",
+          id: "write-off",
+          label: "Write it off to monthly shrinkage",
+          outcome: "Two units today. The person who took them learns the ceiling.",
           quality: 0.05,
+          capabilities: ["decision-making"],
+        },
+        {
+          id: "recount",
+          label: "Recount at the end of the shift",
+          outcome: "By then the shift has gone home and so, probably, have the watches.",
+          quality: 0.25,
           capabilities: ["curiosity"],
-          effects: [{ kind: "rating", delta: -0.5 }],
+        },
+        {
+          id: "accuse",
+          label: "Question the pickers on the floor",
+          outcome: "Nobody near that cage has access, and the floor now knows you suspect them.",
+          quality: 0.1,
+          capabilities: ["communication"],
         },
       ],
     }),
     onExpire: {
-      note: "The four staged orders dispatched. The batch is now in four more homes and the family went public.",
-      effects: [{ kind: "rating", delta: -0.6 }],
+      note: "Nothing was secured before the shift change. The cage variance is an audit finding now.",
     },
   },
 
   {
-    id: "sop-cloudburst",
-    stream: "customers",
-    priority: "critical",
-    weight: 42,
+    id: "sop-daily-variance",
+    stream: "management",
+    priority: "high",
+    weight: 32,
     cooldown: 10_000,
-    ttl: 115,
+    ttl: 70,
     build: () => ({
-      title: "Ninety millimetres in two hours and the competition has gone offline",
-      detail:
-        "Roads are under two feet of water. The store is dry; 300 emergency orders are in for drinking water, formula, milk, bread, candles and first aid. Riders will not take bikes through it and the fleet manager wants the hub offline. Forty riders are sheltering inside. An RWA rep 600 m away: “No power, flooded basements, families need water and baby food. Are you shutting down?” City Ops Head: “Rider safety is paramount. Your decision.”",
-      source: "City Operations Head",
+      title: "Daily variance is 0.6 percent against a 0.2 threshold",
+      detail: "Three times over. A root-cause investigation is automatic above the line.",
+      source: "WMS variance report",
       options: [
         {
-          id: "go-offline",
-          label: "Take the hub offline, send the riders home, lock up",
-          outcome:
-            "Nobody gets hurt, and the one night the catchment genuinely needed the store, it was shut.",
-          quality: 0.35,
-          capabilities: ["ownership"],
-          effects: [{ kind: "throttle", status: "closed" }],
-        },
-        {
-          id: "relief-model",
-          label:
-            "Cut the catalogue to essentials, pull the geofence from 3 km to a walkable 800 m avoiding submerged roads, stop two-wheelers, run foot teams in rain gear with incentive pay plus a high-chassis van, drop consolidated orders at complex gates",
-          outcome:
-            "Nobody rides through floodwater, and water and formula still reach the buildings that need them.",
+          id: "trace-today",
+          label: "Trace today's movements before closing",
+          outcome: "Two putaway errors and a mis-weighed line. All three fixable, all three traced.",
           quality: 0.95,
-          capabilities: ["customer-thinking", "ownership", "learning-agility", "systems-thinking"],
-          effects: [{ kind: "throttle", status: "throttled" }],
+          capabilities: ["curiosity", "systems-thinking", "ownership"],
         },
         {
-          id: "force-riders",
-          label: "Keep the full 3 km zone and catalogue live and penalise riders who refuse",
-          outcome:
-            "You have ordered people onto flooded roads on two-wheelers, with the penalty in writing.",
+          id: "monthly",
+          label: "Roll it into the monthly reconciliation",
+          outcome: "By month end the movement trail is cold and the number is just a number.",
+          quality: 0.15,
+          capabilities: ["prioritization"],
+        },
+        {
+          id: "adjust-system",
+          label: "Adjust the system to match the shelf",
+          outcome: "The variance disappears and so does any chance of knowing what caused it.",
+          quality: 0.05,
+          capabilities: ["decision-making"],
+        },
+        {
+          id: "escalate",
+          label: "Send it to the cluster manager",
+          outcome: "Correct to report it. The investigation is still yours to run.",
+          quality: 0.45,
+          capabilities: ["communication"],
+        },
+      ],
+    }),
+  },
+
+  {
+    id: "sop-weight-mismatch",
+    stream: "customers",
+    priority: "high",
+    weight: 32,
+    cooldown: 10_000,
+    ttl: 70,
+    build: () => ({
+      title: "Customer ordered 30g Parle-G and was given the 40g pack",
+      detail: "Same shelf, adjacent bins. Support has it as a wrong-item complaint.",
+      source: "Customer Support",
+      options: [
+        {
+          id: "split-bins",
+          label: "Separate the bins, refund the difference",
+          outcome: "The customer is squared and the bin layout stops producing the error.",
+          quality: 0.95,
+          capabilities: ["customer-thinking", "systems-thinking", "ownership"],
+        },
+        {
+          id: "refund-only",
+          label: "Refund it and close the ticket",
+          outcome: "Settled for one customer. The two bins are still touching.",
+          quality: 0.45,
+          capabilities: ["customer-thinking"],
+        },
+        {
+          id: "blame-picker",
+          label: "Warn the picker who packed it",
+          outcome: "The next picker makes the same error at the same two bins.",
+          quality: 0.2,
+          capabilities: ["communication"],
+        },
+        {
+          id: "no-action",
+          label: "Call it a fair substitution",
+          outcome: "They got more biscuit and paid for less. It still books as a loss.",
+          quality: 0.1,
+          capabilities: ["decision-making"],
+        },
+      ],
+    }),
+  },
+
+  {
+    id: "sop-expired-on-rack",
+    stream: "operations",
+    priority: "critical",
+    weight: 34,
+    cooldown: 10_000,
+    ttl: 60,
+    build: () => ({
+      title: "Expired curd found on the fresh rack, not in the dump area",
+      detail: "FEFO puts the oldest at the front. Something was stowed behind it instead.",
+      source: "Floor walk",
+      options: [
+        {
+          id: "sweep-and-retrain",
+          label: "Sweep the whole bay, re-brief the stower",
+          outcome: "Four more found behind it. The stowing habit is the actual defect.",
+          quality: 0.95,
+          capabilities: ["ownership", "systems-thinking", "curiosity"],
+        },
+        {
+          id: "pull-one",
+          label: "Pull that one unit to quarantine",
+          outcome: "One unit handled. Whatever is behind it on the same rack is not.",
+          quality: 0.4,
+          capabilities: ["ownership"],
+        },
+        {
+          id: "end-of-day",
+          label: "Flag it for the evening expiry pull",
+          outcome: "It is live on the app until then, at the front of a fresh rack.",
+          quality: 0.1,
+          capabilities: ["prioritization"],
+          effects: [{ kind: "rating", delta: -0.2 }],
+        },
+        {
+          id: "discount",
+          label: "Mark it down and move it today",
+          outcome: "It is expired, not near-expiry. There is no price that makes it sellable.",
           quality: 0.0,
           capabilities: ["decision-making"],
           effects: [{ kind: "rating", delta: -0.4 }],
         },
-        {
-          id: "open-doors",
-          label: "Open the doors and let the public walk in and buy off the fulfilment aisles",
-          outcome:
-            "A dark store is not a shop. No queue management, no segregation, and a crowd inside a live pick floor.",
-          quality: 0.2,
-          capabilities: ["customer-thinking"],
-        },
       ],
     }),
     onExpire: {
-      note: "The decision made itself. The hub went dark and the 300 orders cancelled.",
-      effects: [{ kind: "throttle", status: "closed" }],
+      note: "The expired stock stayed on the fresh rack and kept selling.",
+      effects: [{ kind: "rating", delta: -0.3 }],
     },
   },
 
   {
-    id: "sop-allergen-breach",
-    stream: "customers",
+    id: "sop-chiller-drift",
+    stream: "operations",
     priority: "critical",
-    weight: 42,
+    weight: 38,
     cooldown: 10_000,
-    ttl: 110,
+    ttl: 55,
     build: () => ({
-      title: "Peanut butter leaked over a vegan order packed with raw chicken",
-      detail:
-        "A customer with a severe peanut allergy and a vegan household opened a single unsealed paper bag containing cracked whole peanut butter, their almond butter and oats, and a pack of raw chicken sausages. They have a skin reaction and are preparing a consumer court complaint. The packer bagged across hazard categories to save packaging. Head of Brand Reputation: “She is an influential food writer. How are you handling her, and how did your floor allow this?”",
-      source: "Head of Brand Reputation",
+      title: "Chiller has read 6.8°C for thirty-five minutes",
+      detail: "Above five for thirty continuous minutes means transfer and an HVAC escalation.",
+      source: "IoT thermal sensor",
       options: [
         {
-          id: "blame-transit",
-          label: "Put it down to courier handling, process a routine refund, close the allergy escalation",
-          outcome:
-            "A refund for an allergic reaction caused by your own bagging rule being ignored. The packing floor learns nothing.",
-          quality: 0.0,
-          capabilities: ["customer-thinking"],
-          effects: [{ kind: "rating", delta: -0.5 }],
-        },
-        {
-          id: "restitution-and-fix",
-          label:
-            "Call her yourself — apologise, check her condition, cover medical costs, send replacements from isolated stock. Pull the packing CCTV, pause that station for segregation retraining, and configure the WMS to force a dual scan when raw meat or allergens meet groceries",
-          outcome:
-            "The person is looked after by the manager, and the bagging rule stops depending on whether a packer is in a hurry.",
+          id: "transfer-escalate",
+          label: "Transfer to backup, raise HVAC now",
+          outcome: "Exactly what the thirty-minute rule is for. The stock is out before the hour.",
           quality: 0.95,
-          capabilities: ["customer-thinking", "curiosity", "systems-thinking", "ownership"],
+          capabilities: ["ownership", "decision-making", "prioritization"],
         },
         {
-          id: "nda-subscription",
-          label: "Offer a year of free premium delivery in exchange for an NDA on the incident",
-          outcome:
-            "You have tried to buy silence from a food writer over an allergic reaction. That is the story now.",
-          quality: 0.0,
-          capabilities: ["communication"],
-          effects: [{ kind: "rating", delta: -0.6 }],
+          id: "watch-it",
+          label: "Watch it another fifteen minutes",
+          outcome: "The threshold was crossed five minutes ago. Waiting only adds to the loss.",
+          quality: 0.1,
+          capabilities: ["stress-handling"],
+          effects: [{ kind: "cold-chain-loss", units: 40 }],
         },
         {
-          id: "cannot-guarantee",
-          label: "Tell support that high-volume stores cannot guarantee allergen isolation",
-          outcome:
-            "On the record, from the store manager: our packing cannot be trusted with allergies.",
-          quality: 0.0,
+          id: "close-doors",
+          label: "Stop picking from it, keep doors shut",
+          outcome: "Sensible, partial, and the compressor is still not fixed.",
+          quality: 0.5,
+          capabilities: ["prioritization"],
+        },
+        {
+          id: "log-only",
+          label: "Log the reading and carry on",
+          outcome: "Logged, unmanaged. That is the combination an FSSAI audit looks for.",
+          quality: 0.05,
           capabilities: ["communication"],
-          effects: [{ kind: "rating", delta: -0.6 }],
+          effects: [{ kind: "cold-chain-loss", units: 60 }],
         },
       ],
     }),
     onExpire: {
-      note: "Nobody called her. The complaint was filed with the photographs attached.",
-      effects: [{ kind: "rating", delta: -0.5 }],
+      note: "The drift ran past the hour unmanaged. The bay is a disposal.",
+      effects: [{ kind: "cold-chain-loss", units: 90 }],
     },
+  },
+
+  {
+    id: "sop-packer-defects",
+    stream: "customers",
+    priority: "high",
+    weight: 32,
+    cooldown: 10_000,
+    ttl: 70,
+    build: () => ({
+      title: "Three missing-item complaints today, all from one packing station",
+      detail: "Order defect rate is at 0.9 percent. Target is under 0.35.",
+      source: "Customer Support",
+      options: [
+        {
+          id: "watch-the-station",
+          label: "Stand at that station and watch a cycle",
+          outcome: "He is bagging before the bill of materials clears. Two minutes to see, one to fix.",
+          quality: 0.95,
+          capabilities: ["curiosity", "ownership", "systems-thinking"],
+        },
+        {
+          id: "refund-all",
+          label: "Refund all three and move on",
+          outcome: "Three customers made whole and the station carries on producing a fourth.",
+          quality: 0.35,
+          capabilities: ["customer-thinking"],
+        },
+        {
+          id: "rotate-him",
+          label: "Move him to another station",
+          outcome: "The station was never the problem and now the defect moves with him.",
+          quality: 0.2,
+          capabilities: ["decision-making"],
+        },
+        {
+          id: "brief-all",
+          label: "Re-brief every packer at handover",
+          outcome: "Everyone hears a lecture meant for one person, hours after it mattered.",
+          quality: 0.3,
+          capabilities: ["communication"],
+        },
+      ],
+    }),
   },
 ];
