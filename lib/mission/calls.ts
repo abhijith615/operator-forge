@@ -31,6 +31,12 @@ export interface MissionCallOption {
   /** 0–1, on the same scale as a task option. Feeds the genome directly. */
   quality: number;
   capabilities: CapabilityId[];
+  /**
+   * On an outbound call about a person, whether this answer actually got them
+   * to come in. The worker only returns to the floor if it did — which is the
+   * difference between a phone call and a button.
+   */
+  agrees?: boolean;
 }
 
 export interface MissionCallBeat {
@@ -51,6 +57,8 @@ export interface MissionCall {
   ringFor: number;
   /** Shift second the phone starts ringing. Absent on outbound calls. */
   at?: number;
+  /** The worker this call is about, for an outbound recall. */
+  subjectId?: string;
   /** What declining costs. Never nothing — the call happened either way. */
   ignored: {
     quality: number;
@@ -220,11 +228,12 @@ export const SCHEDULED_CALLS: MissionCall[] = [
  * what is scored is whether something real is traded for something real, and
  * whether the person still picks up next week.
  */
-export function recallNegotiation(workerName: string): MissionCall {
+export function recallNegotiation(workerName: string, workerId?: string): MissionCall {
   const first = workerName.split(" ")[0] ?? workerName;
 
   return {
     id: `recall-${first.toLowerCase()}`,
+    subjectId: workerId,
     caller: workerName,
     role: "Absent · rostered 09:00",
     opening: "“Haan boss. I know, I know.”",
@@ -271,6 +280,7 @@ export function recallNegotiation(workerName: string): MissionCall {
             id: "trade-clean",
             label: "Agree, and put it in writing today",
             reply: "“Done. Thirty minutes.” They are in before the wave.",
+            agrees: true,
             quality: 0.95,
             capabilities: ["decision-making", "ownership", "communication"],
           },
@@ -278,6 +288,7 @@ export function recallNegotiation(workerName: string): MissionCall {
             id: "check-first",
             label: "Check who else wants Saturday first",
             reply: "“Fair. Tell me by evening. Leaving now anyway.”",
+            agrees: true,
             quality: 0.85,
             capabilities: ["systems-thinking", "curiosity"],
           },
@@ -285,6 +296,7 @@ export function recallNegotiation(workerName: string): MissionCall {
             id: "promise-vague",
             label: "Say you will try. Get them moving",
             reply: "“You said that last month.” They come, reluctantly.",
+            agrees: true,
             quality: 0.4,
             capabilities: ["decision-making"],
           },
@@ -292,6 +304,7 @@ export function recallNegotiation(workerName: string): MissionCall {
             id: "refuse",
             label: "Refuse. Attendance is not negotiable",
             reply: "“Then I'll take the day.” The line goes dead.",
+            agrees: false,
             quality: 0.3,
             capabilities: ["decision-making", "stress-handling"],
           },

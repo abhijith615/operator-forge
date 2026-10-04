@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { AchievementToast } from "@/components/mission/achievements";
+import { CallOverlay } from "@/components/mission/call-overlay";
 import { EventToasts } from "@/components/mission/event-toasts";
 import { MessageToasts } from "@/components/mission/message-toasts";
 import { Walkthrough } from "@/components/mission/walkthrough";
@@ -54,6 +55,7 @@ export function AppShell({
         </main>
       </div>
 
+      <CallOverlay />
       <EventToasts />
       <MessageToasts />
       <AchievementToast />

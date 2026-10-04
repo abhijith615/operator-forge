@@ -447,32 +447,19 @@ export const PEOPLE_TASKS: TaskTemplate[] = [
           {
             id: "call-in",
             label: "Ask them to come in",
-            outcome: "You get the hands back. They start the shift already behind.",
+            // No effect here on purpose: picking up the phone is not the same
+            // as getting a yes. The call that opens next decides whether they
+            // actually come in.
+            outcome: "The line connects.",
             quality: 0.85,
             capabilities: ["decision-making", "communication"],
-            effects: [
-              {
-                kind: "worker-status",
-                workerId: worker.id,
-                status: "active",
-                note: "Called in",
-              },
-            ],
           },
           {
             id: "ask-why",
             label: "Ask what happened first",
-            outcome: "Slower, but you find out whether this repeats tomorrow.",
+            outcome: "The line connects.",
             quality: 0.8,
             capabilities: ["curiosity", "communication"],
-            effects: [
-              {
-                kind: "worker-status",
-                workerId: worker.id,
-                status: "active",
-                note: "Called in — reason logged",
-              },
-            ],
           },
           {
             id: "leave-it",
