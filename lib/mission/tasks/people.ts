@@ -417,9 +417,19 @@ export const PEOPLE_TASKS: TaskTemplate[] = [
     id: "ppl-recall",
     stream: "people",
     priority: "critical",
-    weight: 8,
-    cooldown: 150,
+    /**
+     * Weighted hard, because this is the shift's set piece. Two pickers go
+     * missing at minute one and a half; chasing them opens a two-round
+     * negotiation that is one of the few places the operator has to trade
+     * something to get something. At the old weight it could go a whole
+     * fifteen minutes without ever being dealt, which left the absence as a
+     * number on a card and nothing else. `when` keeps it off the board the
+     * moment nobody is absent, so this cannot crowd the rest of the shift.
+     */
+    weight: 30,
+    cooldown: 70,
     ttl: 75,
+    guaranteed: true,
     repeatable: true,
     when: (world) => world.workers.some((worker) => worker.status === "absent"),
     build: (ctx) => {

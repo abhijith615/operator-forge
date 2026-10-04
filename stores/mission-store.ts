@@ -19,6 +19,12 @@ import {
   streamToSource,
 } from "@/lib/mission/tasks/scheduler";
 import { FIRST_SHIFT } from "@/lib/constants/mission";
+import {
+  SCHEDULED_CALLS,
+  recallNegotiation,
+  type MissionCall,
+  type MissionCallOption,
+} from "@/lib/mission/calls";
 import type {
   MissionNotification,
   RunStatus,
@@ -54,10 +60,24 @@ interface MissionState {
   /** Sampled floor state, for the debrief replay and trend lines. */
   traces: WorldTrace[];
 
+  /* ── The phone ──────────────────────────────────────────────────────── */
+  /**
+   * A call the operator has not finished with: the two scheduled ones, or an
+   * outbound negotiation they started by deciding to chase an absentee. Held
+   * here rather than in the control room because a refresh mid-call should not
+   * hand anyone a free escape from it.
+   */
+  call: PendingCall | null;
+  /** Call ids already rung, so the clock never rings the same one twice. */
+  callsDone: string[];
+
   begin: (operatorId: string) => void;
   tick: () => void;
   dispatch: (action: OperatorAction) => void;
   resolveTask: (taskId: string, optionId: string) => void;
+  answerCall: () => void;
+  /** Every answer given, in order — or `null` when the call went unanswered. */
+  endCall: (answers: MissionCallOption[] | null) => void;
   dismissNotification: (id: string) => void;
   markTimelineRead: () => void;
   complete: () => void;
@@ -81,7 +101,17 @@ function initialSlice() {
     nextSpawnAt: 0,
     templateLastUsed: {} as Record<string, number>,
     traces: [] as WorldTrace[],
+    call: null as PendingCall | null,
+    callsDone: [] as string[],
   };
+}
+
+/** A call on screen, and where in it the operator is. */
+export interface PendingCall {
+  call: MissionCall;
+  /** Shift second the phone started ringing, for the countdown. */
+  ringFrom: number;
+  answered: boolean;
 }
 
 /** One sample every half minute is enough to draw the shift afterwards. */
@@ -191,6 +221,29 @@ export const useMissionStore = create<MissionState>()(
         newEntries.push(...queued.entries);
         const decisions = [...state.decisions, ...queued.decisions];
 
+        // The phone. One call at a time, and never while another is open — a
+        // second ring over a live call is a bug, not pressure. A call whose
+        // moment passed while the operator was on the other one is dropped
+        // rather than queued: a phone that rings late rings for nothing.
+        let call = state.call;
+        const callsDone = [...state.callsDone];
+        if (!call) {
+          const due = SCHEDULED_CALLS.find(
+            (entry) =>
+              entry.at !== undefined &&
+              world.elapsed >= entry.at &&
+              !callsDone.includes(entry.id),
+          );
+          if (due) {
+            callsDone.push(due.id);
+            // Ring from now, not from `at`, so a tab that was backgrounded
+            // does not hand back a call that has already timed out.
+            if (world.elapsed - (due.at ?? 0) < 60) {
+              call = { call: due, ringFrom: world.elapsed, answered: false };
+            }
+          }
+        }
+
         const earned = evaluateAchievements({
           decisions,
           tasks: queued.tasks,
@@ -213,6 +266,8 @@ export const useMissionStore = create<MissionState>()(
         set({
           world,
           firedEvents: fired,
+          call,
+          callsDone,
           tasks: queued.tasks,
           decisions,
           traces,
@@ -305,12 +360,115 @@ export const useMissionStore = create<MissionState>()(
           earned: state.achievements,
         });
 
+        // Deciding to chase an absentee is not the end of the task, it is the
+        // start of the call. Anyone who has done this knows the first ask is
+        // never the one that works, so the click opens a conversation instead
+        // of closing the card.
+        const chasing =
+          task.templateId === "ppl-recall" &&
+          optionId !== "leave-it" &&
+          !state.call &&
+          state.world.workers.find((worker) => worker.id === task.subjectId);
+
         set({
           world,
           tasks,
           decisions,
           templateLastUsed,
           achievements: [...state.achievements, ...earned],
+          timeline: [entry, ...state.timeline].slice(0, TIMELINE_CAP),
+          ...(chasing
+            ? {
+                call: {
+                  call: recallNegotiation(chasing.name),
+                  ringFrom: elapsed,
+                  answered: true,
+                },
+              }
+            : {}),
+        });
+      },
+
+      answerCall: () =>
+        set((state) =>
+          state.call ? { call: { ...state.call, answered: true } } : {},
+        ),
+
+      endCall: (answers) => {
+        const state = get();
+        const pending = state.call;
+        if (!pending || !state.world) {
+          set({ call: null });
+          return;
+        }
+
+        const { call } = pending;
+        const elapsed = state.world.elapsed;
+        const ignored = answers === null;
+
+        // A call is scored through the ordinary ledger, so it weighs exactly
+        // what the task it interrupted would have. Ignoring one is a decision
+        // too — recorded, not silently skipped.
+        const made: TaskDecision[] = ignored
+          ? [
+              {
+                taskId: `call-${call.id}`,
+                templateId: call.id,
+                stream: call.stream,
+                priority: "critical",
+                at: elapsed,
+                latency: call.ringFor,
+                optionId: "ignored",
+                optionLabel: "Let it ring",
+                quality: call.ignored.quality,
+                capabilities: call.ignored.capabilities,
+                expired: false,
+                queueDepth: state.tasks.filter((entry) => entry.status === "pending").length,
+              },
+            ]
+          : answers.map((answer, index) => ({
+              taskId: `call-${call.id}-${answer.id}`,
+              templateId: `${call.id}:${call.beats[index]?.id ?? index}`,
+              stream: call.stream,
+              priority: "critical" as const,
+              at: elapsed,
+              latency: 0,
+              optionId: answer.id,
+              optionLabel: answer.label,
+              quality: answer.quality,
+              capabilities: answer.capabilities,
+              expired: false,
+              queueDepth: state.tasks.filter((entry) => entry.status === "pending").length,
+            }));
+
+        const decisions = [...state.decisions, ...made];
+
+        recordTelemetry("decide", call.id, elapsed, {
+          meta: { call: call.id, ignored, answers: made.length },
+        });
+
+        const entry: TimelineEntry = {
+          id: `call-${call.id}-${elapsed}`,
+          at: elapsed,
+          kind: "action",
+          tone: ignored ? "warning" : "neutral",
+          title: ignored ? `Missed a call from ${call.caller}` : `Call with ${call.caller}`,
+          detail: ignored ? call.ignored.note : (made[made.length - 1]?.optionLabel ?? undefined),
+          source: streamToSource(call.stream),
+        };
+
+        set({
+          call: null,
+          decisions,
+          achievements: [
+            ...state.achievements,
+            ...evaluateAchievements({
+              decisions,
+              tasks: state.tasks,
+              elapsed,
+              earned: state.achievements,
+            }),
+          ],
           timeline: [entry, ...state.timeline].slice(0, TIMELINE_CAP),
         });
       },
@@ -380,6 +538,8 @@ export const useMissionStore = create<MissionState>()(
         nextSpawnAt: state.nextSpawnAt,
         templateLastUsed: state.templateLastUsed,
         traces: state.traces,
+        call: state.call,
+        callsDone: state.callsDone,
       }),
     },
   ),

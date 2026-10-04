@@ -56,6 +56,13 @@ export interface TaskTemplate {
    */
   contends?: ResourceKind;
 
+  /**
+   * Takes the next spawn slot outright the moment its gate opens, instead of
+   * competing in the weighted draw. For the one or two situations that are the
+   * point of the shift rather than texture in it — see `claimGuaranteed`.
+   */
+  guaranteed?: boolean;
+
   /** Only offered when the floor actually warrants it. */
   when?: (world: WorldState) => boolean;
   /** Return `null` to decline the draw — the scheduler will pick another. */

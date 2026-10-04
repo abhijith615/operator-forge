@@ -128,6 +128,39 @@ function weightedPick(
  * catalogue before anything comes round again — repeats are the single clearest
  * way to break the illusion that this is a real morning.
  */
+/**
+ * A template that is not allowed to lose a coin toss.
+ *
+ * Almost everything on the board should be drawn, because a shift that deals
+ * the same beats in the same order stops being a simulation. But one or two
+ * situations are the point of the shift rather than texture in it — two
+ * pickers failing to show up, and the conversation that follows — and leaving
+ * those to a weighted draw means a run where the absence is a number on a card
+ * and nothing is ever done about it.
+ *
+ * So a template may be marked `guaranteed`: the moment its gate opens it takes
+ * the next spawn slot outright. It still obeys `when`, cooldown and the
+ * repeatable rule, so it cannot monopolise the queue — and when nothing is
+ * waiting to be guaranteed, the ordinary weighted draw runs untouched.
+ */
+function claimGuaranteed(
+  world: WorldState,
+  elapsed: number,
+  lastUsed: Record<string, number>,
+  pendingTemplateIds: Set<string>,
+): TaskTemplate | null {
+  return (
+    SHIFT_TEMPLATES.find((template) => {
+      if (!template.guaranteed) return false;
+      if (pendingTemplateIds.has(template.id)) return false;
+      if (template.when && !template.when(world)) return false;
+      const used = lastUsed[template.id];
+      if (used === undefined) return true;
+      return template.repeatable === true && elapsed - used >= template.cooldown;
+    }) ?? null
+  );
+}
+
 function drawTemplate(
   world: WorldState,
   elapsed: number,
@@ -283,14 +316,16 @@ export function advanceTasks(input: AdvanceTasksInput): AdvanceTasksResult {
       tasks.filter((task) => task.status === "pending").map((task) => task.templateId),
     );
 
-    const template = drawTemplate(
-      world,
-      elapsed,
-      rand,
-      templateLastUsed,
-      pendingTemplateIds,
-      pending < MIN_PENDING,
-    );
+    const template =
+      claimGuaranteed(world, elapsed, templateLastUsed, pendingTemplateIds) ??
+      drawTemplate(
+        world,
+        elapsed,
+        rand,
+        templateLastUsed,
+        pendingTemplateIds,
+        pending < MIN_PENDING,
+      );
     if (!template) break;
 
     const task = instantiate(template, world, elapsed, rand, busySubjectsOf(tasks));
