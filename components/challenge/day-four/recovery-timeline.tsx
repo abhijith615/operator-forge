@@ -40,6 +40,23 @@ export function RecoveryTimeline({
 
   return (
     <section aria-label="Recovery timeline" className="space-y-3">
+      {/* The mechanic, said once and up front.
+
+          It used to appear only after somebody had already tapped an action
+          chip -- "Now tap Place here in a window" -- which is help you only
+          get once you have worked out the thing you needed help with. Until
+          then the screen was three boxes reading "Nothing scheduled", which
+          reads as a status rather than an empty slot, and eleven chips with
+          no stated relationship to them. */}
+      <div className="rounded-card border border-ember-500/30 bg-ember-500/[0.06] px-3.5 py-2.5">
+        <p className="text-[12.5px] leading-relaxed text-mid">
+          <span className="text-hi">Schedule the last twelve minutes.</span> Tap an
+          action below, then tap the window you want it to run in — or drag it
+          across. Up to two per window, and you do not have to fill them: a
+          window you leave empty is the floor carrying on as it is.
+        </p>
+      </div>
+
       <div className="grid gap-2 md:grid-cols-3">
         {Array.from({ length: WINDOWS }, (_, window) => {
           const actions = state.recovery[window] ?? [];
@@ -112,7 +129,9 @@ export function RecoveryTimeline({
                   Place here
                 </button>
               ) : actions.length === 0 ? (
-                <p className="mt-2 text-[11.5px] text-faint">Nothing scheduled — the floor keeps doing what it is doing.</p>
+                <p className="mt-2 rounded-md border border-dashed border-line-strong px-2 py-3 text-center text-[11.5px] text-faint">
+                  Empty — drop an action here
+                </p>
               ) : null}
             </div>
           );

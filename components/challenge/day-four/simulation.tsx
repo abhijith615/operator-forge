@@ -532,7 +532,13 @@ function Morning({ initial }: { initial: Day4State }) {
       map = <FloorMap state={state} layout={layout} metrics={metrics} bottleneck={state.bottleneck} compact={compact} caption="10:48 AM" />;
       panel = (
         <div className="space-y-3">
-          <StageHeading time="10:48 AM" eyebrow="Stage 4 · Final recovery" title="Lunch demand starts in 12 minutes." tone="alert" />
+          <StageHeading
+            time="10:48 AM"
+            eyebrow="Stage 4 · Final recovery"
+            title="Lunch demand starts in 12 minutes."
+            sub="Plan what the floor does with them, four minutes at a time."
+            tone="alert"
+          />
           <FloorVoice from="Cluster Manager" time="10:48 AM" lines={OPENING_MESSAGES.recovery} tone="alert" />
         </div>
       );
