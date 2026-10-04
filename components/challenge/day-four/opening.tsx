@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { ExplainerVideo } from "@/components/challenge/explainer-video";
+import { CHALLENGE_VIDEOS } from "@/lib/challenge/videos";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 
@@ -124,13 +126,20 @@ export function DayFourOpening({ onStart }: { onStart: () => void }) {
           </div>
         </motion.div>
 
+        {/* The brief, before the clock — same placement as Day 3: with the
+            last reveal, so it sits immediately above the button rather than
+            between somebody and it. */}
+        <motion.div {...rise(step >= 5)} className="mt-7">
+          <ExplainerVideo video={CHALLENGE_VIDEOS.dayFourIntro} />
+        </motion.div>
+
         <AnimatePresence>
           {step >= 5 ? (
             <motion.div
               initial={reduced ? false : { opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, ease: easing.outExpo }}
-              className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center"
+              className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center"
             >
               <Button variant="primary" size="lg" className="w-full sm:w-auto" onClick={onStart} autoFocus>
                 Take the floor
