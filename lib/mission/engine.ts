@@ -25,7 +25,14 @@ export const STEP_SECONDS = 5;
 const BASE_ARRIVAL_RATE = 0.55;
 
 /** Seconds a rider spends on the road, before weather. */
-const BASE_TRAVEL_SECONDS = 210;
+/**
+ * Road time over the 1.5–3 km delivery polygon: five to nine minutes in the
+ * SOP, and the larger half of the ten-minute promise. The jitter below spreads
+ * it across that band. It is deliberately not shortened to make the shift
+ * easier — the whole reason dispatch has a 180-second target is that the road
+ * eats everything else.
+ */
+const BASE_TRAVEL_SECONDS = 390;
 const BASE_RETURN_SECONDS = 200;
 
 const RATING_HIT_BREACH = 0.018;
@@ -370,4 +377,34 @@ export function openOrders(world: WorldState): Order[] {
 
 export function secondsToBreach(order: Order, elapsed: number): number {
   return order.placedAt + order.promisedIn - elapsed;
+}
+
+/**
+ * The store's share of the ten minutes.
+ *
+ * The customer is promised ten minutes, but only the first three of those
+ * belong to this building: click-to-dispatch has a target of 180 seconds, and
+ * everything after the rider scans the bag is road time over a 1.5–3 km
+ * polygon. Counting an order down from ten minutes on the floor therefore
+ * shows an operator seven minutes of room they do not have — by the time that
+ * clock looks urgent, the order is already lost on the road.
+ *
+ * So an order still inside the store counts down to dispatch, and an order
+ * already with a rider counts down to the customer's promise, because that is
+ * the only clock either of them can still affect.
+ */
+export const DISPATCH_SLA_SECONDS = 180;
+
+export function secondsToDispatch(order: Order, elapsed: number): number {
+  return order.placedAt + DISPATCH_SLA_SECONDS - elapsed;
+}
+
+/** True while the order is still the store's problem rather than the road's. */
+export function inStore(order: Order): boolean {
+  return ["queued", "picking", "packed"].includes(order.status);
+}
+
+/** Whichever clock the operator can still do something about. */
+export function secondsOnTheClock(order: Order, elapsed: number): number {
+  return inStore(order) ? secondsToDispatch(order, elapsed) : secondsToBreach(order, elapsed);
 }

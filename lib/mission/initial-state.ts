@@ -56,7 +56,8 @@ export function makeOrder(
     id: `o-${index}`,
     code: `#${4400 + index}`,
     placedAt,
-    // Ten-minute promise. The backlog you inherit is already partway through it.
+    // The customer's ten minutes. Only the first 180 seconds of it belong to
+    // this building — see DISPATCH_SLA_SECONDS. The rest is road.
     promisedIn: 600,
     lines: finalLines,
     status: "queued",
@@ -122,7 +123,10 @@ export function createInitialWorld(seed: number): WorldState {
   // The previous shift left five orders on the clock. They are recoverable —
   // but only if the operator moves early.
   const backlog: Order[] = Array.from({ length: 5 }, (_, index) => {
-    const order = makeOrder(rand, index, -randomInt(rand, 30, 180));
+    // Aged against the 180-second dispatch target, not the ten-minute promise:
+    // the backlog should land tight, not already lost. The oldest has about
+    // forty seconds of room, the newest most of its window.
+    const order = makeOrder(rand, index, -randomInt(rand, 20, 140));
     // Some of it is already being worked.
     if (index < 3) {
       order.status = "picking";

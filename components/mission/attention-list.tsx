@@ -14,7 +14,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { secondsToBreach } from "@/lib/mission/engine";
+import { secondsToDispatch } from "@/lib/mission/engine";
 import { easing } from "@/lib/motion";
 import { useMissionStore } from "@/stores/mission-store";
 import { cn, formatDuration } from "@/lib/utils";
@@ -43,24 +43,24 @@ function buildItems(world: WorldState): AttentionItem[] {
     .filter(
       (order) =>
         ["queued", "picking", "packed"].includes(order.status) &&
-        secondsToBreach(order, world.elapsed) < 180,
+        secondsToDispatch(order, world.elapsed) < 60,
     )
-    .sort((a, b) => secondsToBreach(a, world.elapsed) - secondsToBreach(b, world.elapsed));
+    .sort((a, b) => secondsToDispatch(a, world.elapsed) - secondsToDispatch(b, world.elapsed));
 
   const soonest = nearBreach[0];
   if (soonest) {
-    const left = secondsToBreach(soonest, world.elapsed);
+    const left = secondsToDispatch(soonest, world.elapsed);
     items.push({
       id: "near-breach",
       icon: ShoppingBag,
       tone: left < 0 ? "critical" : "warning",
       title:
         left < 0
-          ? `${nearBreach.length} order${nearBreach.length === 1 ? "" : "s"} past the promise`
-          : `${soonest.code} breaches in ${formatDuration(left)}`,
+          ? `${nearBreach.length} order${nearBreach.length === 1 ? "" : "s"} past the dispatch window`
+          : `${soonest.code} must dispatch in ${formatDuration(left)}`,
       detail:
         nearBreach.length > 1
-          ? `${nearBreach.length} orders are inside the last three minutes.`
+          ? `${nearBreach.length} orders are past their 180-second dispatch target.`
           : `${soonest.customerName} is waiting on ${soonest.lines.length} items.`,
       href: "/orders",
       cta: "Open Orders",

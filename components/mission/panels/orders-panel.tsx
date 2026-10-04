@@ -14,7 +14,7 @@ import { Term } from "@/components/mission/term";
 import { Button } from "@/components/ui/button";
 import { useIsShiftLive } from "@/hooks/use-mission";
 import { hubClock } from "@/lib/mission/config";
-import { secondsToBreach } from "@/lib/mission/engine";
+import { inStore, secondsOnTheClock } from "@/lib/mission/engine";
 import { easing } from "@/lib/motion";
 import { useMissionStore } from "@/stores/mission-store";
 import { cn, formatDuration } from "@/lib/utils";
@@ -43,7 +43,7 @@ export function OrdersPanel() {
   const open = world.orders.filter((order) =>
     ["queued", "picking", "packed", "dispatched"].includes(order.status),
   );
-  const risk = open.filter((order) => secondsToBreach(order, world.elapsed) < 180);
+  const risk = open.filter((order) => secondsOnTheClock(order, world.elapsed) < 60);
   const closed = world.orders
     .filter((order) => ["delivered", "breached", "cancelled"].includes(order.status))
     .slice(-40)
@@ -52,11 +52,11 @@ export function OrdersPanel() {
   const rows =
     lens === "open"
       ? [...open].sort(
-          (a, b) => secondsToBreach(a, world.elapsed) - secondsToBreach(b, world.elapsed),
+          (a, b) => secondsOnTheClock(a, world.elapsed) - secondsOnTheClock(b, world.elapsed),
         )
       : lens === "risk"
         ? [...risk].sort(
-            (a, b) => secondsToBreach(a, world.elapsed) - secondsToBreach(b, world.elapsed),
+            (a, b) => secondsOnTheClock(a, world.elapsed) - secondsOnTheClock(b, world.elapsed),
           )
         : closed;
 
@@ -66,15 +66,16 @@ export function OrdersPanel() {
       title="Orders"
       description={
         <>
-          Every promise the store has made and has not yet kept. Sorted by how
-          close each one is to a <Term id="breach">breach</Term>.
+          Every promise the store has made and has not yet kept. The clock on an
+          order still in the store is your 180 seconds to dispatch; once it is
+          with a rider it becomes the customer&rsquo;s ten minutes.
         </>
       }
     >
       <StatRow
         items={[
           { label: "Open", value: String(open.length) },
-          { label: "Within 3 minutes", value: String(risk.length) },
+          { label: "Running out", value: String(risk.length) },
           { label: <Term id="otif">OTIF</Term>, value: `${Math.round(world.metrics.otif * 100)}%` },
           { label: "Breached", value: String(world.metrics.ordersBreached) },
         ]}
@@ -151,9 +152,12 @@ function OrderRow({
   onCancel: () => void;
 }) {
   const [expanded, setExpanded] = React.useState(false);
-  const left = secondsToBreach(order, elapsed);
+  const left = secondsOnTheClock(order, elapsed);
+  // Pre-dispatch the clock is the store's own 180 seconds, so "soon" is much
+  // closer than it is once the bag is on a bike.
+  const onFloor = inStore(order);
   const settled = ["delivered", "breached", "cancelled"].includes(order.status);
-  const critical = !settled && left < 120;
+  const critical = !settled && left < (onFloor ? 45 : 120);
 
   return (
     <motion.li
@@ -206,15 +210,26 @@ function OrderRow({
           {settled ? (
             <span className="font-mono text-[11.5px] text-faint">—</span>
           ) : (
-            <span
-              data-readout
-              className={cn(
-                "font-mono text-[13px] tabular-nums",
-                left < 0 ? "text-alert-500" : left < 180 ? "text-warn-500" : "text-mid",
-              )}
-            >
-              {left < 0 ? `−${formatDuration(-left)}` : formatDuration(left)}
-            </span>
+            <>
+              <span
+                data-readout
+                className={cn(
+                  "font-mono text-[13px] tabular-nums",
+                  left < 0
+                    ? "text-alert-500"
+                    : left < (onFloor ? 60 : 180)
+                      ? "text-warn-500"
+                      : "text-mid",
+                )}
+              >
+                {left < 0 ? `−${formatDuration(-left)}` : formatDuration(left)}
+              </span>
+              {/* Which clock this is. Without it the same number means two
+                  very different amounts of room depending on the status. */}
+              <p className="mt-0.5 font-mono text-[9px] tracking-[0.1em] text-faint uppercase">
+                {onFloor ? "to dispatch" : "to door"}
+              </p>
+            </>
           )}
         </div>
 
