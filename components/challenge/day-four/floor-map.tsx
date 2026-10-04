@@ -267,6 +267,28 @@ export function FloorMap({
                     strokeDasharray={lit && !isSelected ? "6 4" : undefined}
                   />
                 ) : null}
+                {/* Which boxes are actually a question.
+
+                    The panel says "tap zones on the floor", but only eight of
+                    the fifteen labelled regions respond — the rest are the
+                    building. With every hit area transparent at rest there was
+                    no way to tell them apart except by tapping and getting
+                    nothing back, repeatedly, on a clock. Unvisited zones now
+                    carry a dashed outline; visited ones trade it for the dot
+                    that was already here. */}
+                {interactive && index === 0 && !seen && !marking ? (
+                  <rect
+                    x={r.x}
+                    y={r.y}
+                    width={r.w}
+                    height={r.h}
+                    rx={4}
+                    fill="none"
+                    strokeWidth={1.5}
+                    strokeDasharray="5 4"
+                    className="stroke-ember-500/55"
+                  />
+                ) : null}
                 {interactive && index === 0 && seen && !marking ? (
                   <circle cx={r.x + r.w - 10} cy={r.y + 10} r={4} className="fill-ion-400" />
                 ) : null}

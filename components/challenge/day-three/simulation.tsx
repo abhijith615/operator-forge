@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Day3Assistant } from "@/components/challenge/day-three/assistant";
+import { ChallengeAssistant } from "@/components/challenge/assistant";
+import * as day3Coach from "@/lib/challenge/day-three/coach";
 import { cn } from "@/lib/utils";
 
 import { PaneTour, type TourStep } from "@/components/challenge/pane-tour";
@@ -835,7 +836,7 @@ function Evening({ initial }: { initial: Day3State }) {
 
   return (
     <div className="flex min-h-dvh flex-col bg-obsidian">
-      <Day3Assistant />
+      <ChallengeAssistant coach={day3Coach} role="Shift Supervisor" placeholder="What does PPI mean?" day={3} />
       {tour.step ? (
         <PaneTour step={tour.step} index={tour.index} total={tour.total} onNext={tour.next} onSkip={tour.skip} />
       ) : null}

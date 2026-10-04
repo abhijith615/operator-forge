@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { ChallengeAssistant } from "@/components/challenge/assistant";
+import * as day4Coach from "@/lib/challenge/day-four/coach";
 
 import { PaneTour, type TourStep } from "@/components/challenge/pane-tour";
 import { useTour } from "@/lib/challenge/use-tour";
@@ -411,6 +413,17 @@ function Morning({ initial }: { initial: Day4State }) {
   let panel: React.ReactNode = null;
   let map: React.ReactNode = null;
   let below: React.ReactNode = null;
+  /**
+   * The button that ends a stage.
+   *
+   * Kept out of the panel and rendered last, because the panel sits above
+   * `below` in the document and the controls a stage is about live in
+   * `below`. With the commit in the panel, the only thing on screen was the
+   * button that skipped the work: on a 700px viewport Stage 2 showed "Start
+   * receiving on this plan" at 652px and the first vehicle control at 898px.
+   * People pressed the visible thing and never saw the decision.
+   */
+  let commit: React.ReactNode = null;
 
   switch (state.phase) {
     case "inspect": {
@@ -476,11 +489,13 @@ function Morning({ initial }: { initial: Day4State }) {
               <p className="mt-1 text-[13.5px] text-hi">Inbound is entering faster than stock is leaving staging.</p>
             </div>
           ) : null}
-          <Button variant="primary" size="lg" className="w-full" onClick={confirmDock}>
-            Start receiving on this plan
-            <ArrowRight />
-          </Button>
         </div>
+      );
+      commit = (
+        <Button variant="primary" size="lg" className="w-full" onClick={confirmDock}>
+          Start receiving on this plan
+          <ArrowRight />
+        </Button>
       );
       below = <DockSequencer state={state} opening={metricsOf(E.createDay4())} projected={metricsOf(projection)} onLane={setLane} />;
       break;
@@ -530,6 +545,7 @@ function Morning({ initial }: { initial: Day4State }) {
 
   return (
     <div className="flex min-h-dvh flex-col bg-obsidian">
+      <ChallengeAssistant coach={day4Coach} role="Floor Lead" placeholder="What is pick-ready?" day={4} />
       {tour.step ? (
         <PaneTour step={tour.step} index={tour.index} total={tour.total} onNext={tour.next} onSkip={tour.skip} />
       ) : null}
@@ -579,6 +595,7 @@ function Morning({ initial }: { initial: Day4State }) {
           </AnimatePresence>
         </div>
         {below}
+        {commit}
       </main>
 
       {zone && compact && state.phase === "inspect" ? (

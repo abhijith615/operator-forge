@@ -248,16 +248,6 @@ export function PipelinePanel({
     <div className="space-y-3">
       {state.qcIssue.status === "pending" ? <QualityHold onResolve={onResolve} /> : null}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Button variant="primary" size="lg" onClick={onRun}>
-          Run 3 minutes
-          <span className="font-mono text-[12px] opacity-80">→ {clockAt(Math.min(RECOVERY_AT, state.t + 3))}</span>
-        </Button>
-        <span className="text-[11.5px] text-faint">
-          {last ? "The next run takes the floor to 10:48 — recovery planning." : "The floor only moves when you run it."}
-        </span>
-      </div>
-
       {digest ? <Digest digest={digest} /> : null}
 
       {selected ? (
@@ -271,6 +261,19 @@ export function PipelinePanel({
       <Vehicles state={state} onVehicle={onVehicle} />
       <AisleRecovery state={state} routeSeconds={metrics.routeSeconds} onAisle={onAisle} />
       <LunchForecast nilRisk={metrics.nilPickRisk} />
+
+      {/* Last, not first. This advances the clock, so it belongs after the
+          decisions it carries out — it used to sit at the top of the panel,
+          where it was the only control most people ever saw. */}
+      <div className="flex flex-wrap items-center gap-3 border-t border-line pt-3">
+        <Button variant="primary" size="lg" onClick={onRun}>
+          Run 3 minutes
+          <span className="font-mono text-[12px] opacity-80">→ {clockAt(Math.min(RECOVERY_AT, state.t + 3))}</span>
+        </Button>
+        <span className="text-[11.5px] text-faint">
+          {last ? "The next run takes the floor to 10:48 — recovery planning." : "Set the floor up first. It only moves when you run it."}
+        </span>
+      </div>
     </div>
   );
 }

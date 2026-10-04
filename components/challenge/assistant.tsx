@@ -4,10 +4,14 @@ import * as React from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowUp, HelpCircle, X } from "lucide-react";
 
-import { answer, openingMessage } from "@/lib/challenge/day-three/coach";
 import { logEvent } from "@/lib/challenge/telemetry";
 import { easing } from "@/lib/motion";
 import { cn } from "@/lib/utils";
+
+export interface CoachLike {
+  openingMessage: () => { text: string; suggestions?: string[] };
+  answer: (question: string) => { text: string; suggestions?: string[] };
+}
 
 interface Line {
   id: string;
@@ -33,11 +37,22 @@ interface Line {
  * terms people actually get stuck on is worth knowing when writing Day 4 —
  * and that log never reaches the scorecard.
  */
-export function Day3Assistant() {
+export function ChallengeAssistant({
+  coach,
+  role,
+  placeholder,
+  day,
+}: {
+  coach: CoachLike;
+  /** Who is on the other end, shown in the header. */
+  role: string;
+  placeholder: string;
+  day: number;
+}) {
   const reduced = useReducedMotion();
   const [open, setOpen] = React.useState(false);
   const [asked, setAsked] = React.useState(false);
-  const opening = React.useMemo(openingMessage, []);
+  const opening = React.useMemo(() => coach.openingMessage(), [coach]);
   const [lines, setLines] = React.useState<Line[]>([
     { id: "open", from: "coach", text: opening.text, suggestions: opening.suggestions },
   ]);
@@ -51,16 +66,16 @@ export function Day3Assistant() {
   const ask = React.useCallback((question: string) => {
     const trimmed = question.trim();
     if (!trimmed) return;
-    const reply = answer(trimmed);
+    const reply = coach.answer(trimmed);
     setAsked(true);
-    logEvent("day3_assistant_asked", { question: trimmed }, 3);
+    logEvent("assistant_asked", { question: trimmed, day }, day);
     setLines((prev) => [
       ...prev,
       { id: `you-${prev.length}`, from: "you", text: trimmed },
       { id: `coach-${prev.length}`, from: "coach", text: reply.text, suggestions: reply.suggestions },
     ]);
     setDraft("");
-  }, []);
+  }, [coach, day]);
 
   const suggestions =
     [...lines].reverse().find((line) => line.from === "coach")?.suggestions ?? [];
@@ -92,7 +107,7 @@ export function Day3Assistant() {
             animate={{ opacity: 1, y: 0 }}
             exit={reduced ? undefined : { opacity: 0, y: 16 }}
             transition={{ duration: 0.28, ease: easing.outExpo }}
-            aria-label="Ask the Shift Supervisor"
+            aria-label={`Ask the ${role}`}
             className="fixed right-4 bottom-4 z-40 flex max-h-[min(560px,calc(100dvh-2rem))] w-[min(380px,calc(100vw-2rem))] flex-col overflow-hidden rounded-card border border-line bg-obsidian shadow-[0_40px_90px_-24px_rgba(0,0,0,1)]"
           >
             <header className="flex shrink-0 items-center gap-2 border-b border-line px-4 py-3">
@@ -102,7 +117,7 @@ export function Day3Assistant() {
               </span>
               <span className="ml-auto flex items-center gap-1.5 text-[11.5px] text-mid">
                 <span className="size-1.5 rounded-full bg-ion-500" aria-hidden />
-                Shift Supervisor
+                {role}
               </span>
               <button
                 type="button"
@@ -157,14 +172,14 @@ export function Day3Assistant() {
               }}
               className="flex shrink-0 items-center gap-2 border-t border-line p-2.5"
             >
-              <label htmlFor="day3-ask" className="sr-only">
+              <label htmlFor="challenge-ask" className="sr-only">
                 Ask about anything on the screen
               </label>
               <input
-                id="day3-ask"
+                id="challenge-ask"
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
-                placeholder="What does PPI mean?"
+                placeholder={placeholder}
                 className="min-h-[40px] flex-1 rounded-full border border-line bg-void px-3.5 text-[12.5px] text-hi placeholder:text-faint focus:border-ember-500/50 focus:outline-none"
               />
               <button
