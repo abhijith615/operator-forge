@@ -2,9 +2,11 @@ import { CUSTOMER_TASKS } from "./customers";
 import { MANAGEMENT_TASKS } from "./management";
 import { OPERATIONS_TASKS } from "./operations";
 import { PEOPLE_TASKS } from "./people";
+import { SOP_TASKS } from "./sop";
 import type { TaskTemplate } from "./types";
 
 export const TASK_TEMPLATES: TaskTemplate[] = [
+  ...SOP_TASKS,
   ...OPERATIONS_TASKS,
   ...PEOPLE_TASKS,
   ...CUSTOMER_TASKS,
@@ -36,10 +38,29 @@ export const TEMPLATES_BY_ID = new Map(
  * consequence.
  */
 const SHIFT_TEMPLATE_IDS = new Set([
+  // The fifteen from `SOP.md` — the set pieces the shift is built around.
+  // Weighted far above everything below them, so most of what an operator
+  // answers is one of these and the rest is the floor carrying on around it.
+  "sop-barcode-corruption",
+  "sop-shelf-life-blockade",
+  "sop-high-value-shortage",
+  "sop-wildcat-strike",
+  "sop-absenteeism-cascade",
+  "sop-metric-gaming",
+  "sop-phase-failure",
+  "sop-routing-discrepancy",
+  "sop-aisle-congestion",
+  "sop-convergence",
+  "sop-staging-backlog",
+  "sop-flash-sale-cutover",
+  "sop-infant-formula",
+  "sop-cloudburst",
+  "sop-allergen-breach",
+
   // Operations — the floor stops, or something spoils.
   "ops-stock-threshold",
   "ops-dispatch-stall",
-  "ops-cold-chain",
+  // ("ops-cold-chain" is covered by sop-phase-failure.)
   "ops-fire-exit",
   "ops-item-not-found",
   "ops-mispick",
@@ -66,7 +87,7 @@ const SHIFT_TEMPLATE_IDS = new Set([
 
   // Customers — the rating is on the line and they are watching.
   "cust-vip",
-  "cust-allergen",
+  // ("cust-allergen" is covered by sop-allergen-breach.)
   "cust-late-delivery",
   "cust-refund",
   "cust-wrong-item",
@@ -80,7 +101,7 @@ const SHIFT_TEMPLATE_IDS = new Set([
 
   // Head office — someone senior wants an answer now.
   "mgmt-promo-warning",
-  "mgmt-inspector",
+  // ("mgmt-inspector" is covered by sop-convergence.)
   "mgmt-manager-call",
   "mgmt-handover",
   "mgmt-press",

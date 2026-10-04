@@ -28,9 +28,9 @@ export const MAX_PENDING = 8;
  */
 function nextGap(pending: number, rand: () => number): number {
   if (pending <= 2) return 10 + rand() * 8; // starved — refill fast
-  if (pending <= 4) return 24 + rand() * 14;
-  if (pending <= 6) return 36 + rand() * 18;
-  return 56 + rand() * 24; // already drowning — stop piling on
+  if (pending <= 4) return 15 + rand() * 9;
+  if (pending <= 6) return 18 + rand() * 12;
+  return 20 + rand() * 10; // busy end — still tight, never silent
 }
 
 /** Keep the record bounded; the oldest settled tasks are already in decisions. */
