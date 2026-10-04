@@ -149,7 +149,7 @@ export function AttentionList({ className }: { className?: string }) {
   const items = buildItems(world);
 
   return (
-    <section className={cn("panel sheen flex flex-col overflow-hidden", className)}>
+    <section className={cn("panel panel-glass sheen flex flex-col overflow-hidden", className)}>
       <header className="flex shrink-0 items-center gap-2 border-b border-line px-4 py-3">
         <TriangleAlert className="size-3.5 text-ember-500" />
         <span className="font-mono text-[10.5px] tracking-[0.16em] text-lo uppercase">

@@ -27,8 +27,8 @@ interface ShellState {
    * the component so the walkthrough can bring a lane into view before it tries
    * to point at something inside it.
    */
-  missionLane: "comms" | "floor" | "queue";
-  setMissionLane: (lane: "comms" | "floor" | "queue") => void;
+  missionLane: "floor" | "queue";
+  setMissionLane: (lane: "floor" | "queue") => void;
 
   /** The orientation tour runs once, then never again unless replayed. */
   walkthroughSeen: boolean;

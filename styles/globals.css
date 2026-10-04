@@ -274,6 +274,21 @@
   border-radius: var(--radius-panel);
 }
 
+/*
+ * A panel with the floor showing through it.
+ *
+ * Only for the mission control room, which now has a photograph of a dark
+ * store behind it. The heavy blur is what makes the translucency safe: it
+ * replaces the picture under the panel with a local average, so a bright LED
+ * strip in the background never ends up behind small text.
+ */
+@utility panel-glass {
+  background:
+    linear-gradient(180deg, oklch(1 0 0 / 3.5%) 0%, oklch(1 0 0 / 0%) 60%),
+    color-mix(in oklab, var(--color-surface) 62%, transparent);
+  backdrop-filter: blur(28px) saturate(1.15);
+}
+
 /* A single hairline of light along the top edge — the "Linear sheen" */
 @utility sheen {
   position: relative;

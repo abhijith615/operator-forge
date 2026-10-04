@@ -52,7 +52,7 @@ export function Timeline({ className }: { className?: string }) {
 
   return (
     <section
-      className={cn("panel sheen flex min-h-0 flex-col overflow-hidden", className)}
+      className={cn("panel panel-glass sheen flex min-h-0 flex-col overflow-hidden", className)}
       aria-label="Live timeline"
     >
       <header className="flex shrink-0 items-center gap-2 border-b border-line px-4 py-3">

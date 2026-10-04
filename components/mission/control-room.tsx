@@ -1,11 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { CallOverlay } from "@/components/mission/call-overlay";
+import { MissionFloorBackdrop } from "@/components/mission/floor-backdrop";
 import { motion } from "framer-motion";
 
 import { AchievementStrip } from "@/components/mission/achievements";
 import { AttentionList } from "@/components/mission/attention-list";
-import { CommsRail } from "@/components/mission/comms-rail";
 import { HubControls } from "@/components/mission/hub-controls";
 import { TaskQueue } from "@/components/mission/task-queue";
 import { Timeline } from "@/components/mission/timeline";
@@ -17,10 +18,9 @@ import { useShellStore } from "@/stores/shell-store";
 import { FIRST_SHIFT } from "@/lib/constants/mission";
 import { cn } from "@/lib/utils";
 
-type Lane = "comms" | "floor" | "queue";
+type Lane = "floor" | "queue";
 
 const LANES: { value: Lane; label: string }[] = [
-  { value: "comms", label: "Comms" },
   { value: "floor", label: "Floor" },
   { value: "queue", label: "Queue" },
 ];
@@ -83,15 +83,8 @@ export function ControlRoom({
         ))}
       </div>
 
-      <div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-[20rem_minmax(0,1fr)_23rem]">
-        {/* ── Left: communications ────────────────────────────────────── */}
-        <div
-          data-tour="comms"
-          className={cn("min-h-0", lane === "comms" ? "flex" : "hidden xl:flex")}
-        >
-          <CommsRail configured={chatConfigured} className="min-h-0 flex-1" />
-        </div>
-
+      <div className="relative grid min-h-0 flex-1 gap-3 xl:grid-cols-[minmax(0,1fr)_23rem]">
+        <MissionFloorBackdrop />
         {/* ── Centre: the floor ───────────────────────────────────────── */}
         <div
           className={cn(
@@ -146,6 +139,9 @@ export function ControlRoom({
           <Timeline className="h-[13rem] shrink-0" />
         </div>
       </div>
+
+      {/* Over everything, including the lane switcher. */}
+      <CallOverlay />
     </div>
   );
 }

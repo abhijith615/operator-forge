@@ -25,7 +25,7 @@ interface Step {
   /** Where the card sits relative to the target. */
   place: "right" | "left" | "below";
   /** Below `xl` the columns are lanes; open this one before measuring. */
-  lane?: "comms" | "floor" | "queue";
+  lane?: "floor" | "queue";
 }
 
 const STEPS: Step[] = [
@@ -50,11 +50,10 @@ const STEPS: Step[] = [
     lane: "floor",
   },
   {
-    target: "comms",
+    target: "messages",
     title: "Three people who answer",
-    body: "Your store manager, the inventory lead, and a customer who is waiting. Ask them things — how you ask is part of your record.",
+    body: "Your store manager, the inventory lead, and a customer who is waiting. Messages live here, and anything new interrupts you wherever you are. How you ask is part of your record.",
     place: "right",
-    lane: "comms",
   },
   {
     target: "intake",

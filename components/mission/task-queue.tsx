@@ -98,7 +98,7 @@ export function TaskQueue({
 
   return (
     <section
-      className={cn("panel sheen flex min-h-0 flex-col overflow-hidden", className)}
+      className={cn("panel panel-glass sheen flex min-h-0 flex-col overflow-hidden", className)}
       aria-label="Task queue"
       {...props}
     >

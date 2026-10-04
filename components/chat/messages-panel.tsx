@@ -43,7 +43,7 @@ export function MessagesPanel({ configured: initial }: { configured: boolean }) 
   const messages = threads[active] ?? NO_MESSAGES;
   const activeUnread = unread(active);
 
-  // See comms-rail: a streamed reply completes as an in-place patch, so
+  // A streamed reply completes as an in-place patch, so
   // `messages.length` does not change and cannot be what this depends on.
   React.useEffect(() => {
     markRead(active);

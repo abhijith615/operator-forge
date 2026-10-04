@@ -157,7 +157,9 @@ export function SidebarNav({ collapsed, onNavigate }: SidebarNavProps) {
 
           <ul className="space-y-0.5">
             {section.items.map((item) => (
-              <li key={item.href}>
+              // The walkthrough points at Messages now that the comms column
+              // is gone, so the tab has to be findable by the measurer.
+              <li key={item.href} data-tour={item.href === "/messages" ? "messages" : undefined}>
                 <NavRow
                   item={item}
                   collapsed={collapsed}

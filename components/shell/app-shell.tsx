@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { AchievementToast } from "@/components/mission/achievements";
 import { EventToasts } from "@/components/mission/event-toasts";
+import { MessageToasts } from "@/components/mission/message-toasts";
 import { Walkthrough } from "@/components/mission/walkthrough";
 import { CommandMenu } from "@/components/shell/command-menu";
 import { MobileNav } from "@/components/shell/mobile-nav";
@@ -54,6 +55,7 @@ export function AppShell({
       </div>
 
       <EventToasts />
+      <MessageToasts />
       <AchievementToast />
       <Walkthrough />
       <CommandMenu />
