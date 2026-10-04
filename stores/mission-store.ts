@@ -73,6 +73,8 @@ interface MissionState {
   callsDone: string[];
 
   begin: (operatorId: string) => void;
+  /** Starts the shift clock. Called once the walkthrough is done. */
+  startClock: () => void;
   tick: () => void;
   dispatch: (action: OperatorAction) => void;
   resolveTask: (taskId: string, optionId: string) => void;
@@ -157,7 +159,17 @@ export const useMissionStore = create<MissionState>()(
           ...initialSlice(),
           runId,
           status: "live",
-          startedAt: Date.now(),
+          /**
+           * Null until the walkthrough is done — `startClock` sets it.
+           *
+           * Gating the world tick was not enough on its own: the readouts
+           * derive elapsed time from `startedAt` against the wall clock, so
+           * the shift clock counted down behind the orientation cards and the
+           * world would then have jumped forward to catch up the moment they
+           * were dismissed. The shift has not started until the operator has
+           * been told what they are looking at.
+           */
+          startedAt: null,
           world,
           tasks: seeded.tasks,
           templateLastUsed: seeded.templateLastUsed,
@@ -175,6 +187,12 @@ export const useMissionStore = create<MissionState>()(
             },
           ],
         });
+      },
+
+      startClock: () => {
+        const state = get();
+        if (state.status !== "live" || state.startedAt !== null) return;
+        set({ startedAt: Date.now() });
       },
 
       tick: () => {
@@ -388,7 +406,7 @@ export const useMissionStore = create<MissionState>()(
           ...(chasing
             ? {
                 call: {
-                  call: recallNegotiation(chasing.name),
+                  call: recallNegotiation(chasing.name, chasing.id),
                   ringFrom: elapsed,
                   answered: true,
                 },
@@ -455,18 +473,47 @@ export const useMissionStore = create<MissionState>()(
           meta: { call: call.id, ignored, answers: made.length },
         });
 
+        /**
+         * An outbound recall only brings somebody back if the conversation
+         * actually landed. Refusing to trade anything, or hanging up partway,
+         * leaves the gap on the floor exactly where it was — which is the
+         * whole reason this is a call rather than a button.
+         */
+        const last = ignored ? null : (answers[answers.length - 1] ?? null);
+        const agreed = last?.agrees === true;
+        const world = cloneWorld(state.world);
+        if (call.subjectId && agreed) {
+          applyEffects(world, [
+            {
+              kind: "worker-status",
+              workerId: call.subjectId,
+              status: "active",
+              note: "Called in",
+            },
+          ]);
+        }
+
+        const recallFailed = Boolean(call.subjectId) && !agreed;
+
         const entry: TimelineEntry = {
           id: `call-${call.id}-${elapsed}`,
           at: elapsed,
           kind: "action",
-          tone: ignored ? "warning" : "neutral",
-          title: ignored ? `Missed a call from ${call.caller}` : `Call with ${call.caller}`,
+          tone: ignored || recallFailed ? "warning" : "neutral",
+          title: ignored
+            ? `Missed a call from ${call.caller}`
+            : call.subjectId
+              ? agreed
+                ? `${call.caller} is coming in`
+                : `${call.caller} is not coming in`
+              : `Call with ${call.caller}`,
           detail: ignored ? call.ignored.note : (made[made.length - 1]?.optionLabel ?? undefined),
           source: streamToSource(call.stream),
         };
 
         set({
           call: null,
+          world,
           decisions,
           achievements: [
             ...state.achievements,
@@ -484,6 +531,32 @@ export const useMissionStore = create<MissionState>()(
       dispatch: (action) => {
         const state = get();
         if (!state.world || state.status !== "live") return;
+
+        /**
+         * Calling an absentee back is a conversation, not a toggle.
+         *
+         * The phone button on the People panel used to flip the worker
+         * straight to active, which taught an operator that getting someone to
+         * give up their morning costs one click. It opens the same negotiation
+         * the queue card does, and whether they actually come in depends on
+         * what gets offered.
+         */
+        if (action.type === "recall-worker") {
+          if (state.call) return;
+          const worker = state.world.workers.find(
+            (candidate) => candidate.id === action.workerId,
+          );
+          if (!worker || worker.status === "active") return;
+          recordTelemetry("control", action.type, state.world.elapsed);
+          set({
+            call: {
+              call: recallNegotiation(worker.name, worker.id),
+              ringFrom: state.world.elapsed,
+              answered: true,
+            },
+          });
+          return;
+        }
 
         const result = applyOperatorAction(state.world, action);
         if (!result.entry) return;

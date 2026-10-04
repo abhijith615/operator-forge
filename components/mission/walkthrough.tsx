@@ -7,6 +7,7 @@ import { ArrowRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIsShiftLive } from "@/hooks/use-mission";
 import { easing } from "@/lib/motion";
+import { useMissionStore } from "@/stores/mission-store";
 import { useShellStore } from "@/stores/shell-store";
 import { cn } from "@/lib/utils";
 
@@ -139,11 +140,15 @@ export function Walkthrough() {
     };
   }, [active, index, setLane]);
 
+  const startClock = useMissionStore((state) => state.startClock);
+
   const finish = React.useCallback(() => {
     setSeen(true);
     clearReplay(false);
     setIndex(0);
-  }, [setSeen, clearReplay]);
+    // The shift begins here, not when the status went live.
+    startClock();
+  }, [setSeen, clearReplay, startClock]);
 
   React.useEffect(() => {
     if (!active) return;

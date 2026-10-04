@@ -56,9 +56,16 @@ export function useMissionTick(): void {
   const walkthroughReplay = useShellStore((state) => state.walkthroughReplay);
   const explaining = !walkthroughSeen || walkthroughReplay;
 
+  const startClock = useMissionStore((state) => state.startClock);
+
   React.useEffect(() => {
     if (status !== "live" || explaining) return;
 
+    // The walkthrough normally starts the clock as it closes. This covers the
+    // case where it never ran at all — a replay dismissed from elsewhere, or a
+    // surface that does not mount it — so the shift can never be left live
+    // with a clock that has no start time.
+    startClock();
     tick();
     const interval = window.setInterval(tick, 1000 / Math.min(4, missionTimeScale()));
 
@@ -72,7 +79,7 @@ export function useMissionTick(): void {
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [tick, status, explaining]);
+  }, [tick, status, explaining, startClock]);
 }
 
 /**
