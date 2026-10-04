@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Bike, Boxes, Container, Route, ScanLine, ShieldAlert, ShoppingBag, Snowflake, Thermometer, Truck, type LucideIcon } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 
 import { teamsOnPutaway } from "@/lib/challenge/day-four/engine";
@@ -153,19 +154,19 @@ export function FloorMap({
         <rect width={W} height={H} fill="url(#d4-grid)" />
 
         {/* ── Zones ── */}
-        <Zone r={G.yard} label="Yard" size={labelSize} dashed />
-        <Zone r={G.dock1} label="Dock 1" size={labelSize} />
-        <Zone r={G.dock2} label="Dock 2" size={labelSize} tone={layout.dock2Factor < 1 ? "warn" : undefined} />
-        <Zone r={G.qc} label="QC gate" size={labelSize} />
-        <Zone r={G.staging} label="GRN staging" size={bigLabel} tone={layout.lanes >= 64 ? "alert" : layout.lanes >= 50 ? "warn" : undefined} />
-        <Zone r={G.safe} label="Safe lane" size={labelSize} dashed={!state.safeOpen} tone={state.safeOpen ? "ion" : undefined} muted={!state.safeOpen} />
-        <Zone r={G.quarantine} label="Quarantine" size={labelSize} tone={state.quarantine > 0 ? "alert" : undefined} />
+        <Zone r={G.yard} label="Yard" size={labelSize} icon={Truck} dashed />
+        <Zone r={G.dock1} label="Dock 1" size={labelSize} icon={Container} />
+        <Zone r={G.dock2} label="Dock 2" size={labelSize} icon={Container} tone={layout.dock2Factor < 1 ? "warn" : undefined} />
+        <Zone r={G.qc} label="QC gate" size={labelSize} icon={ScanLine} />
+        <Zone r={G.staging} label="GRN staging" size={bigLabel} icon={Boxes} tone={layout.lanes >= 64 ? "alert" : layout.lanes >= 50 ? "warn" : undefined} />
+        <Zone r={G.safe} label="Safe lane" size={labelSize} icon={Route} dashed={!state.safeOpen} tone={state.safeOpen ? "ion" : undefined} muted={!state.safeOpen} />
+        <Zone r={G.quarantine} label="Quarantine" size={labelSize} icon={ShieldAlert} tone={state.quarantine > 0 ? "alert" : undefined} />
         <Zone r={G.putaway} label="" size={labelSize} />
         <Zone r={G.store} label="" size={labelSize} />
-        <Zone r={G.chilled} label="Chilled" size={bigLabel} tone="info" />
-        <Zone r={G.frozen} label="Frozen" size={bigLabel} tone="flux" />
-        <Zone r={G.packing} label="Packing" size={bigLabel} />
-        <Zone r={G.outbound} label="Outbound / dispatch" size={labelSize} />
+        <Zone r={G.chilled} label="Chilled" size={bigLabel} icon={Thermometer} tone="info" />
+        <Zone r={G.frozen} label="Frozen" size={bigLabel} icon={Snowflake} tone="flux" />
+        <Zone r={G.packing} label="Packing" size={bigLabel} icon={ShoppingBag} />
+        <Zone r={G.outbound} label="Outbound / dispatch" size={labelSize} icon={Bike} />
 
         {/* Racks and aisles */}
         {[G.fastpick, G.rack1, G.rack2, G.deep].map((rack, index) => (
@@ -344,12 +345,14 @@ function Zone({
   label,
   size,
   tone,
+  icon: Icon,
   dashed = false,
   muted = false,
 }: {
   r: Rect;
   label: string;
   size: number;
+  icon?: LucideIcon;
   tone?: "warn" | "alert" | "ion" | "info" | "flux";
   dashed?: boolean;
   muted?: boolean;
@@ -379,9 +382,31 @@ function Zone({
         strokeDasharray={dashed ? "5 4" : undefined}
       />
       {label ? (
-        <text x={r.x + 8} y={r.y + size + 4} className={cn("font-mono uppercase", muted ? "fill-faint" : "fill-lo")} fontSize={size} letterSpacing={1}>
-          {label}
-        </text>
+        <>
+          {/* A pictogram beside every name. Fifteen monospaced labels on a dark
+              rectangle all read the same at a glance, which is most of why
+              this diagram had to be deciphered rather than seen. */}
+          {Icon ? (
+            <Icon
+              x={r.x + 8}
+              y={r.y + 4}
+              width={size + 3}
+              height={size + 3}
+              strokeWidth={2}
+              className={cn(muted ? "stroke-faint" : "stroke-lo")}
+              aria-hidden
+            />
+          ) : null}
+          <text
+            x={r.x + 8 + (Icon ? size + 8 : 0)}
+            y={r.y + size + 4}
+            className={cn("font-mono uppercase", muted ? "fill-faint" : "fill-lo")}
+            fontSize={size}
+            letterSpacing={1}
+          >
+            {label}
+          </text>
+        </>
       ) : null}
     </g>
   );
@@ -617,8 +642,12 @@ function StorageMeter({
     <g>
       <rect x={r.x + 10} y={r.y + r.h - 22} width={barW} height={6} rx={3} className="fill-white/[0.07]" />
       <rect x={r.x + 10} y={r.y + r.h - 22} width={barW * share} height={6} rx={3} className={cn("transition-all duration-700", storage === "frozen" ? "fill-flux-400" : "fill-info-500")} />
+      {/* "0/30" on its own is a riddle. It is how much of this room is
+          filled, and at the start of the morning it is empty — which is the
+          point of the whole day. */}
       <text x={r.x + 10} y={r.y + r.h - 30} className="fill-mid font-mono" fontSize={compact ? 16 : 10}>
         {Math.round(used)}/{cap}
+        <tspan className="fill-faint"> stored</tspan>
       </text>
       {ready ? (
         <text x={r.x + r.w - 10} y={r.y + (compact ? 30 : 22)} textAnchor="end" className="fill-ion-400 font-mono font-semibold" fontSize={compact ? 14 : 9}>

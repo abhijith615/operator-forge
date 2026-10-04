@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { FloorLegend } from "@/components/challenge/day-four/floor-legend";
 import { ChallengeAssistant } from "@/components/challenge/assistant";
 import * as day4Coach from "@/lib/challenge/day-four/coach";
 
@@ -585,6 +586,7 @@ function Morning({ initial }: { initial: Day4State }) {
             <div className="overflow-x-auto">
               <div className="min-w-[620px] sm:min-w-0">{map}</div>
             </div>
+            <FloorLegend state={state} />
           </div>
           <AnimatePresence mode="wait" initial={false}>
             <motion.aside

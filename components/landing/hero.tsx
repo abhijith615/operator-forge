@@ -86,7 +86,7 @@ export function Hero() {
           transition={{ duration: 1, ease: easing.outExpo, delay: 0.5 }}
           className="mx-auto mt-7 max-w-[38rem] text-[17px] leading-relaxed text-balance text-[#3D3D3D] sm:text-[18px]"
         >
-          Thirty-minute live operations missions, an assessment built from what you actually did rather than what
+          Fifteen-minute live operations missions, an assessment built from what you actually did rather than what
           you claim, and the people who do this work for a living. Nobody is grading an essay here.
         </motion.p>
 
