@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { MISSION_DURATION_SECONDS, missionTimeScale } from "@/lib/mission/config";
 import { useMissionStore } from "@/stores/mission-store";
+import { useShellStore } from "@/stores/shell-store";
 
 /**
  * True once zustand has rehydrated from storage. Everything mission-aware must
@@ -42,8 +43,21 @@ export function useMissionTick(): void {
   const tick = useMissionStore((state) => state.tick);
   const status = useMissionStore((state) => state.status);
 
+  /**
+   * The walkthrough happens before the shift, not during it.
+   *
+   * The clock used to start the moment the status went live, so the floor was
+   * drifting, tasks were landing and orders were ageing while the operator
+   * read four cards explaining what the panels are. The first thing anybody
+   * learned about this store was that it punishes you for being told how it
+   * works.
+   */
+  const walkthroughSeen = useShellStore((state) => state.walkthroughSeen);
+  const walkthroughReplay = useShellStore((state) => state.walkthroughReplay);
+  const explaining = !walkthroughSeen || walkthroughReplay;
+
   React.useEffect(() => {
-    if (status !== "live") return;
+    if (status !== "live" || explaining) return;
 
     tick();
     const interval = window.setInterval(tick, 1000 / Math.min(4, missionTimeScale()));
@@ -58,7 +72,7 @@ export function useMissionTick(): void {
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [tick, status]);
+  }, [tick, status, explaining]);
 }
 
 /**
