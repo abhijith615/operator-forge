@@ -1,4 +1,14 @@
-export type AgentId = "hub-manager" | "inventory-lead" | "customer";
+/**
+ * The two colleagues an assistant store manager can actually reach.
+ *
+ * There used to be a third thread: a customer, messaging the store directly.
+ * No customer can do that. They reach the platform's support team, who raise
+ * a ticket that lands on the floor as work — which is how every customer
+ * problem in this shift already arrives. A thread where a customer argues
+ * with the store manager in person was the one piece of this simulation that
+ * could not happen in a real dark store.
+ */
+export type AgentId = "hub-manager" | "inventory-lead";
 
 export interface AgentPersona {
   id: AgentId;

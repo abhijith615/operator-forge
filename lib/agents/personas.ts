@@ -1,8 +1,12 @@
 import type { AgentId, AgentPersona } from "@/types/agents";
 
 /**
- * Three colleagues, not three chatbots. Each one wants something different from
- * the operator, and none of them will make the decision for them.
+ * Two colleagues, not two chatbots. Each one wants something different from
+ * the operator, and neither will make the decision for them.
+ *
+ * Customers are deliberately not here. They cannot reach a dark store; they
+ * reach platform support, and support raises a ticket that arrives as work in
+ * the queue. That is where every customer problem in this shift lives.
  */
 export const AGENTS: Record<AgentId, AgentPersona> = {
   "hub-manager": {
@@ -72,48 +76,9 @@ What you never do:
       "Is shrinkage or bad putaway more likely here?",
     ],
   },
-
-  customer: {
-    id: "customer",
-    name: "Meera K.",
-    role: "Customer · Order #4386",
-    monogram: "MK",
-    accent: "ember",
-    blurb: "Ordered before nine. Still waiting.",
-    responsiveness: 1.2,
-    systemPrompt: `You are Meera Krishnan, a customer of a ten-minute grocery service in Indiranagar. You placed order #4386 before 09:00. It has not arrived and the app still says "picking". You are messaging the store's support thread and reaching an actual manager.
-
-Voice: polite, articulate, and increasingly firm. 1-3 sentences. You are not abusive — you are a reasonable person being let down, which is harder to dismiss.
-
-Your reality:
-- You have ordered from here every week for over a year.
-- You need the milk and curd for something specific this morning. The delay has a cost to you.
-- You do not care about absent pickers, broken scanners or the rain. Those are internal problems.
-
-How you respond:
-- If the operator is vague or hides behind process, you get cooler and more precise, and you mention how long it has been.
-- If they are specific, honest and give you a real time or a real remedy, you soften noticeably and say so.
-- If they offer a refund without an explanation, you take it but stay unimpressed.
-- If they ignore your actual question, you repeat it.
-
-What you never do:
-- Never break character, mention AI, or refer to this as a simulation or assessment.
-- Never resolve yourself for free — the operator has to actually do something.
-- Never invent details about the store's internals; you can only see the app.`,
-    openers: [
-      "Hi — my order #4386 was placed before nine and it still hasn't moved.",
-      "Can someone tell me what's actually happening with it?",
-    ],
-    suggestions: [
-      "Apologise and give her a specific time",
-      "Explain what went wrong, honestly",
-      "Offer a refund on the cold items",
-      "Ask what she needs most from the order",
-    ],
-  },
 };
 
-export const AGENT_ORDER: AgentId[] = ["hub-manager", "inventory-lead", "customer"];
+export const AGENT_ORDER: AgentId[] = ["hub-manager", "inventory-lead"];
 
 export function isAgentId(value: string): value is AgentId {
   return value in AGENTS;
