@@ -9,10 +9,19 @@ export type Band = "emerging" | "developing" | "solid" | "strong" | "distinctive
 /** How much the shift actually told us. Thin evidence is said out loud. */
 export type Confidence = "low" | "medium" | "high";
 
+/**
+ * Whether a cited moment is a thing that went well, a thing that cost them, or
+ * neither. The debrief groups evidence under those two headings, because
+ * "here is what happened" is far less useful to read than "here is what you
+ * did well and here is what you did not".
+ */
+export type MomentKind = "strength" | "gap" | "note";
+
 export interface GenomeMoment {
   /** Elapsed mission seconds. */
   at: number;
   text: string;
+  kind: MomentKind;
 }
 
 export interface CapabilityReading {
@@ -25,6 +34,11 @@ export interface CapabilityReading {
   evidenceCount: number;
   /** One sentence about this operator, not about the capability. */
   headline: string;
+  /**
+   * The one thing to do differently next shift. Always present, including
+   * where the shift went well — a strong reading still has a next step.
+   */
+  advice: string;
   moments: GenomeMoment[];
 }
 

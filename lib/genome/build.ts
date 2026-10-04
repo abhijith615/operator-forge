@@ -4,7 +4,7 @@ import type { TaskDecision } from "@/types/tasks";
 import type { TelemetryEvent } from "@/types/telemetry";
 import type { WorldState } from "@/types/world";
 
-import { buildStory, headlineFor, signatureFor, summaryFor } from "./narrative";
+import { adviceFor, buildStory, headlineFor, signatureFor, summaryFor } from "./narrative";
 import { operatorRating, scoreCapabilities } from "./scoring";
 import { gatherSignals, median } from "./signals";
 
@@ -22,8 +22,19 @@ export interface GenomeInput {
  */
 export function buildGenome(input: GenomeInput): OperatorGenome {
   const signals = gatherSignals(input);
-  const capabilities = scoreCapabilities(signals, headlineFor);
-  const ranked = [...capabilities].sort((a, b) => b.score - a.score);
+  const capabilities = scoreCapabilities(signals, headlineFor, adviceFor);
+
+  /**
+   * Strengths and growth areas are drawn only from what the shift actually
+   * tested. A capability with no evidence scores the neutral 0.5 that `blend`
+   * returns for an empty read, which used to sink it to the bottom of the
+   * ranking and get it named as a weakness — telling an operator they are
+   * weak at something nobody ever asked them to do.
+   */
+  const measured = capabilities.filter((reading) => reading.evidenceCount > 0);
+  const ranked = [...(measured.length > 0 ? measured : capabilities)].sort(
+    (a, b) => b.score - a.score,
+  );
   const signature = signatureFor(capabilities);
 
   return {

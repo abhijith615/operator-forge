@@ -23,9 +23,14 @@ interface RawReading {
   moments: GenomeMoment[];
 }
 
-function momentFrom(decision: TaskDecision, lead: string): GenomeMoment {
+function momentFrom(
+  decision: TaskDecision,
+  lead: string,
+  kind: GenomeMoment["kind"],
+): GenomeMoment {
   return {
     at: decision.at,
+    kind,
     text: `${lead} “${decision.optionLabel ?? "—"}” at ${hubClock(decision.at)}.`,
   };
 }
@@ -40,9 +45,11 @@ function bookendMoments(signals: RunSignals, capability: CapabilityId): GenomeMo
   const best = tagged[0];
   const worst = tagged[tagged.length - 1];
 
-  if (best && best.quality >= 0.7) moments.push(momentFrom(best, "You chose"));
-  if (worst && worst !== best && worst.quality <= 0.35) {
-    moments.push(momentFrom(worst, "You also chose"));
+  if (best && best.quality >= 0.7) {
+    moments.push(momentFrom(best, "You chose", "strength"));
+  }
+  if (worst && worst !== best && worst.quality <= 0.45) {
+    moments.push(momentFrom(worst, "You also chose", "gap"));
   }
   return moments;
 }
@@ -61,6 +68,7 @@ function scoreCuriosity(signals: RunSignals): RawReading {
     if (first) {
       moments.push({
         at: first.at,
+        kind: "strength",
         text:
           termCount === 1
             ? "You stopped to look up an operations term rather than working around it."
@@ -119,6 +127,7 @@ function scoreSystemsThinking(signals: RunSignals): RawReading {
   if (throttled || throttleTask) {
     moments.push({
       at: signals.duration,
+      kind: "strength",
       text: "You reached for intake control instead of asking the floor to absorb it.",
     });
   }
@@ -173,6 +182,7 @@ function scorePrioritization(signals: RunSignals): RawReading {
   if (missedCritical) {
     moments.push({
       at: missedCritical.at,
+      kind: "gap",
       text: `A critical task expired unanswered at ${hubClock(missedCritical.at)} with ${missedCritical.queueDepth} other items on the board.`,
     });
   }
@@ -216,11 +226,13 @@ function scoreLearningAgility(signals: RunSignals): RawReading {
   if (qualityTrend !== null && qualityTrend > 0.62) {
     moments.push({
       at: last[0]?.at ?? signals.duration,
+      kind: "strength",
       text: "Your calls in the last five minutes were better than your calls in the first five.",
     });
   } else if (qualityTrend !== null && qualityTrend < 0.4) {
     moments.push({
       at: last[0]?.at ?? signals.duration,
+      kind: "gap",
       text: "Your judgement drifted as the shift went on rather than sharpening.",
     });
   }
@@ -246,6 +258,7 @@ function scoreOwnership(signals: RunSignals): RawReading {
   if (corners > 0) {
     moments.push({
       at: signals.duration,
+      kind: "gap",
       text: `You took the quick way out of ${corners} call${corners === 1 ? "" : "s"} that had your name on it.`,
     });
   }
@@ -271,6 +284,7 @@ function scoreAiCollaboration(signals: RunSignals): RawReading {
   if (prompts.length === 0) {
     moments.push({
       at: 0,
+      kind: "gap",
       text: "You ran the whole shift without asking anyone a single question.",
     });
   } else {
@@ -278,7 +292,8 @@ function scoreAiCollaboration(signals: RunSignals): RawReading {
     if (first) {
       moments.push({
         at: first.at,
-        text: `You opened a conversation at ${hubClock(first.at)} and sent ${prompts.length} message${prompts.length === 1 ? "" : "s"} in total.`,
+        kind: "strength",
+      text: `You opened a conversation at ${hubClock(first.at)} and sent ${prompts.length} message${prompts.length === 1 ? "" : "s"} in total.`,
       });
     }
   }
@@ -310,6 +325,7 @@ function scoreCustomerThinking(signals: RunSignals): RawReading {
   const moments = bookendMoments(signals, "customer-thinking");
   moments.push({
     at: signals.duration,
+    kind: "note",
     text: `The store rating finished at ${signals.world.rating.toFixed(2)}, from 4.60 when you took over.`,
   });
 
@@ -372,6 +388,7 @@ function scoreStressHandling(signals: RunSignals): RawReading {
   if (peak >= 6) {
     moments.push({
       at: signals.duration,
+      kind: "strength",
       text: `The board reached ${peak} open items. You were still answering at that depth.`,
     });
   }
@@ -400,12 +417,43 @@ const SCORERS: Record<CapabilityId, (signals: RunSignals) => RawReading> = {
   "stress-handling": scoreStressHandling,
 };
 
+/**
+ * A reading that was scored but produced no quotable moment.
+ *
+ * This happens when every tagged call landed in the middle — nothing good
+ * enough to cite as a strength, nothing poor enough to cite as a gap. Saying
+ * so is far better than an empty panel, because the operator's question is
+ * "what did you see?" and "a lot of adequate calls" is a real answer.
+ */
+function middlingNote(signals: RunSignals, capability: CapabilityId): GenomeMoment | null {
+  const tagged = signals.answered.filter((decision) =>
+    decision.capabilities.includes(capability),
+  );
+  if (tagged.length === 0) return null;
+  return {
+    at: tagged[tagged.length - 1]?.at ?? signals.duration,
+    kind: "note",
+    text: `${tagged.length} call${tagged.length === 1 ? "" : "s"} here went the workable way rather than the best or the worst available.`,
+  };
+}
+
 export function scoreCapabilities(
   signals: RunSignals,
   headlineFor: (id: CapabilityId, reading: RawReading) => string,
+  adviceFor: (id: CapabilityId, reading: RawReading) => string,
 ): CapabilityReading[] {
   return capabilities.map((capability) => {
     const raw = SCORERS[capability.id](signals);
+
+    // Strengths first, then gaps, then context: the operator should see what
+    // held before what slipped, whatever order the scorer happened to build.
+    const order = { strength: 0, gap: 1, note: 2 } as const;
+    const moments = [...raw.moments].sort((a, b) => order[a.kind] - order[b.kind]);
+    if (moments.length === 0) {
+      const note = middlingNote(signals, capability.id);
+      if (note) moments.push(note);
+    }
+
     return {
       id: capability.id,
       name: capability.name,
@@ -414,7 +462,8 @@ export function scoreCapabilities(
       confidence: confidenceOf(raw.evidenceCount),
       evidenceCount: raw.evidenceCount,
       headline: headlineFor(capability.id, raw),
-      moments: raw.moments.slice(0, 3),
+      advice: adviceFor(capability.id, raw),
+      moments: moments.slice(0, 4),
     };
   });
 }

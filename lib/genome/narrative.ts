@@ -51,7 +51,7 @@ const HEADLINES: Record<CapabilityId, Record<Tier, string>> = {
     high: "You signed for what you had actually checked, including when nobody would know.",
   },
   "ai-collaboration": {
-    low: "You had three colleagues and a copilot available and barely used them.",
+    low: "You had two colleagues and a copilot available and barely used them.",
     mid: "You asked when you were stuck, in fairly general terms.",
     high: "You directed the people around you with specific questions and then acted on what came back.",
   },
@@ -74,6 +74,72 @@ const HEADLINES: Record<CapabilityId, Record<Tier, string>> = {
 
 export function headlineFor(id: CapabilityId, reading: { score: number }): string {
   return HEADLINES[id][tierOf(reading.score)];
+}
+
+/**
+ * The one thing to do differently next shift.
+ *
+ * Deliberately written as an instruction for the next hour on a floor, not as
+ * a verdict on the person. Every tier gets one, including `high`: an operator
+ * who did this well still has a next move, and a report where the good
+ * readings say nothing actionable teaches them that praise is where the advice
+ * stops.
+ */
+const ADVICE: Record<CapabilityId, Record<Tier, string>> = {
+  curiosity: {
+    low: "Before the next call you commit to, spend ten seconds checking the panel that would prove you wrong. Most of these were decidable from the floor, not from the card.",
+    mid: "You checked when there was room. Try checking first on the one that looks obvious — the obvious ones are where an unchecked assumption costs the most.",
+    high: "Keep going, and start saying out loud what you checked. The habit is worth more to the floor once they can see it.",
+  },
+  "decision-making": {
+    low: "Answer more of the board, even imperfectly. An expired task scores zero; a middling call scores something and keeps the floor moving.",
+    mid: "When two options are close, you took the safer one. Next shift, pick the one that fixes the cause and accept the cost — that is the call the harder cards are testing.",
+    high: "Your calls held. Push on speed: shaving latency on criticals is the only headroom left here.",
+  },
+  "systems-thinking": {
+    low: "Ask “what does this cause” once per card. A nil pick is never just a nil pick — it is a count, a de-listing and a refund behind it.",
+    mid: "You caught the knock-ons after they started. Next time, name the second effect before you choose, and pick for that instead.",
+    high: "You worked on causes. Start spending the time you save on the slower structural fixes — slotting, rotas, bin layout.",
+  },
+  prioritization: {
+    low: "Sort by what breaches first, not by what arrived first. Let routine work expire on purpose rather than by accident.",
+    mid: "Your exceptions were expensive. When a critical and a normal arrive together, take the critical even if the normal is quicker to clear.",
+    high: "You dropped the right things. Push further: decide what you are dropping out loud at the start, instead of discovering it at the end.",
+  },
+  "learning-agility": {
+    low: "The floor told you the same thing more than once. Treat a repeat as information about your approach, not about the floor.",
+    mid: "You adjusted on the second signal. Try adjusting on the first — one repeat is already a pattern in a fifteen-minute shift.",
+    high: "You got sharper as it went. Carry the last five minutes into the first five next time: that is the whole gain available.",
+  },
+  ownership: {
+    low: "Several calls got the quickest possible answer. Before you pick the fast option, ask whether you would sign your name under it in an audit.",
+    mid: "You closed most loops and let a few go when it got heavy. Those are the ones that come back — pick one and close it even at the busiest point.",
+    high: "You signed for what you had checked. Keep the standard when nobody is watching the specific thing you are signing.",
+  },
+  "ai-collaboration": {
+    low: "You had colleagues available and barely used them. One specific question costs fifteen seconds and routinely saves a wrong call.",
+    mid: "Your questions were general, so the answers were too. Ask for a number or a name, not for an opinion.",
+    high: "You directed them well and acted on what came back. Try asking earlier — before you have formed the plan, not after.",
+  },
+  "customer-thinking": {
+    low: "Name who is waiting before you choose. Every order on that board is a person, and the choice usually changes once you can say which one.",
+    mid: "You handled the customers who complained. The ones who do not complain simply leave — look at the quiet breaches too.",
+    high: "You could name who was affected and it changed your choices. Push it upstream: fix the bin, the rota or the route that produced the complaint.",
+  },
+  communication: {
+    low: "What you sent was short enough to be ambiguous. One extra clause — the number, or the deadline — is usually the whole difference.",
+    mid: "You were clear when you had time. Being specific when you do not have time is the version of this that counts.",
+    high: "You said the uncomfortable thing plainly. Keep doing it upward, where it is hardest and matters most.",
+  },
+  "stress-handling": {
+    low: "Your judgement thinned as the board filled. When it stacks, slow down on the next single card rather than speeding up across all of them.",
+    mid: "Quality dipped when it got busy. Pick one rule to hold at a full board — criticals first, always — and keep it when everything else gives.",
+    high: "You held your standard at depth. The next step is holding it at depth for an hour rather than fifteen minutes.",
+  },
+};
+
+export function adviceFor(id: CapabilityId, reading: { score: number }): string {
+  return ADVICE[id][tierOf(reading.score)];
 }
 
 /** Lowercases a capability name for use mid-sentence, leaving acronyms alone. */
@@ -234,7 +300,12 @@ export function summaryFor(
   const answered = signals.answered.length;
   const expired = signals.expired.length;
   const total = answered + expired;
-  const ranked = [...readings].sort((a, b) => b.score - a.score);
+  // Only what the shift tested. Naming an untested capability as the
+  // "thinnest" read is the one line in this report that would be untrue.
+  const measured = readings.filter((reading) => reading.evidenceCount > 0);
+  const ranked = [...(measured.length > 0 ? measured : readings)].sort(
+    (a, b) => b.score - a.score,
+  );
   const best = ranked[0];
   const worst = ranked[ranked.length - 1];
 

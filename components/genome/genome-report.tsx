@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
-import { Dna, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
+import { ArrowRight, Dna, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
 
 import { AchievementStrip } from "@/components/mission/achievements";
 import { AppreciationDialog } from "@/components/genome/appreciation-dialog";
@@ -13,8 +14,10 @@ import { Replay } from "@/components/genome/replay";
 import { CountUp } from "@/components/motion/count-up";
 import { Reveal } from "@/components/motion/reveal";
 import { PageShell } from "@/components/shell/page-header";
+import { Button } from "@/components/ui/button";
 import { RestartShift } from "@/features/mission/components/restart-shift";
 import { capabilities } from "@/lib/constants/site";
+import { OFFER_ROUTE } from "@/lib/constants/offer";
 import { easing } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import type { OperatorGenome } from "@/types/genome";
@@ -43,6 +46,20 @@ export function GenomeReport({
   fallbackTimeline?: TimelineEntry[];
   fallbackAchievements?: Achievement[];
 }) {
+  /**
+   * Only the readings the shift actually produced evidence for.
+   *
+   * The radar and the rating still use all ten — the shape has to be
+   * comparable between runs — but listing a capability that scored on nothing
+   * invites the operator to read a band they were never measured on. The ones
+   * that could not be read are named below the list instead.
+   */
+  const scored = genome.capabilities.filter((reading) => reading.evidenceCount > 0);
+  const unscored = genome.capabilities.filter((reading) => reading.evidenceCount === 0);
+
+  // The thinnest reading the shift did produce, for the challenge pitch below.
+  const weakest = [...scored].sort((a, b) => a.score - b.score)[0] ?? null;
+
   const stats = [
     { label: "Tasks handled", value: String(genome.stats.tasksHandled) },
     { label: "Let expire", value: String(genome.stats.tasksExpired) },
@@ -158,20 +175,42 @@ export function GenomeReport({
         </div>
       </div>
 
-      {/* ── Ten readings ────────────────────────────────────────────────── */}
+      {/* ── Readings ────────────────────────────────────────────────────── */}
       <Reveal className="mt-12">
         <h3 className="text-[19px] font-medium tracking-[-0.02em] text-hi">
-          The ten readings
+          {scored.length === genome.capabilities.length
+            ? "The ten readings"
+            : `What this shift could read`}
         </h3>
         <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-mid">
           Each one is drawn from what you actually did — the option you chose, how
-          long you took, and what else was waiting. Open any of them for the
-          evidence.
+          long you took, and what else was waiting. Open any of them for what held,
+          what cost you, and what to do next time.
         </p>
       </Reveal>
       <div className="mt-6">
-        <CapabilityPanel readings={genome.capabilities} />
+        <CapabilityPanel readings={scored} />
       </div>
+
+      {/*
+        Named rather than silently dropped. A capability the shift never tested
+        is a fact about the shift, not about the operator, and leaving it off
+        the page entirely would let them assume it had been measured and come
+        out blank.
+      */}
+      {unscored.length > 0 ? (
+        <Reveal className="mt-4 rounded-card border border-line bg-surface/60 px-5 py-4">
+          <p className="text-[13px] leading-relaxed text-lo">
+            <span className="text-mid">
+              {unscored.length === 1 ? "One capability" : `${unscored.length} capabilities`} had
+              nothing to read from this shift:
+            </span>{" "}
+            {unscored.map((reading) => reading.name).join(", ")}. Nothing came up that
+            tested {unscored.length === 1 ? "it" : "them"}, so {unscored.length === 1 ? "it is" : "they are"}{" "}
+            left unscored rather than guessed at.
+          </p>
+        </Reveal>
+      ) : null}
 
       {/* ── Achievements ────────────────────────────────────────────────── */}
       <Reveal className="mt-6">
@@ -237,6 +276,36 @@ export function GenomeReport({
           <RestartShift variant="primary" />
         </Reveal>
       ) : null}
+
+      {/* ── Where this goes next ────────────────────────────────────────── */}
+      <Reveal className="mt-12 overflow-hidden rounded-panel border border-ember-500/30 bg-gradient-to-br from-ember-500/[0.09] to-transparent p-7">
+        <p className="font-mono text-[10.5px] tracking-[0.16em] text-ember-400 uppercase">
+          7-Day Challenge
+        </p>
+        <h3 className="mt-3 max-w-xl text-[21px] leading-snug font-medium tracking-[-0.02em] text-hi">
+          One shift gave you {scored.length} reading{scored.length === 1 ? "" : "s"}. Seven
+          days gives you the whole genome.
+        </h3>
+        <p className="mt-3 max-w-2xl text-[14px] leading-relaxed text-mid">
+          {weakest
+            ? `The challenge is built around the days this shift could only glance at — ${weakest.name.toLowerCase()} among them. `
+            : ""}
+          Five simulated days on a real dark store floor, each one harder than the
+          last, scored against the same ten capabilities. Your rating moves against
+          a cohort instead of against nothing, and you finish with a record you can
+          actually show someone.
+        </p>
+
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <Button asChild variant="primary" size="md">
+            <Link href={OFFER_ROUTE}>
+              Join the 7-Day Challenge
+              <ArrowRight />
+            </Link>
+          </Button>
+          <p className="text-[12.5px] text-lo">Founding Cohort Price · Limited seats available</p>
+        </div>
+      </Reveal>
 
       <p className="mt-8 text-[12.5px] leading-relaxed text-faint">
         Everything above is derived from your own run — every decision, its

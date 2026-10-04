@@ -8,7 +8,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { hubClock } from "@/lib/mission/config";
 import { easing } from "@/lib/motion";
 import { cn } from "@/lib/utils";
-import { BAND_LABEL, type Band, type CapabilityReading } from "@/types/genome";
+import {
+  BAND_LABEL,
+  type Band,
+  type CapabilityReading,
+  type GenomeMoment,
+} from "@/types/genome";
 
 /** Five marks along a rail, no numbers. The rail is the same for every axis. */
 const BAND_INDEX: Record<Band, number> = {
@@ -35,6 +40,61 @@ function BandRail({ band }: { band: Band }) {
           )}
         />
       ))}
+    </div>
+  );
+}
+
+/**
+ * One side of the ledger.
+ *
+ * Both headings are always drawn, including when they are empty, because the
+ * absence is itself the finding: an operator who reads "nothing here went
+ * badly enough to cite" has learned something that a missing heading would
+ * have hidden from them.
+ */
+function MomentGroup({
+  label,
+  tone,
+  moments,
+  empty,
+  className,
+}: {
+  label: string;
+  tone: "good" | "bad" | "neutral";
+  moments: GenomeMoment[];
+  empty?: string;
+  className?: string;
+}) {
+  if (moments.length === 0 && !empty) return null;
+
+  return (
+    <div className={className}>
+      <p
+        className={cn(
+          "font-mono text-[10px] tracking-[0.14em] uppercase",
+          tone === "good" ? "text-ion-500" : tone === "bad" ? "text-alert-500" : "text-faint",
+        )}
+      >
+        {label}
+      </p>
+
+      {moments.length === 0 ? (
+        <p className="mt-1.5 text-[13px] leading-relaxed text-faint">{empty}</p>
+      ) : (
+        <ul className="mt-1.5 space-y-2">
+          {moments.map((moment, momentIndex) => (
+            <li key={momentIndex} className="flex gap-3">
+              <span
+                data-readout
+                className="shrink-0 font-mono text-[10.5px] text-faint tabular-nums"
+              >
+                {hubClock(moment.at)}
+              </span>
+              <span className="text-[13px] leading-relaxed text-mid">{moment.text}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -113,28 +173,39 @@ export function CapabilityPanel({ readings }: { readings: CapabilityReading[] })
                       </span>
                     </div>
 
-                    {reading.moments.length === 0 ? (
-                      <p className="text-[13px] leading-relaxed text-lo">
-                        Nothing in this shift spoke to this one clearly. It is not a
-                        weakness — it simply did not come up.
+                    <MomentGroup
+                      label="What held"
+                      tone="good"
+                      moments={reading.moments.filter((m) => m.kind === "strength")}
+                      empty="Nothing in this shift stood out as a strength here."
+                    />
+
+                    <MomentGroup
+                      label="What cost you"
+                      tone="bad"
+                      moments={reading.moments.filter((m) => m.kind === "gap")}
+                      empty="Nothing here went badly enough to cite."
+                      className="mt-4"
+                    />
+
+                    {reading.moments.some((m) => m.kind === "note") ? (
+                      <MomentGroup
+                        label="Context"
+                        tone="neutral"
+                        moments={reading.moments.filter((m) => m.kind === "note")}
+                        className="mt-4"
+                      />
+                    ) : null}
+
+                    {/* The point of the whole panel: what to do about it. */}
+                    <div className="mt-4 rounded-card border border-ember-500/25 bg-ember-500/[0.05] px-3.5 py-3">
+                      <p className="font-mono text-[10px] tracking-[0.14em] text-ember-400 uppercase">
+                        Next shift
                       </p>
-                    ) : (
-                      <ul className="space-y-2.5">
-                        {reading.moments.map((moment, momentIndex) => (
-                          <li key={momentIndex} className="flex gap-3">
-                            <span
-                              data-readout
-                              className="shrink-0 font-mono text-[10.5px] text-faint tabular-nums"
-                            >
-                              {hubClock(moment.at)}
-                            </span>
-                            <span className="text-[13px] leading-relaxed text-mid">
-                              {moment.text}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                      <p className="mt-1.5 text-[13px] leading-relaxed text-mid">
+                        {reading.advice}
+                      </p>
+                    </div>
                   </div>
                 </motion.div>
               ) : null}
