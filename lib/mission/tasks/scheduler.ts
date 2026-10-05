@@ -253,6 +253,38 @@ export function advanceTasks(input: AdvanceTasksInput): AdvanceTasksResult {
   const pendingBefore = tasks.filter((task) => task.status === "pending").length;
   const cascadeQueue: string[] = [];
 
+  /* ── Overtaken by events ──────────────────────────────────────────────── */
+
+  /**
+   * A card describes the floor as it was when it was dealt. Sometimes the
+   * operator fixes the thing another way before they get to it — they call
+   * the absentees back from the People panel, and a card saying "you are two
+   * down" is still sitting on the board telling them otherwise.
+   *
+   * Those are withdrawn rather than expired. An expiry is scored as a decision
+   * the operator failed to make; this is a situation that stopped existing,
+   * which is the opposite, and charging them for it would punish the fix.
+   */
+  for (const task of tasks) {
+    if (task.status !== "pending") continue;
+    const template = TEMPLATES_BY_ID.get(task.templateId);
+    if (!template?.when || template.when(world)) continue;
+
+    task.status = "resolved";
+    task.resolvedAt = elapsed;
+    task.resolvedOptionId = "overtaken";
+
+    entries.push({
+      id: `w-${task.id}`,
+      at: elapsed,
+      kind: "event",
+      tone: "info",
+      title: `No longer needed: ${task.title}`,
+      detail: "The floor moved on before you got to it.",
+      source: streamToSource(task.stream),
+    });
+  }
+
   for (const task of tasks) {
     if (task.status !== "pending") continue;
     if (task.expiresAt === null || task.expiresAt > elapsed) continue;

@@ -78,6 +78,24 @@ export interface TaskTemplate {
 
 /* ── Helpers shared across the catalogue ──────────────────────────────────── */
 
+/**
+ * The marker left on somebody once the operator has actually spoken to them
+ * about today. Anything that would chase them again reads it first, so the
+ * floor stops phoning a picker who is four hours away at a hospital.
+ */
+export const SPOKEN_TO = "Called —";
+
+export function spokenTo(worker: { shiftNote: string | null }): boolean {
+  return (worker.shiftNote ?? "").startsWith(SPOKEN_TO);
+}
+
+/** Absent, and nobody has reached them yet. */
+export function unreachedAbsentees(world: WorldState) {
+  return world.workers.filter(
+    (worker) => worker.status === "absent" && !spokenTo(worker),
+  );
+}
+
 export function activeWorkers(world: WorldState) {
   return world.workers.filter((worker) => worker.status === "active");
 }

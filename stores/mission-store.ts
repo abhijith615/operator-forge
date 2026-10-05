@@ -19,6 +19,7 @@ import {
   streamToSource,
 } from "@/lib/mission/tasks/scheduler";
 import { FIRST_SHIFT } from "@/lib/constants/mission";
+import { SPOKEN_TO } from "@/lib/mission/tasks/types";
 import {
   SCHEDULED_CALLS,
   recallNegotiation,
@@ -482,18 +483,46 @@ export const useMissionStore = create<MissionState>()(
         const last = ignored ? null : (answers[answers.length - 1] ?? null);
         const agreed = last?.agrees === true;
         const world = cloneWorld(state.world);
-        if (call.subjectId && agreed) {
-          applyEffects(world, [
-            {
-              kind: "worker-status",
-              workerId: call.subjectId,
-              status: "active",
-              note: "Called in",
-            },
-          ]);
+        if (call.subjectId) {
+          if (agreed) {
+            applyEffects(world, [
+              {
+                kind: "worker-status",
+                workerId: call.subjectId,
+                status: "active",
+                note: "Called in",
+              },
+            ]);
+          } else {
+            // Mark them as spoken to either way. Whatever the answer, nothing
+            // should ring this person again — the floor was phoning somebody
+            // sitting outside a hospital four hours away, every seventy
+            // seconds, for the rest of the shift.
+            const worker = world.workers.find((entry) => entry.id === call.subjectId);
+            if (worker) worker.shiftNote = `${SPOKEN_TO} not coming in today`;
+          }
         }
 
         const recallFailed = Boolean(call.subjectId) && !agreed;
+
+        /**
+         * The same person can be on the board as a card and on the phone at
+         * once — the queue deals the recall, and the operator calls them from
+         * the People panel instead. Once the call is over the card is about a
+         * conversation that already happened, so it comes off the board.
+         */
+        const tasks = call.subjectId
+          ? state.tasks.map((entry) =>
+              entry.status === "pending" && entry.subjectId === call.subjectId
+                ? {
+                    ...entry,
+                    status: "resolved" as const,
+                    resolvedAt: elapsed,
+                    resolvedOptionId: "handled-on-the-phone",
+                  }
+                : entry,
+            )
+          : state.tasks;
 
         const entry: TimelineEntry = {
           id: `call-${call.id}-${elapsed}`,
@@ -514,12 +543,13 @@ export const useMissionStore = create<MissionState>()(
         set({
           call: null,
           world,
+          tasks,
           decisions,
           achievements: [
             ...state.achievements,
             ...evaluateAchievements({
               decisions,
-              tasks: state.tasks,
+              tasks,
               elapsed,
               earned: state.achievements,
             }),

@@ -1,5 +1,11 @@
 import type { TaskTemplate } from "./types";
-import { activePickers, activeWorkers, pickFree } from "./types";
+import {
+  activePickers,
+  activeWorkers,
+  pickFree,
+  spokenTo,
+  unreachedAbsentees,
+} from "./types";
 
 /**
  * People: the half of the job nobody puts in a job description. Most of these
@@ -120,7 +126,10 @@ export const PEOPLE_TASKS: TaskTemplate[] = [
     cooldown: 220,
     ttl: 110,
     build: (ctx) => {
-      const worker = pickFree(ctx, ctx.world.workers);
+      const worker = pickFree(
+        ctx,
+        ctx.world.workers.filter((entry) => !spokenTo(entry)),
+      );
       if (!worker) return null;
       return {
         title: `${worker.name} has just clocked in, forty minutes late`,
@@ -431,12 +440,9 @@ export const PEOPLE_TASKS: TaskTemplate[] = [
     ttl: 75,
     guaranteed: true,
     repeatable: true,
-    when: (world) => world.workers.some((worker) => worker.status === "absent"),
+    when: (world) => unreachedAbsentees(world).length > 0,
     build: (ctx) => {
-      const worker = pickFree(
-        ctx,
-        ctx.world.workers.filter((entry) => entry.status === "absent"),
-      );
+      const worker = pickFree(ctx, unreachedAbsentees(ctx.world));
       if (!worker) return null;
       return {
         title: `${worker.name} is picking up their phone`,
@@ -669,7 +675,7 @@ export const PEOPLE_TASKS: TaskTemplate[] = [
     when: (world) => world.workers.some((worker) => worker.status === "absent"),
     build: ({ world }) => ({
       title: "Agency can send two people for the peak",
-      detail: `You are ${world.workers.filter((w) => w.status === "absent").length} down. They would arrive in twenty minutes, untrained on this floor.`,
+      detail: "They would arrive in twenty minutes, untrained on this floor.",
       source: "Agency desk",
       options: [
         {
