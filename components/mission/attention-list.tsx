@@ -39,10 +39,19 @@ const TONE: Record<AttentionItem["tone"], string> = {
 function buildItems(world: WorldState): AttentionItem[] {
   const items: AttentionItem[] = [];
 
+  /**
+   * Orders the operator can still do something about.
+   *
+   * An expedited order is left out. Expediting is the only lever there is for
+   * a late order — it is already at the front of the pick queue — so carrying
+   * on flagging it is asking for an action that does not exist, and the
+   * operator reads it as the expedite having done nothing.
+   */
   const nearBreach = world.orders
     .filter(
       (order) =>
         ["queued", "picking", "packed"].includes(order.status) &&
+        !order.expedited &&
         secondsToDispatch(order, world.elapsed) < 60,
     )
     .sort((a, b) => secondsToDispatch(a, world.elapsed) - secondsToDispatch(b, world.elapsed));
