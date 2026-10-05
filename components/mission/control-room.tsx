@@ -95,7 +95,15 @@ export function ControlRoom({
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: easing.outExpo }}
-            className="shrink-0"
+            /*
+             * The header has its own plate for the same reason the panels do.
+             * The clock, the intake lever and the badges used to sit straight
+             * on the photograph with nothing behind them, which left the one
+             * control that changes the shape of the shift as grey text over a
+             * lit aisle. Everything else on this screen reads against a
+             * surface; this has to as well.
+             */
+            className="panel panel-glass sheen shrink-0 px-4 py-3.5"
           >
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <h2

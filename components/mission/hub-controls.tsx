@@ -38,10 +38,10 @@ export function HubControls() {
 
   return (
     <div className="flex items-center gap-3">
-      <span className="hidden text-[12px] text-lo sm:inline">
+      <span className="hidden text-[12px] text-mid sm:inline">
         <Term id="throttle">Intake</Term>
       </span>
-      <div className="flex items-center gap-0.5 rounded-full border border-line bg-white/[0.02] p-0.5">
+      <div className="flex items-center gap-0.5 rounded-full border border-line bg-obsidian/70 p-0.5">
         {OPTIONS.map((option) => {
           const active = override === option.value;
           return (
@@ -59,7 +59,7 @@ export function HubControls() {
                         : option.value === "throttled"
                           ? "bg-warn-500/15 text-warn-500"
                           : "bg-alert-500/15 text-alert-500"
-                      : "text-lo hover:bg-white/[0.05] hover:text-mid",
+                      : "text-mid hover:bg-white/[0.07] hover:text-hi",
                   )}
                   aria-pressed={active}
                 >

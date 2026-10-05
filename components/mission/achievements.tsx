@@ -35,7 +35,7 @@ export function AchievementStrip({
             <span
               className={cn(
                 "inline-flex cursor-default items-center gap-1.5 rounded-full border px-2 py-1",
-                "border-ember-500/25 bg-ember-500/[0.08] text-[10.5px] text-ember-400",
+                "border-ember-500/35 bg-ember-500/[0.14] text-[10.5px] text-ember-300",
               )}
             >
               <Award className="size-3" />
