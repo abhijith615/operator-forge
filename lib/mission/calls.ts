@@ -219,22 +219,26 @@ export const SCHEDULED_CALLS: MissionCall[] = [
 /**
  * Chasing an absentee, as an actual conversation.
  *
- * Choosing "call them in" from the queue used to be the whole task: one click
- * and a line of outcome text. But nobody who has done this job gets a yes on
- * the first ask. They get a reason, and then the reason underneath it, and the
- * shift is covered or not covered depending on what gets traded in between.
+ * Choosing "call them in" used to be the whole task: one click and a line of
+ * outcome text. But nobody who has done this job gets a yes on the first ask.
+ * They get a reason, then the reason underneath it, and the shift is covered
+ * or not covered depending on what gets traded in between.
  *
- * Two rounds. Conceding everything scores no better than conceding nothing:
- * what is scored is whether something real is traded for something real, and
- * whether the person still picks up next week.
+ * Two people go missing in this shift and they do not get the same call. One
+ * is winnable and one is not, which is the part of the job the single version
+ * could not teach: an operator who treats every absence as a negotiation they
+ * can win spends the morning on the phone instead of covering the floor. The
+ * second call is scored on how fast they work that out and what they do with
+ * the minute they save.
+ *
+ * Which call a person gets is fixed by their id, so the same worker is always
+ * the same conversation and a replayed shift reads identically.
  */
-export function recallNegotiation(workerName: string, workerId?: string): MissionCall {
-  const first = workerName.split(" ")[0] ?? workerName;
-
-  return {
+const RECALLS: ((name: string, first: string) => Omit<MissionCall, "subjectId">)[] = [
+  /* ── Winnable: they want something, and it is cheap ──────────────────── */
+  (name, first) => ({
     id: `recall-${first.toLowerCase()}`,
-    subjectId: workerId,
-    caller: workerName,
+    caller: name,
     role: "Absent · rostered 09:00",
     opening: "“Haan boss. I know, I know.”",
     stream: "people",
@@ -311,5 +315,98 @@ export function recallNegotiation(workerName: string, workerId?: string): Missio
         ],
       },
     ],
-  };
+  }),
+
+  /* ── Not winnable: they are 200 km away and it is not their fault ────── */
+  (name, first) => ({
+    id: `recall-${first.toLowerCase()}`,
+    caller: name,
+    role: "Absent · rostered 09:00",
+    opening: "“Boss, I'm in Mysuru. My father is in hospital.”",
+    stream: "people",
+    ringFor: 0,
+    ignored: {
+      quality: 0.25,
+      capabilities: ["communication"],
+      note: `${first} was left on the call with no answer either way.`,
+    },
+    beats: [
+      {
+        id: "beat-reason",
+        text: "“Surgery was last night. I took the first bus I could get.”",
+        options: [
+          {
+            id: "ask-when-back",
+            label: "Ask when they are back, nothing else",
+            reply: "“Tuesday, I think. I'll message you tonight.”",
+            quality: 0.95,
+            capabilities: ["curiosity", "communication", "ownership"],
+          },
+          {
+            id: "offer-help",
+            label: "Tell them to take the time they need",
+            reply: "“...Thank you, boss.” There is a long pause.",
+            quality: 0.85,
+            capabilities: ["communication", "ownership"],
+          },
+          {
+            id: "push-back",
+            label: "Ask if anyone can cover from their end",
+            reply: "“I'm four hours away. There is nothing I can do.”",
+            quality: 0.3,
+            capabilities: ["decision-making"],
+          },
+        ],
+      },
+      {
+        id: "beat-close",
+        text: "“I'm sorry about the shift. Is it going to be a problem?”",
+        options: [
+          {
+            id: "list-the-job",
+            label: "Say no, and list a job on the picker app",
+            reply: "“Okay. Okay.” You are already typing the listing.",
+            agrees: false,
+            quality: 0.95,
+            capabilities: ["decision-making", "systems-thinking", "ownership"],
+          },
+          {
+            id: "reassure-and-move",
+            label: "Say it is handled, and end the call",
+            reply: "“Thank you.” Ninety seconds, and you are back on the floor.",
+            agrees: false,
+            quality: 0.8,
+            capabilities: ["prioritization", "communication"],
+          },
+          {
+            id: "keep-pressing",
+            label: "Ask again whether they could get back today",
+            reply: "“Boss. My father is in surgery.” The call ends badly.",
+            agrees: false,
+            quality: 0.05,
+            capabilities: ["communication", "stress-handling"],
+          },
+          {
+            id: "guilt-trip",
+            label: "Say the floor is two down because of them",
+            reply: "“Then take me off the roster.” They hang up.",
+            agrees: false,
+            quality: 0.0,
+            capabilities: ["communication"],
+          },
+        ],
+      },
+    ],
+  }),
+];
+
+export function recallNegotiation(workerName: string, workerId?: string): MissionCall {
+  const first = workerName.split(" ")[0] ?? workerName;
+
+  // The digits in the worker id, so the two absentees always get the two
+  // different calls rather than landing on the same one by chance.
+  const index = Number((workerId ?? "").replace(/\D/g, "") || 0) % RECALLS.length;
+  const build = RECALLS[index] ?? RECALLS[0]!;
+
+  return { ...build(workerName, first), subjectId: workerId };
 }
