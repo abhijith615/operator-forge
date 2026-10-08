@@ -1,10 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { isAdmin } from "@/lib/admin/queries";
 import { getOperator } from "@/lib/auth/session";
 import { hasChallengeAccess } from "@/lib/challenge/access";
 import { buildOperatorProfile } from "@/lib/challenge/day-six/profile";
 import { profileFileName, renderProfileImage } from "@/lib/challenge/day-six/profile-image";
 import { readWeek } from "@/lib/challenge/runs";
+import { dayIsOpen } from "@/lib/constants/offer";
 import { LOGIN_ROUTE } from "@/lib/constants/routes";
 
 /**
@@ -27,6 +29,10 @@ export async function GET(request: NextRequest) {
   }
   if (!(await hasChallengeAccess())) {
     return NextResponse.redirect(new URL(PROFILE_ROUTE, request.url));
+  }
+
+  if (!dayIsOpen(6) && !(await isAdmin())) {
+    return NextResponse.redirect(new URL("/challenge", request.url));
   }
 
   const profile = buildOperatorProfile(await readWeek());

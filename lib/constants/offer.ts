@@ -91,6 +91,27 @@ export function cohortDate(index: number): string {
   return DATE_FORMAT.format(new Date(Date.parse(OFFER.startsAt) + index * DAY_MS));
 }
 
+/**
+ * When day N of the cohort opens, as epoch ms. Day 1 is the start date.
+ *
+ * Only Day 6 is held back by the calendar. Days 1 to 5 open together at the
+ * start so participants can play at their own pace, but the Operator Profile
+ * is a reading of the whole week and is dated Day 6 on every page that
+ * describes the challenge.
+ */
+export function dayOpensAt(day: number): number {
+  return Date.parse(OFFER.startsAt) + (day - 1) * DAY_MS;
+}
+
+export function dayIsOpen(day: number, now: number = Date.now()): boolean {
+  return now >= dayOpensAt(day);
+}
+
+/** "Sat, 17 Oct" for day N, in IST. */
+export function dayDate(day: number): string {
+  return DATE_FORMAT.format(new Date(dayOpensAt(day)));
+}
+
 export interface OfferDay {
   day: number;
   title: string;

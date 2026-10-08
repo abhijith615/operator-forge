@@ -10,7 +10,7 @@ import { Reveal } from "@/components/motion/reveal";
 import { Button } from "@/components/ui/button";
 import { Aurora, GridField, Horizon } from "@/components/visuals/aurora";
 import { DAY_TWO_TOTAL_VARIANCE, rupees } from "@/lib/challenge/day-two/ledger";
-import { OFFER } from "@/lib/constants/offer";
+import { OFFER, dayDate, dayIsOpen } from "@/lib/constants/offer";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -25,6 +25,8 @@ interface Day {
   teaser: string;
   href?: string;
   state: "live" | "locked" | "ama";
+  /** Overrides the default "Coming" on a locked card. */
+  badge?: string;
 }
 
 const DAYS: Day[] = [
@@ -70,10 +72,12 @@ const DAYS: Day[] = [
   },
   {
     day: 6,
-    title: "Self Review",
+    title: "Your Operator Profile",
     teaser:
-      "Five days of your own decisions, laid out together. What you did well, what you repeated without noticing, and the honest read you write about yourself before anyone else does.",
-    state: "locked",
+      "Five days of your own decisions, read together: five operating skills, the evidence behind each one, and a profile you can download and share. A practice assessment, not a certification.",
+    // Held until its date by the calendar, not by a flag somebody has to flip.
+    href: "/challenge/day-6",
+    state: "live",
   },
   {
     day: 7,
@@ -84,7 +88,20 @@ const DAYS: Day[] = [
   },
 ];
 
+/**
+ * Day 6 opens by the calendar, so this cannot be frozen at build time. Ten
+ * minutes of staleness on the hour it opens is fine; a card that stays locked
+ * until the next deploy is not.
+ */
+export const revalidate = 600;
+
 export default function ChallengePage() {
+  const days: Day[] = DAYS.map((entry) =>
+    entry.day === 6 && !dayIsOpen(6)
+      ? { ...entry, state: "locked", href: undefined, badge: `Opens ${dayDate(6)}` }
+      : entry,
+  );
+
   return (
     <>
       <LandingNav />
@@ -195,7 +212,7 @@ export default function ChallengePage() {
             </div>
 
             <ol className="mt-10 space-y-2.5">
-              {DAYS.map((entry, index) => {
+              {days.map((entry, index) => {
                 const live = entry.state === "live";
                 const body = (
                   <div
@@ -223,7 +240,7 @@ export default function ChallengePage() {
                         {entry.state === "locked" ? (
                           <span className="inline-flex items-center gap-1 rounded-full border border-line-strong px-2 py-0.5 font-mono text-[9.5px] tracking-[0.12em] text-lo uppercase">
                             <Lock className="size-2.5" aria-hidden />
-                            Coming
+                            {entry.badge ?? "Coming"}
                           </span>
                         ) : null}
                         {entry.state === "ama" ? (
@@ -261,9 +278,9 @@ export default function ChallengePage() {
 
             <Reveal delay={0.3}>
               <p className="mt-8 text-[12.5px] leading-relaxed text-faint">
-                Self Review and the AMA are not open yet. Days 1 to 5 are
-                complete and playable now — finishing them is how you find out
-                whether the rest is worth your week.
+                Days 1 to 5 are playable from the start. Your Operator Profile
+                opens on Day 6, once there is a week of decisions to read, and
+                the live AMA follows on Day 7.
               </p>
             </Reveal>
           </Container>
