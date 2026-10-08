@@ -5,9 +5,11 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 
 import { CustomerJourney } from "@/components/challenge/day-five/ui";
+import { ExplainerVideo } from "@/components/challenge/explainer-video";
 import { Button } from "@/components/ui/button";
 import { DAY_FIVE_BRIEF, OPENING_MESSAGES, OPENING_ORDERS } from "@/lib/challenge/day-five/scenario";
 import { JOURNEY, type JourneyNode, type NodeState } from "@/lib/challenge/day-five/types";
+import { CHALLENGE_VIDEOS } from "@/lib/challenge/videos";
 import { easing } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -149,6 +151,13 @@ export function DayFiveOpening({ onStart }: { onStart: () => void }) {
               {line}
             </p>
           ))}
+        </motion.div>
+
+        {/* The brief, before the clock — same placement as Days 3 and 4: with
+            the last reveal, so it sits immediately above the button rather
+            than between somebody and it. */}
+        <motion.div {...rise(step >= 6)} className="mt-7">
+          <ExplainerVideo video={CHALLENGE_VIDEOS.dayFiveIntro} />
         </motion.div>
 
         <AnimatePresence>
