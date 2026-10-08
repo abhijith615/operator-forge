@@ -205,8 +205,9 @@ export function OperatorProfileView({
             The five operating skills
           </h2>
           <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-mid">
-            Every simulation scores against all five, and each day is built to stress one
-            of them hardest. The lines under each score say where the number came from and
+            Each day scores the skills it was built around, and every one of them rolls up
+            into these five. A skill a day did not test is left out of that day rather than
+            counted as zero. The lines under each score say where the number came from and
             what it means in a store.
           </p>
 

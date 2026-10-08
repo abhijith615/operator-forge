@@ -1,4 +1,5 @@
 import { bandFor, BAND_RANGE } from "@/lib/challenge/scoring";
+import { coreScoresOf } from "@/lib/challenge/day-six/skills";
 import {
   DIMENSIONS,
   DIMENSION_LABEL,
@@ -173,12 +174,19 @@ function tier(score: number): 0 | 1 | 2 {
   return 2;
 }
 
-/** Every day's score for one dimension, keyed by day. */
+/**
+ * Every day's score for one of the five, keyed by day.
+ *
+ * Days 2 to 5 do not score against the five directly — each has its own skills
+ * under its own names — so each is rolled up through `coreScoresOf` first.
+ * Matching on the five names alone would have read Day 1 and silently skipped
+ * the other four, while still printing "across 5 simulations".
+ */
 function byDay(results: ChallengeResult[], dimension: Dimension): Map<number, number> {
   const scores = new Map<number, number>();
   for (const result of results) {
-    const found = result.competencies.find((entry) => entry.dimension === dimension);
-    if (found) scores.set(result.day, Math.round(found.score));
+    const rolled = coreScoresOf(result.competencies)[dimension];
+    if (rolled !== null) scores.set(result.day, rolled);
   }
   return scores;
 }
