@@ -89,6 +89,40 @@ export async function readOwnResult(day = 1): Promise<ChallengeResult | null> {
 }
 
 /**
+ * Every day the operator has finished, for the Day 6 profile.
+ *
+ * One query rather than five, and the scorecards come back with the rows so
+ * the profile can read the dimension scores directly instead of re-deriving
+ * them from the flattened `competencies` column. Row level security means
+ * this is the operator's own week and nobody else's.
+ *
+ * A run written before the `result` column existed contributes its score and
+ * band but no scorecard, which is why the two arrays are returned separately
+ * rather than zipped — the caller has to cope with a week that is partly
+ * readable.
+ */
+export async function readWeek(): Promise<{
+  runs: { day: number; score: number; band: string }[];
+  results: ChallengeResult[];
+}> {
+  const supabase = await getSupabaseServerClient();
+  if (!supabase) return { runs: [], results: [] };
+
+  const { data, error } = await supabase
+    .from("challenge_runs")
+    .select("day, score, band, result")
+    .lte("day", 5)
+    .order("day");
+  if (error || !data) return { runs: [], results: [] };
+
+  const rows = data as { day: number; score: number; band: string; result: unknown }[];
+  return {
+    runs: rows.map((row) => ({ day: row.day, score: row.score, band: row.band })),
+    results: rows.map((row) => row.result).filter(isResult),
+  };
+}
+
+/**
  * The column is ours to write and row level security keeps it ours to read, so
  * this is not a trust boundary — it is a guard against rendering a row written
  * by an older shape of the code and crashing on a missing array.

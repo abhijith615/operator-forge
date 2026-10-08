@@ -25,6 +25,9 @@ export type ChallengeEventName =
   | "simulation_completed"
   | "scorecard_viewed"
   | "assistant_asked"
+  /* ── Day 6 · the cumulative profile ── */
+  | "profile_viewed"
+  | "profile_downloaded"
   /* ── Day 1 · the phone ── */
   | "call_incoming"
   | "call_answered"
