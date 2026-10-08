@@ -2,7 +2,9 @@
 
 import * as React from "react";
 
+import { ChallengeAssistant } from "@/components/challenge/assistant";
 import { PaneTour, type TourStep } from "@/components/challenge/pane-tour";
+import * as day5Coach from "@/lib/challenge/day-five/coach";
 import { useTour } from "@/lib/challenge/use-tour";
 import { HeartHandshake, PackageSearch } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -499,6 +501,7 @@ function Evening({ initial }: { initial: Day5State }) {
 
   return (
     <div className="flex min-h-dvh flex-col bg-obsidian">
+      <ChallengeAssistant coach={day5Coach} role="Shift Lead" placeholder="What is a tote?" day={5} />
       {tour.step ? (
         <PaneTour step={tour.step} index={tour.index} total={tour.total} onNext={tour.next} onSkip={tour.skip} />
       ) : null}
@@ -512,11 +515,11 @@ function Evening({ initial }: { initial: Day5State }) {
             Protect the Promise · {PHASE_LABEL[state.phase] ?? ""}
           </span>
           <span className="ml-auto inline-flex items-baseline gap-1.5">
-            <span className="font-mono text-[9px] tracking-[0.12em] text-faint uppercase">Protected</span>
+            <span className="font-mono text-[12px] tracking-[0.12em] text-faint uppercase">Protected</span>
             <span data-readout className="font-mono text-[13px] font-semibold text-ion-400 tabular-nums">
               {protectedCount}
             </span>
-            <span className="font-mono text-[10px] text-faint">/ 7</span>
+            <span className="font-mono text-[13px] text-faint">/ 7</span>
           </span>
           <button
             type="button"
@@ -546,7 +549,7 @@ function Evening({ initial }: { initial: Day5State }) {
 
         {/* The four case journeys, always underneath — the day's own progress bar. */}
         <section aria-label="Customer promises" className={cn("rounded-card border border-line bg-surface p-3", tour.spotlight("promises"))}>
-          <p className="font-mono text-[9.5px] tracking-[0.14em] text-faint uppercase">Customer promises</p>
+          <p className="font-mono text-[12.5px] tracking-[0.14em] text-faint uppercase">Customer promises</p>
           <ul className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
             {CASE_IDS.map((id) => {
               const settled = state.milestones[id] !== undefined;
@@ -558,7 +561,7 @@ function Evening({ initial }: { initial: Day5State }) {
                     <span className="truncate text-[11.5px] text-mid">{INCIDENTS[id].label}</span>
                     <span
                       className={cn(
-                        "ml-auto font-mono text-[9px] tracking-[0.1em] uppercase",
+                        "ml-auto font-mono text-[12px] tracking-[0.1em] uppercase",
                         endState === "clear"
                           ? "text-ion-400"
                           : endState === "broken"
