@@ -8,37 +8,35 @@ import { ArrowRight, Download, Fingerprint, Lock } from "lucide-react";
 import { CountUp } from "@/components/motion/count-up";
 import { Button } from "@/components/ui/button";
 import { logEvent } from "@/lib/challenge/telemetry";
-import type { OperatorProfile, SkillReading } from "@/lib/challenge/day-six/profile";
+import type { MainSkill, OperatorProfile, SubSkill } from "@/lib/challenge/day-six/profile";
 import { easing } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 /**
  * Day 6 · the Operator Profile.
  *
- * Five days of scorecards, read at once. The order is deliberate: the
- * signature first because it is the sentence somebody repeats about
- * themselves, then the ten readings because that is the substance, then the
- * five days so the evidence is one click away from every claim.
+ * Read by two people. The operator wants to know what they are like; whoever
+ * is thinking about hiring them wants to know whether to put them in front of
+ * a store. The second is the harder reader, and the layout is built for them:
+ * five competencies, each with the score large enough to scan and two or
+ * three lines underneath that explain what produced it.
  *
- * Every skill carries where its number came from. A profile that says "Range:
- * 61" and nothing else is a horoscope with a decimal point.
+ * A number on its own is not evidence. "Team Management: 74" tells a hiring
+ * manager nothing they can act on — "averaged 74, from 61 on Day 1 to 84 on
+ * Day 3, and held 81 on the day built to stress it" does.
  */
 
-/** Five marks along a rail, no percentage. The rail is the same for every skill. */
-function Rail({ score }: { score: number | null }) {
+/** Five marks along a rail. No percentage, and the rail is the same everywhere. */
+function Rail({ score, className }: { score: number | null; className?: string }) {
   const filled = score === null ? 0 : Math.max(1, Math.round((score / 100) * 5));
   return (
-    <div className="flex items-center gap-1" aria-hidden>
+    <div className={cn("flex items-center gap-1", className)} aria-hidden>
       {[0, 1, 2, 3, 4].map((step) => (
         <span
           key={step}
           className={cn(
-            "h-1 w-5 rounded-full",
-            score === null
-              ? "bg-white/[0.07]"
-              : step < filled
-                ? "bg-ember-500"
-                : "bg-white/[0.09]",
+            "h-1 w-6 rounded-full",
+            score === null ? "bg-white/[0.07]" : step < filled ? "bg-ember-500" : "bg-white/[0.09]",
           )}
         />
       ))}
@@ -46,35 +44,83 @@ function Rail({ score }: { score: number | null }) {
   );
 }
 
-function SkillRow({ skill, index }: { skill: SkillReading; index: number }) {
+function MainSkillCard({ skill, index }: { skill: MainSkill; index: number }) {
   const unread = skill.score === null;
   return (
-    <li className="border-t border-line first:border-t-0">
-      <div className="flex flex-wrap items-start gap-x-4 gap-y-2 px-5 py-4">
-        <span className="w-6 shrink-0 pt-0.5 font-mono text-[12px] text-faint tabular-nums">
+    <li className="rounded-panel border border-line bg-surface p-5">
+      <div className="flex flex-wrap items-start gap-x-5 gap-y-3">
+        <span className="pt-1 font-mono text-[12.5px] text-faint tabular-nums">
           {String(index + 1).padStart(2, "0")}
         </span>
 
-        <div className="min-w-[14rem] flex-1">
-          <p className={cn("text-[14.5px] font-medium", unread ? "text-lo" : "text-hi")}>
-            {skill.name}
-          </p>
-          <p className="mt-1 text-[13.5px] leading-relaxed text-mid">{skill.line}</p>
-          <p className="mt-1.5 text-[12.5px] leading-relaxed text-faint">{skill.source}</p>
-        </div>
+        <h3
+          className={cn(
+            "min-w-[12rem] flex-1 text-[17px] leading-snug font-medium tracking-[-0.01em]",
+            unread ? "text-lo" : "text-hi",
+          )}
+        >
+          {skill.name}
+        </h3>
 
-        <div className="flex shrink-0 items-center gap-3 pt-0.5">
+        <div className="flex shrink-0 items-center gap-3.5">
           <Rail score={skill.score} />
           <span
             data-readout
             className={cn(
-              "w-10 text-right font-mono text-[14px] tabular-nums",
+              "w-11 text-right font-mono text-[26px] leading-none font-semibold tracking-[-0.03em] tabular-nums",
               unread ? "text-faint" : "text-hi",
             )}
           >
             {unread ? "—" : skill.score}
           </span>
         </div>
+      </div>
+
+      {/* The evidence. This is the part a reader who was not there needs. */}
+      <ul className="mt-4 space-y-2 border-t border-line pt-4">
+        {skill.evidence.map((line, lineIndex) => (
+          <li key={lineIndex} className="flex gap-2.5">
+            <span
+              className={cn(
+                "mt-[0.55rem] size-1 shrink-0 rounded-full",
+                lineIndex === skill.evidence.length - 1 ? "bg-ember-500" : "bg-line-bright",
+              )}
+              aria-hidden
+            />
+            <p
+              className={cn(
+                "text-[13.5px] leading-relaxed",
+                lineIndex === skill.evidence.length - 1 ? "text-hi" : "text-mid",
+              )}
+            >
+              {line}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </li>
+  );
+}
+
+function SubSkillRow({ skill }: { skill: SubSkill }) {
+  const unread = skill.score === null;
+  return (
+    <li className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-line px-5 py-3.5 first:border-t-0">
+      <span className={cn("w-[10.5rem] text-[13.5px] font-medium", unread ? "text-lo" : "text-hi")}>
+        {skill.name}
+      </span>
+      <p className="min-w-[12rem] flex-1 text-[13px] leading-relaxed text-mid">{skill.line}</p>
+      <div className="flex shrink-0 items-center gap-3">
+        <Rail score={skill.score} />
+        <span
+          data-readout
+          className={cn(
+            "w-8 text-right font-mono text-[14px] tabular-nums",
+            unread ? "text-faint" : "text-hi",
+          )}
+        >
+          {unread ? "—" : skill.score}
+        </span>
       </div>
     </li>
   );
@@ -117,19 +163,16 @@ export function OperatorProfileView({
           </h1>
           <p className="mt-2 text-[14px] leading-relaxed text-mid">
             {complete
-              ? "Five simulations, read together. A scorecard judges one morning; this is the part that was true on all of them."
-              : `You have played ${profile.daysDone} of five. The readings below use what exists — the rest fill in as you finish the week.`}
+              ? "Five simulations, read together. A scorecard judges one morning; this is what was true across all of them — and it is written so somebody who was not there can read it."
+              : `You have played ${profile.daysDone} of five. The readings below use what exists; the rest fill in as you finish the week.`}
           </p>
         </motion.section>
 
         {/* ── Signature and overall ───────────────────────────────────── */}
-        <motion.section
-          {...rise(0.08)}
-          className="grid gap-3 sm:grid-cols-[1.4fr_1fr]"
-        >
+        <motion.section {...rise(0.08)} className="grid gap-3 sm:grid-cols-[1.4fr_1fr]">
           <div className="rounded-panel border border-ember-500/30 bg-ember-500/[0.05] p-5">
             <p className="font-mono text-[12px] tracking-[0.16em] text-ember-400 uppercase">
-              Your signature
+              Operator signature
             </p>
             <p className="mt-2 text-[22px] leading-tight font-semibold tracking-[-0.02em] text-hi">
               {profile.signature.name}
@@ -156,18 +199,37 @@ export function OperatorProfileView({
           </div>
         </motion.section>
 
-        {/* ── The ten readings ────────────────────────────────────────── */}
+        {/* ── The five ────────────────────────────────────────────────── */}
         <motion.section {...rise(0.16)}>
-          <h2 className="text-[19px] font-medium tracking-[-0.02em] text-hi">Your ten skills</h2>
-          <p className="mt-2 text-[14px] leading-relaxed text-mid">
-            Five come from what each day scores you against. The other five only exist
-            across days — nothing in a single run can tell you whether you are
-            consistent, or whether you got better.
+          <h2 className="text-[19px] font-medium tracking-[-0.02em] text-hi">
+            The five operating skills
+          </h2>
+          <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-mid">
+            Every simulation scores against all five, and each day is built to stress one
+            of them hardest. The lines under each score say where the number came from and
+            what it means in a store.
+          </p>
+
+          <ul className="mt-5 space-y-3">
+            {profile.main.map((skill, index) => (
+              <MainSkillCard key={skill.dimension} skill={skill} index={index} />
+            ))}
+          </ul>
+        </motion.section>
+
+        {/* ── The subset ──────────────────────────────────────────────── */}
+        <motion.section {...rise(0.24)}>
+          <h2 className="text-[19px] font-medium tracking-[-0.02em] text-hi">
+            Also observed
+          </h2>
+          <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-mid">
+            Not competencies — habits. None of these can be read from a single run, which
+            is the only reason they are here.
           </p>
 
           <ul className="mt-5 overflow-hidden rounded-panel border border-line bg-surface">
-            {profile.skills.map((skill, index) => (
-              <SkillRow key={skill.id} skill={skill} index={index} />
+            {profile.subset.map((skill) => (
+              <SubSkillRow key={skill.id} skill={skill} />
             ))}
           </ul>
 
@@ -188,13 +250,13 @@ export function OperatorProfileView({
         </motion.section>
 
         {/* ── The five days ───────────────────────────────────────────── */}
-        <motion.section {...rise(0.24)}>
+        <motion.section {...rise(0.32)}>
           <h2 className="text-[19px] font-medium tracking-[-0.02em] text-hi">
             Where it came from
           </h2>
           <p className="mt-2 text-[14px] leading-relaxed text-mid">
-            Every reading above is built from these five. Open any of them for the
-            decisions behind the number.
+            Every number above is built from these five. Open any of them for the decisions
+            behind it.
           </p>
 
           <ul className="mt-5 space-y-2">
@@ -254,14 +316,14 @@ export function OperatorProfileView({
 
         {/* ── Download ────────────────────────────────────────────────── */}
         <motion.section
-          {...rise(0.32)}
+          {...rise(0.4)}
           className="flex flex-wrap items-center justify-between gap-4 rounded-panel border border-line bg-surface p-5"
         >
           <div className="min-w-0">
             <p className="text-[15px] font-medium text-hi">Keep your profile</p>
             <p className="mt-1 max-w-md text-[13.5px] leading-relaxed text-mid">
-              A single image with your signature, your week average and all ten
-              readings. Yours to put wherever you like.
+              One page with your five skills, the evidence behind each, and your week
+              average. Yours to send to anyone.
             </p>
           </div>
           <Button asChild variant="primary" size="md">
@@ -273,9 +335,8 @@ export function OperatorProfileView({
         </motion.section>
 
         <p className="text-[12.5px] leading-relaxed text-faint">
-          Built from your own runs — every decision, how long you took over it, and
-          what was waiting behind it. None of it was visible to you during the
-          simulations.
+          Built from your own runs — every decision, how long you took over it, and what was
+          waiting behind it. None of it was visible to you during the simulations.
         </p>
       </main>
     </div>

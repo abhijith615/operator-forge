@@ -10,14 +10,17 @@ import type { OperatorProfile } from "@/lib/challenge/day-six/profile";
 /**
  * The Operator Profile as a PNG.
  *
- * Portrait, at a size that stays legible pasted into a document or a message
- * thread — the two places this actually ends up. Same layout logic as the
- * screen, drawn with explicit flex because satori has no cascade and no
- * Tailwind.
+ * Portrait, at a size that stays legible attached to an application or pasted
+ * into a message thread — the two places this actually ends up. It carries the
+ * evidence lines, not only the scores, because the whole point of the page is
+ * that a number without them is unreadable to anybody who was not there.
+ *
+ * Satori has no cascade and no block layout, so every div sets its own
+ * display explicitly. That is not a style choice; leaving one out throws.
  */
 
-const WIDTH = 1200;
-const HEIGHT = 1900;
+const WIDTH = 1240;
+const HEIGHT = 1930;
 
 const INK = "#0A0B0D";
 const PANEL = "#121418";
@@ -51,8 +54,8 @@ export async function renderProfileImage(
     asset("assets", "fonts", "GeistMono-Medium.ttf"),
   ]);
 
-  const subtitle = `Operator Profile · ${profile.daysDone} of 5 simulations`;
-  const footer = `Built from ${profile.decisionsTaken} recorded decisions across the week. operatorforge.in`;
+  const subtitle = `Operator Profile · ${profile.daysDone} of 5 simulations completed`;
+  const footer = `Built from ${profile.decisionsTaken} recorded decisions across five simulated shifts. operatorforge.in`;
 
   return new ImageResponse(
     (
@@ -63,7 +66,7 @@ export async function renderProfileImage(
           height: HEIGHT,
           flexDirection: "column",
           backgroundColor: INK,
-          padding: 64,
+          padding: 56,
           fontFamily: "Geist",
         }}
       >
@@ -73,7 +76,7 @@ export async function renderProfileImage(
             style={{
               display: "flex",
               fontFamily: "GeistMono",
-              fontSize: 22,
+              fontSize: 20,
               letterSpacing: 4,
               color: EMBER,
               textTransform: "uppercase",
@@ -84,22 +87,20 @@ export async function renderProfileImage(
           <div
             style={{
               display: "flex",
-              marginTop: 18,
+              marginTop: 14,
               fontFamily: "GeistBold",
-              fontSize: 64,
+              fontSize: 58,
               letterSpacing: -2,
               color: HI,
             }}
           >
             {fullName}
           </div>
-          <div style={{ marginTop: 10, fontSize: 26, color: MID }}>
-            {subtitle}
-          </div>
+          <div style={{ display: "flex", marginTop: 8, fontSize: 23, color: MID }}>{subtitle}</div>
         </div>
 
         {/* ── Signature and score ──────────────────────────────────── */}
-        <div style={{ display: "flex", gap: 20, marginTop: 44 }}>
+        <div style={{ display: "flex", gap: 16, marginTop: 30 }}>
           <div
             style={{
               display: "flex",
@@ -107,26 +108,34 @@ export async function renderProfileImage(
               flex: 2,
               backgroundColor: "#1A1710",
               border: `2px solid ${EMBER}55`,
-              borderRadius: 20,
-              padding: 28,
+              borderRadius: 18,
+              padding: 24,
             }}
           >
             <div
               style={{
                 display: "flex",
                 fontFamily: "GeistMono",
-                fontSize: 18,
+                fontSize: 16,
                 letterSpacing: 3,
                 color: EMBER,
                 textTransform: "uppercase",
               }}
             >
-              Signature
+              Operator signature
             </div>
-            <div style={{ marginTop: 12, fontFamily: "GeistBold", fontSize: 40, color: HI }}>
+            <div
+              style={{
+                display: "flex",
+                marginTop: 10,
+                fontFamily: "GeistBold",
+                fontSize: 34,
+                color: HI,
+              }}
+            >
               {profile.signature.name}
             </div>
-            <div style={{ marginTop: 10, fontSize: 24, lineHeight: 1.4, color: MID }}>
+            <div style={{ display: "flex", marginTop: 8, fontSize: 21, color: MID }}>
               {profile.signature.blurb}
             </div>
           </div>
@@ -138,15 +147,15 @@ export async function renderProfileImage(
               flex: 1,
               backgroundColor: PANEL,
               border: `2px solid ${LINE}`,
-              borderRadius: 20,
-              padding: 28,
+              borderRadius: 18,
+              padding: 24,
             }}
           >
             <div
               style={{
                 display: "flex",
                 fontFamily: "GeistMono",
-                fontSize: 18,
+                fontSize: 16,
                 letterSpacing: 3,
                 color: FAINT,
                 textTransform: "uppercase",
@@ -157,103 +166,187 @@ export async function renderProfileImage(
             <div
               style={{
                 display: "flex",
-                marginTop: 10,
+                marginTop: 8,
                 fontFamily: "GeistBold",
-                fontSize: 76,
+                fontSize: 64,
                 letterSpacing: -3,
                 color: HI,
               }}
             >
-              {profile.overall === null ? "—" : profile.overall}
+              {profile.overall === null ? "—" : String(profile.overall)}
             </div>
-            <div style={{ marginTop: 4, fontSize: 22, color: MID }}>{profile.band ?? ""}</div>
+            <div style={{ display: "flex", marginTop: 2, fontSize: 20, color: MID }}>
+              {profile.band ?? ""}
+            </div>
           </div>
         </div>
 
-        {/* ── The ten readings ─────────────────────────────────────── */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            marginTop: 40,
-            backgroundColor: PANEL,
-            border: `2px solid ${LINE}`,
-            borderRadius: 20,
-            padding: "8px 28px",
-          }}
-        >
-          {profile.skills.map((skill, index) => (
+        {/* ── The five, with their evidence ────────────────────────── */}
+        <div style={{ display: "flex", flexDirection: "column", marginTop: 26, gap: 11 }}>
+          {profile.main.map((skill, index) => (
+            <div
+              key={skill.dimension}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                backgroundColor: PANEL,
+                border: `2px solid ${LINE}`,
+                borderRadius: 16,
+                padding: "16px 22px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    fontFamily: "GeistMono",
+                    fontSize: 16,
+                    color: FAINT,
+                    width: 28,
+                  }}
+                >
+                  {String(index + 1).padStart(2, "0")}
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    flex: 1,
+                    fontFamily: "GeistBold",
+                    fontSize: 25,
+                    color: HI,
+                  }}
+                >
+                  {skill.name}
+                </div>
+                <div style={{ display: "flex", gap: 5 }}>
+                  {[0, 1, 2, 3, 4].map((step) => {
+                    const filled =
+                      skill.score !== null &&
+                      step < Math.max(1, Math.round((skill.score / 100) * 5));
+                    return (
+                      <div
+                        key={step}
+                        style={{
+                          display: "flex",
+                          width: 24,
+                          height: 6,
+                          borderRadius: 3,
+                          backgroundColor: filled ? EMBER : "#2A2E35",
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    fontFamily: "GeistBold",
+                    fontSize: 30,
+                    color: skill.score === null ? FAINT : HI,
+                    width: 62,
+                    justifyContent: "flex-end",
+                  }}
+                >
+                  {skill.score === null ? "—" : String(skill.score)}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  marginTop: 12,
+                  paddingTop: 11,
+                  borderTop: `1px solid ${LINE}`,
+                  gap: 5,
+                }}
+              >
+                {skill.evidence.map((line, lineIndex) => (
+                  <div key={lineIndex} style={{ display: "flex", gap: 10 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        width: 5,
+                        height: 5,
+                        borderRadius: 3,
+                        marginTop: 9,
+                        backgroundColor:
+                          lineIndex === skill.evidence.length - 1 ? EMBER : "#3A3F47",
+                      }}
+                    />
+                    <div
+                      style={{
+                        display: "flex",
+                        flex: 1,
+                        fontSize: 18,
+                        lineHeight: 1.4,
+                        color: lineIndex === skill.evidence.length - 1 ? HI : MID,
+                      }}
+                    >
+                      {line}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Also observed ────────────────────────────────────────── */}
+        <div style={{ display: "flex", gap: 11, marginTop: 22 }}>
+          {profile.subset.map((skill) => (
             <div
               key={skill.id}
               style={{
                 display: "flex",
-                alignItems: "flex-start",
-                gap: 18,
-                padding: "18px 0",
-                borderTop: index === 0 ? "none" : `1px solid ${LINE}`,
+                flexDirection: "column",
+                flex: 1,
+                backgroundColor: PANEL,
+                border: `2px solid ${LINE}`,
+                borderRadius: 16,
+                padding: 16,
               }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  fontFamily: "GeistMono",
-                  fontSize: 18,
-                  color: FAINT,
-                  width: 32,
-                  paddingTop: 4,
-                }}
-              >
-                {String(index + 1).padStart(2, "0")}
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-                <div style={{ fontFamily: "GeistBold", fontSize: 25, color: HI }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    flex: 1,
+                    fontFamily: "GeistBold",
+                    fontSize: 19,
+                    color: HI,
+                  }}
+                >
                   {skill.name}
                 </div>
-                <div style={{ marginTop: 4, fontSize: 21, lineHeight: 1.35, color: MID }}>
-                  {skill.line}
+                <div
+                  style={{
+                    display: "flex",
+                    fontFamily: "GeistBold",
+                    fontSize: 23,
+                    color: skill.score === null ? FAINT : EMBER,
+                  }}
+                >
+                  {skill.score === null ? "—" : String(skill.score)}
                 </div>
               </div>
-
-              {/* The rail, five marks, same as the screen. */}
-              <div style={{ display: "flex", gap: 5, paddingTop: 12 }}>
-                {[0, 1, 2, 3, 4].map((step) => {
-                  const filled =
-                    skill.score !== null && step < Math.max(1, Math.round((skill.score / 100) * 5));
-                  return (
-                    <div
-                      key={step}
-                      style={{
-                        display: "flex",
-                        width: 24,
-                        height: 6,
-                        borderRadius: 3,
-                        backgroundColor: filled ? EMBER : "#2A2E35",
-                      }}
-                    />
-                  );
-                })}
-              </div>
-
               <div
                 style={{
                   display: "flex",
-                  fontFamily: "GeistMono",
-                  fontSize: 26,
-                  color: skill.score === null ? FAINT : HI,
-                  width: 56,
-                  textAlign: "right",
-                  paddingTop: 2,
+                  marginTop: 6,
+                  fontSize: 16,
+                  lineHeight: 1.35,
+                  color: MID,
                 }}
               >
-                {skill.score === null ? "—" : skill.score}
+                {skill.line}
               </div>
             </div>
           ))}
         </div>
 
         {/* ── Days ─────────────────────────────────────────────────── */}
-        <div style={{ display: "flex", gap: 12, marginTop: 36 }}>
+        <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
           {profile.days.map((day) => (
             <div
               key={day.day}
@@ -263,15 +356,15 @@ export async function renderProfileImage(
                 flex: 1,
                 backgroundColor: PANEL,
                 border: `2px solid ${LINE}`,
-                borderRadius: 16,
-                padding: 18,
+                borderRadius: 14,
+                padding: 14,
               }}
             >
               <div
                 style={{
                   display: "flex",
                   fontFamily: "GeistMono",
-                  fontSize: 17,
+                  fontSize: 15,
                   letterSpacing: 2,
                   color: day.done ? EMBER : FAINT,
                   textTransform: "uppercase",
@@ -282,21 +375,19 @@ export async function renderProfileImage(
               <div
                 style={{
                   display: "flex",
-                  marginTop: 8,
+                  marginTop: 6,
                   fontFamily: "GeistBold",
-                  fontSize: 34,
+                  fontSize: 29,
                   color: day.done ? HI : FAINT,
                 }}
               >
-                {day.done ? day.score : "—"}
+                {day.done ? String(day.score) : "—"}
               </div>
             </div>
           ))}
         </div>
 
-        <div style={{ display: "flex", marginTop: 30, fontSize: 20, color: FAINT }}>
-          {footer}
-        </div>
+        <div style={{ display: "flex", marginTop: 20, fontSize: 18, color: FAINT }}>{footer}</div>
       </div>
     ),
     {
