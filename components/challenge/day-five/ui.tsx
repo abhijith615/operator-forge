@@ -78,7 +78,7 @@ export function CustomerJourney({
   return (
     <div className={cn("min-w-0", className)}>
       {label ? (
-        <p className="mb-1.5 truncate font-mono text-[9.5px] tracking-[0.14em] text-faint uppercase">{label}</p>
+        <p className="mb-1.5 truncate font-mono text-[12.5px] tracking-[0.14em] text-faint uppercase">{label}</p>
       ) : null}
       <ol className="flex items-center gap-0" aria-label={label ? `${label} journey` : "Customer journey"}>
         {JOURNEY.map((node, index) => {
@@ -110,7 +110,7 @@ export function CustomerJourney({
                 {!compact ? (
                   <span
                     className={cn(
-                      "truncate text-center font-mono text-[8.5px] tracking-[0.1em] uppercase",
+                      "truncate text-center font-mono text-[11.5px] tracking-[0.1em] uppercase",
                       last && state === "clear" ? "text-ion-400" : "text-faint",
                     )}
                   >
@@ -155,7 +155,7 @@ export function PromiseStatus({
         const tone = value >= 85 ? "text-ion-400" : value >= 60 ? "text-warn-500" : "text-alert-500";
         return (
           <div key={dimension} className="min-w-0">
-            <dt className="truncate font-mono text-[8.5px] tracking-[0.1em] text-faint uppercase">
+            <dt className="truncate font-mono text-[11.5px] tracking-[0.1em] text-faint uppercase">
               {PROMISE_LABEL[dimension]}
             </dt>
             <dd className="mt-1">
@@ -214,7 +214,7 @@ export function CustomerCard({
       {eyebrow ? (
         <p
           className={cn(
-            "font-mono text-[9.5px] tracking-[0.18em] uppercase",
+            "font-mono text-[12.5px] tracking-[0.18em] uppercase",
             tone === "clear" ? "text-ion-400" : tone === "risk" ? "text-warn-500" : tone === "broken" ? "text-alert-500" : "text-[#e8ddc9]/70",
           )}
         >
@@ -238,10 +238,10 @@ export function SystemChip({
 }) {
   return (
     <span className="inline-flex items-baseline gap-1.5 rounded-full border border-line-strong bg-surface px-2.5 py-1">
-      <span className="font-mono text-[9px] tracking-[0.12em] text-faint uppercase">{label}</span>
+      <span className="font-mono text-[12px] tracking-[0.12em] text-faint uppercase">{label}</span>
       <span
         className={cn(
-          "font-mono text-[11px] font-semibold",
+          "font-mono text-[12px] font-semibold",
           tone === "ok" ? "text-ion-400" : tone === "warn" ? "text-warn-500" : "text-hi",
         )}
       >
@@ -270,7 +270,7 @@ export function CaseHeading({
     <div>
       <p
         className={cn(
-          "font-mono text-[10px] tracking-[0.2em] uppercase",
+          "font-mono text-[13px] tracking-[0.2em] uppercase",
           tone === "alert" ? "text-alert-500" : tone === "ion" ? "text-ion-400" : "text-ember-500",
         )}
       >
@@ -315,7 +315,7 @@ export function OutcomeChip({
     >
       <NodeMark state={state} className="mt-0.5 size-3.5 shrink-0" />
       <div className="min-w-0">
-        <p className={cn("font-mono text-[10.5px] tracking-[0.16em] uppercase", NODE_TEXT[state])}>{headline}</p>
+        <p className={cn("font-mono text-[13px] tracking-[0.16em] uppercase", NODE_TEXT[state])}>{headline}</p>
         {detail ? <p className="mt-1 text-[12.5px] leading-relaxed text-mid">{detail}</p> : null}
       </div>
     </motion.div>
@@ -351,7 +351,7 @@ export function Voice({
             : "border-line-strong bg-elevated",
       )}
     >
-      <p className="flex flex-wrap items-baseline gap-x-2 font-mono text-[10px] tracking-[0.12em] uppercase">
+      <p className="flex flex-wrap items-baseline gap-x-2 font-mono text-[13px] tracking-[0.12em] uppercase">
         <span className={tone === "alert" ? "text-alert-500" : tone === "customer" ? "text-[#e8ddc9]/80" : "text-ember-500"}>
           {from}
         </span>
@@ -406,7 +406,7 @@ export function InspectButton({
       </span>
       <span className="min-w-0">
         <span className="block text-[12.5px] font-semibold text-hi">{label}</span>
-        {detail ? <span className="block text-[11px] text-lo">{detail}</span> : null}
+        {detail ? <span className="block text-[12px] text-lo">{detail}</span> : null}
       </span>
     </button>
   );

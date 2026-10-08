@@ -22,6 +22,7 @@ import {
   type ShelfSlot,
 } from "@/lib/challenge/day-five/types";
 import { easing } from "@/lib/motion";
+import { ItemPhoto } from "@/components/challenge/day-five/item-photo";
 import { cn } from "@/lib/utils";
 
 /**
@@ -71,7 +72,7 @@ export function MilkCase({
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_260px]">
         {/* ── The shelf ── */}
         <div className="rounded-card border border-line bg-surface p-3">
-          <p className="flex items-center gap-1.5 font-mono text-[9.5px] tracking-[0.14em] text-faint uppercase">
+          <p className="flex items-center gap-1.5 font-mono text-[12.5px] tracking-[0.14em] text-faint uppercase">
             <Snowflake className="size-3" aria-hidden />
             Chilled shelf · 4°C
           </p>
@@ -104,14 +105,14 @@ export function MilkCase({
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="text-[12px] font-semibold text-hi">{MILK.slots[slot].label}</span>
                     {slot === "pickface" ? (
-                      <span className="font-mono text-[9px] tracking-[0.1em] text-ember-400 uppercase">Picks here</span>
+                      <span className="font-mono text-[12px] tracking-[0.1em] text-ember-400 uppercase">Picks here</span>
                     ) : null}
                   </div>
-                  <p className="mt-0.5 text-[10.5px] leading-snug text-lo">{MILK.slots[slot].detail}</p>
+                  <p className="mt-0.5 text-[13px] leading-snug text-lo">{MILK.slots[slot].detail}</p>
 
                   <div className="mt-2 space-y-1.5">
                     {here.length === 0 ? (
-                      <p className="rounded border border-dashed border-line-strong px-2 py-3 text-center text-[10.5px] text-faint">
+                      <p className="rounded border border-dashed border-line-strong px-2 py-3 text-center text-[13px] text-faint">
                         {held ? "Drop here" : "Empty"}
                       </p>
                     ) : (
@@ -172,7 +173,7 @@ export function MilkCase({
                         <span className="text-[12px] text-mid">{row.label}</span>
                         <span
                           className={cn(
-                            "ml-auto font-mono text-[10.5px]",
+                            "ml-auto font-mono text-[13px]",
                             row.state === "broken" ? "text-alert-500" : row.state === "risk" ? "text-warn-500" : "text-faint",
                           )}
                         >
@@ -198,7 +199,7 @@ export function MilkCase({
           />
           {milk.policySeen ? (
             <div className="rounded-card border border-line bg-surface p-3">
-              <p className="font-mono text-[9.5px] tracking-[0.14em] text-faint uppercase">Policy</p>
+              <p className="font-mono text-[12.5px] tracking-[0.14em] text-faint uppercase">Policy</p>
               <p className="mt-1.5 text-[12.5px] leading-relaxed text-mid">
                 Minimum sellable remaining life: <span className="text-hi">{MILK.minimumSellableHours} hours</span>.
               </p>
@@ -251,6 +252,7 @@ function BatchCard({
       )}
     >
       <span className="flex items-baseline justify-between gap-2">
+        <ItemPhoto id={batch.id} size={30} />
         <span className="truncate text-[12px] font-semibold text-hi">{batch.name}</span>
         <span
           data-readout
@@ -259,7 +261,7 @@ function BatchCard({
           {batch.hours}h
         </span>
       </span>
-      <span className="mt-1 flex flex-wrap items-baseline gap-x-2 font-mono text-[9.5px] text-faint">
+      <span className="mt-1 flex flex-wrap items-baseline gap-x-2 font-mono text-[12.5px] text-faint">
         <span>{batch.batch}</span>
         <span>In {batch.received}</span>
         <span>{batch.units} units</span>

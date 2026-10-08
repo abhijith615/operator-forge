@@ -53,7 +53,7 @@ export function CloseTheLoop({
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         {/* ── What happened ── */}
         <div>
-          <p className="font-mono text-[9.5px] tracking-[0.14em] text-faint uppercase">Tonight&rsquo;s failures</p>
+          <p className="font-mono text-[12.5px] tracking-[0.14em] text-faint uppercase">Tonight&rsquo;s failures</p>
           <ul className="mt-2 space-y-2">
             {CASE_IDS.map((id) => {
               const incident = INCIDENTS[id];
@@ -91,7 +91,7 @@ export function CloseTheLoop({
                         initial={reduced ? false : { opacity: 0, y: -3 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3, ease: easing.outExpo }}
-                        className="mt-2 flex items-center gap-1.5 font-mono text-[10px] tracking-[0.1em] uppercase"
+                        className="mt-2 flex items-center gap-1.5 font-mono text-[13px] tracking-[0.1em] uppercase"
                       >
                         {control ? (
                           <>
@@ -107,7 +107,7 @@ export function CloseTheLoop({
                     </AnimatePresence>
 
                     {control ? (
-                      <span className="mt-1.5 block text-[11px] text-mid">{CONTROLS[control].label}</span>
+                      <span className="mt-1.5 block text-[12px] text-mid">{CONTROLS[control].label}</span>
                     ) : null}
                   </button>
 
@@ -115,7 +115,7 @@ export function CloseTheLoop({
                     <button
                       type="button"
                       onClick={() => onLink(id, null)}
-                      className="mt-1 rounded px-1 text-[11px] text-lo underline-offset-4 hover:text-mid hover:underline focus-visible:ring-2 focus-visible:ring-ember-500 focus-visible:outline-none"
+                      className="mt-1 rounded px-1 text-[12px] text-lo underline-offset-4 hover:text-mid hover:underline focus-visible:ring-2 focus-visible:ring-ember-500 focus-visible:outline-none"
                     >
                       Unlink
                     </button>
@@ -128,7 +128,7 @@ export function CloseTheLoop({
 
         {/* ── What would have stopped it ── */}
         <div>
-          <p className="font-mono text-[9.5px] tracking-[0.14em] text-faint uppercase">Preventive controls</p>
+          <p className="font-mono text-[12.5px] tracking-[0.14em] text-faint uppercase">Preventive controls</p>
           <ul className="mt-2 grid gap-1.5">
             {CONTROL_IDS.map((control) => {
               const spec = CONTROLS[control];
@@ -158,7 +158,7 @@ export function CloseTheLoop({
                     />
                     <span className="min-w-0">
                       <span className="block text-[12.5px] font-semibold text-hi">{spec.label}</span>
-                      <span className="block text-[10.5px] leading-snug text-lo">{spec.detail}</span>
+                      <span className="block text-[13px] leading-snug text-lo">{spec.detail}</span>
                     </span>
                   </button>
                 </li>

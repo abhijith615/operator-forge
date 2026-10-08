@@ -17,6 +17,7 @@ import { bakingOutcome } from "@/lib/challenge/day-five/outcome";
 import { BAKING } from "@/lib/challenge/day-five/scenario";
 import type { BasketItemId, ContactOption, Day5State } from "@/lib/challenge/day-five/types";
 import { easing } from "@/lib/motion";
+import { ItemPhoto } from "@/components/challenge/day-five/item-photo";
 import { cn } from "@/lib/utils";
 
 const OFFERS: { id: ContactOption; label: string; detail: string }[] = [
@@ -85,7 +86,7 @@ export function BakingCase({
 
       {/* ── The preparation surface ── */}
       <div className="rounded-card border border-line bg-surface p-3.5">
-        <p className="font-mono text-[9.5px] tracking-[0.14em] text-faint uppercase">Look at the basket</p>
+        <p className="font-mono text-[12.5px] tracking-[0.14em] text-faint uppercase">Look at the basket</p>
         <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
           {BAKING.items.map((item) => {
             const opened = baking.inspected.includes(item.id);
@@ -109,11 +110,12 @@ export function BakingCase({
                           : "border-line-strong bg-elevated hover:border-line-bright",
                   )}
                 >
+                  <ItemPhoto id={item.id} size={44} className="mb-2" />
                   <span className="text-[12px] font-semibold text-hi">{item.name}</span>
-                  <span className="mt-1 block font-mono text-[9.5px] text-faint">{item.detail}</span>
+                  <span className="mt-1 block font-mono text-[12.5px] text-faint">{item.detail}</span>
                   <span
                     className={cn(
-                      "mt-1.5 block font-mono text-[9px] tracking-[0.1em] uppercase",
+                      "mt-1.5 block font-mono text-[12px] tracking-[0.1em] uppercase",
                       item.picked ? "text-ion-400" : "text-warn-500",
                     )}
                   >
@@ -173,12 +175,13 @@ export function BakingCase({
             const sub = BAKING.substitutes[id];
             return (
               <div key={id} className="rounded-card border border-line-strong bg-elevated p-3">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-[13px] font-semibold text-hi">{sub.name}</span>
-                  <span className="font-mono text-[11px] text-mid">{sub.price}</span>
+                <div className="flex items-center justify-between gap-2">
+                  <ItemPhoto id={sub.id} size={34} />
+                  <span className="mr-auto text-[13px] font-semibold text-hi">{sub.name}</span>
+                  <span className="font-mono text-[12px] text-mid">{sub.price}</span>
                 </div>
                 <p className="mt-1 text-[11.5px] text-lo">{sub.detail}</p>
-                <p className="mt-1.5 font-mono text-[10px] tracking-[0.1em] text-ion-400 uppercase">{sub.fit}</p>
+                <p className="mt-1.5 font-mono text-[13px] tracking-[0.1em] text-ion-400 uppercase">{sub.fit}</p>
               </div>
             );
           })}
@@ -188,7 +191,7 @@ export function BakingCase({
       {/* ── The tote's fate ── */}
       {!baking.contacted && !baking.confirmed ? (
         <div className="space-y-2.5 rounded-card border border-line bg-surface p-3.5">
-          <p className="font-mono text-[9.5px] tracking-[0.14em] text-faint uppercase">Before it packs</p>
+          <p className="font-mono text-[12.5px] tracking-[0.14em] text-faint uppercase">Before it packs</p>
           <div className="flex flex-wrap gap-2">
             <Button variant={baking.held ? "secondary" : "primary"} size="md" onClick={onHold} disabled={baking.held}>
               {baking.held ? "Held before packing" : "Hold before packing"}
@@ -203,7 +206,7 @@ export function BakingCase({
 
           {/* The in-app contact sheet: the operator chooses what to offer. */}
           <div className="rounded-card border border-line-strong bg-elevated p-3">
-            <p className="font-mono text-[9.5px] tracking-[0.14em] text-faint uppercase">
+            <p className="font-mono text-[12.5px] tracking-[0.14em] text-faint uppercase">
               In-app message · what to offer
             </p>
             <p className="mt-1.5 text-[12px] text-mid">“Vanilla extract is unavailable.”</p>
@@ -222,8 +225,13 @@ export function BakingCase({
                         on ? "border-ember-500/70 bg-ember-500/[0.1]" : "border-line bg-surface hover:border-line-bright",
                       )}
                     >
-                      <span className="block text-[12px] font-semibold text-hi">{offer.label}</span>
-                      <span className="block text-[10.5px] text-lo">{offer.detail}</span>
+                      <span className="flex items-center gap-2.5">
+                        <ItemPhoto id={offer.id} size={32} />
+                        <span className="min-w-0">
+                          <span className="block text-[12px] font-semibold text-hi">{offer.label}</span>
+                          <span className="block text-[13px] text-lo">{offer.detail}</span>
+                        </span>
+                      </span>
                     </button>
                   </li>
                 );

@@ -35,7 +35,7 @@ export function Day5Scorecard({ result }: { result: ChallengeResult }) {
     <div className="min-h-dvh bg-obsidian">
       <main id="main" className="mx-auto max-w-3xl space-y-8 px-4 py-10">
         <section>
-          <p className="font-mono text-[10px] tracking-[0.2em] text-ember-500 uppercase">
+          <p className="font-mono text-[13px] tracking-[0.2em] text-ember-500 uppercase">
             Protect the Promise · {p?.lockedByClock ? "Closed by the clock" : "Evening complete"}
           </p>
           <h1 className="mt-2 text-[28px] leading-tight font-semibold tracking-[-0.03em] text-hi">Day 5 complete</h1>
@@ -57,7 +57,7 @@ export function Day5Scorecard({ result }: { result: ChallengeResult }) {
           >
             <p
               className={cn(
-                "font-mono text-[11px] tracking-[0.2em] uppercase",
+                "font-mono text-[12px] tracking-[0.2em] uppercase",
                 p.outcome.title === "PROMISES PROTECTED"
                   ? "text-ion-400"
                   : p.outcome.title === "PROMISES PARTLY HELD"
@@ -73,7 +73,7 @@ export function Day5Scorecard({ result }: { result: ChallengeResult }) {
               <Metric label="Metric courage" value={`${p.outcome.metricCourage}%`} />
               <Metric label="Need vs transaction" value={`${p.outcome.needVsTransaction}%`} />
             </dl>
-            <p className="mt-4 border-t border-white/10 pt-3 font-mono text-[11px] text-faint">
+            <p className="mt-4 border-t border-white/10 pt-3 font-mono text-[12px] text-faint">
               Cost of protecting them: +{p.outcome.ctdCost}s click-to-dispatch · {rupees(p.outcome.spend)}
               {p.outcome.wasteUnits > 0 ? ` · ${p.outcome.wasteUnits} units written off` : ""}
             </p>
@@ -83,7 +83,7 @@ export function Day5Scorecard({ result }: { result: ChallengeResult }) {
         {/* ── The journeys ── */}
         {p ? (
           <section>
-            <h2 className="font-mono text-[10px] tracking-[0.18em] text-lo uppercase">What each customer got</h2>
+            <h2 className="font-mono text-[13px] tracking-[0.18em] text-lo uppercase">What each customer got</h2>
             <ul className="mt-3 space-y-2">
               {p.journeys.map((journey) => (
                 <li
@@ -102,11 +102,11 @@ export function Day5Scorecard({ result }: { result: ChallengeResult }) {
                     <div className="min-w-0 flex-1">
                       <p className="flex flex-wrap items-baseline gap-x-2">
                         <span className="text-[13.5px] font-semibold text-hi">{journey.label}</span>
-                        <span className="font-mono text-[10px] text-faint">{journey.customer}</span>
+                        <span className="font-mono text-[13px] text-faint">{journey.customer}</span>
                       </p>
                       <p
                         className={cn(
-                          "mt-1 font-mono text-[10.5px] tracking-[0.14em] uppercase",
+                          "mt-1 font-mono text-[13px] tracking-[0.14em] uppercase",
                           journey.state === "clear"
                             ? "text-ion-400"
                             : journey.state === "risk"
@@ -126,20 +126,20 @@ export function Day5Scorecard({ result }: { result: ChallengeResult }) {
         ) : null}
 
         <section className="rounded-card border border-line bg-surface p-6 text-center">
-          <p className="font-mono text-[10px] tracking-[0.18em] text-lo uppercase">Customer-first judgement</p>
+          <p className="font-mono text-[13px] tracking-[0.18em] text-lo uppercase">Customer-first judgement</p>
           <p data-readout className="mt-3 text-[56px] leading-none font-semibold tracking-[-0.05em] text-hi tabular-nums">
             <CountUp to={result.score} duration={reduced ? 0 : 1.4} />
             <span className="text-[22px] text-lo">/100</span>
           </p>
           <p className="mt-3 text-[14px] font-medium text-ember-400">{result.band}</p>
-          <p className="mt-1 font-mono text-[11px] text-faint">Band range {result.bandRange}</p>
+          <p className="mt-1 font-mono text-[12px] text-faint">Band range {result.bandRange}</p>
           <p className="mt-4 border-t border-line pt-4 text-[11.5px] leading-relaxed text-faint">
             A practice assessment from a simulated shift. Not an employment certification.
           </p>
         </section>
 
         <section>
-          <h2 className="font-mono text-[10px] tracking-[0.18em] text-lo uppercase">Judgement profile</h2>
+          <h2 className="font-mono text-[13px] tracking-[0.18em] text-lo uppercase">Judgement profile</h2>
           <ul className="mt-3 space-y-3.5">
             {result.competencies.map((entry, index) => (
               <li key={entry.dimension}>
@@ -169,7 +169,7 @@ export function Day5Scorecard({ result }: { result: ChallengeResult }) {
         {/* ── Promise dimensions ── */}
         {p ? (
           <section>
-            <h2 className="font-mono text-[10px] tracking-[0.18em] text-lo uppercase">Promise status</h2>
+            <h2 className="font-mono text-[13px] tracking-[0.18em] text-lo uppercase">Promise status</h2>
             <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
               {(
                 [
@@ -181,7 +181,7 @@ export function Day5Scorecard({ result }: { result: ChallengeResult }) {
                 ] as const
               ).map(([label, value]) => (
                 <div key={label} className="rounded-card border border-line bg-surface px-3 py-2.5">
-                  <dt className="font-mono text-[9px] tracking-[0.12em] text-faint uppercase">{label}</dt>
+                  <dt className="font-mono text-[12px] tracking-[0.12em] text-faint uppercase">{label}</dt>
                   <dd
                     data-readout
                     className={cn(
@@ -198,14 +198,14 @@ export function Day5Scorecard({ result }: { result: ChallengeResult }) {
         ) : null}
 
         <section>
-          <h2 className="font-mono text-[10px] tracking-[0.18em] text-lo uppercase">Decision style</h2>
+          <h2 className="font-mono text-[13px] tracking-[0.18em] text-lo uppercase">Decision style</h2>
           <p className="mt-2 text-[20px] leading-tight font-semibold tracking-[-0.02em] text-hi">{result.signature.name}</p>
           <p className="mt-2 text-[13px] leading-relaxed text-mid">{result.signature.blurb}</p>
         </section>
 
         {p && p.timeline.length > 0 ? (
           <section>
-            <h2 className="font-mono text-[10px] tracking-[0.18em] text-lo uppercase">Decision timeline</h2>
+            <h2 className="font-mono text-[13px] tracking-[0.18em] text-lo uppercase">Decision timeline</h2>
             <ol className="mt-3 space-y-2">
               {p.timeline.map((entry) => (
                 <li key={`${entry.time}-${entry.text}`} className="flex items-start gap-3">
@@ -224,14 +224,14 @@ export function Day5Scorecard({ result }: { result: ChallengeResult }) {
 
         {p?.bestCall ? (
           <section className="rounded-card border border-ion-500/35 bg-ion-500/[0.05] p-5">
-            <p className="font-mono text-[10px] tracking-[0.2em] text-ion-400 uppercase">Best call</p>
+            <p className="font-mono text-[13px] tracking-[0.2em] text-ion-400 uppercase">Best call</p>
             <p className="mt-2 text-[15px] leading-relaxed text-hi">{p.bestCall.body}</p>
           </section>
         ) : null}
 
         {p ? (
           <section className="rounded-card border border-warn-500/35 bg-warn-500/[0.04] p-5">
-            <p className="font-mono text-[10px] tracking-[0.2em] text-warn-500 uppercase">Development area</p>
+            <p className="font-mono text-[13px] tracking-[0.2em] text-warn-500 uppercase">Development area</p>
             <p className="mt-2 text-[14px] font-semibold text-hi uppercase">{p.developmentArea.area}</p>
             <p className="mt-1.5 text-[14px] leading-relaxed text-mid">{p.developmentArea.body}</p>
           </section>
@@ -240,7 +240,7 @@ export function Day5Scorecard({ result }: { result: ChallengeResult }) {
         {/* ── Prevention ── */}
         {p ? (
           <section>
-            <h2 className="font-mono text-[10px] tracking-[0.18em] text-lo uppercase">Preventive controls</h2>
+            <h2 className="font-mono text-[13px] tracking-[0.18em] text-lo uppercase">Preventive controls</h2>
             <ul className="mt-3 space-y-1.5">
               {p.prevention.map((row) => (
                 <li
@@ -252,7 +252,7 @@ export function Day5Scorecard({ result }: { result: ChallengeResult }) {
                     aria-hidden
                   />
                   <span className="text-[12.5px] text-hi">{row.incident}</span>
-                  <span className="font-mono text-[10px] text-faint">→</span>
+                  <span className="font-mono text-[13px] text-faint">→</span>
                   <span className={cn("text-[12px]", row.fits ? "text-ion-400" : "text-warn-500")}>
                     {row.control ?? "No control linked"}
                   </span>
@@ -264,17 +264,17 @@ export function Day5Scorecard({ result }: { result: ChallengeResult }) {
 
         {p ? (
           <section className="rounded-card border border-line-strong bg-elevated p-5">
-            <p className="font-mono text-[10px] tracking-[0.2em] text-ember-500 uppercase">How you decide</p>
+            <p className="font-mono text-[13px] tracking-[0.2em] text-ember-500 uppercase">How you decide</p>
             <p className="mt-2 text-[14.5px] leading-relaxed text-hi">{p.insight}</p>
           </section>
         ) : null}
 
         <section>
-          <h2 className="font-mono text-[10px] tracking-[0.18em] text-lo uppercase">If you ran this evening again</h2>
+          <h2 className="font-mono text-[13px] tracking-[0.18em] text-lo uppercase">If you ran this evening again</h2>
           <ol className="mt-3 space-y-2.5">
             {result.replay.map((line, index) => (
               <li key={line} className="flex gap-3 text-[13.5px] leading-relaxed text-mid">
-                <span className="mt-px grid size-5 shrink-0 place-items-center rounded-full border border-ember-500/40 font-mono text-[10.5px] text-ember-400">
+                <span className="mt-px grid size-5 shrink-0 place-items-center rounded-full border border-ember-500/40 font-mono text-[13px] text-ember-400">
                   {index + 1}
                 </span>
                 {line}
@@ -284,7 +284,7 @@ export function Day5Scorecard({ result }: { result: ChallengeResult }) {
         </section>
 
         <section>
-          <h2 className="font-mono text-[10px] tracking-[0.18em] text-lo uppercase">What you learned today</h2>
+          <h2 className="font-mono text-[13px] tracking-[0.18em] text-lo uppercase">What you learned today</h2>
           <ul className="mt-3 space-y-3">
             {result.learned.map((item) => (
               <li key={item.title} className="rounded-card border border-line bg-surface p-3.5">
@@ -338,7 +338,7 @@ function Metric({
 }) {
   return (
     <div>
-      <dt className="font-mono text-[9.5px] tracking-[0.12em] text-faint uppercase">{label}</dt>
+      <dt className="font-mono text-[12.5px] tracking-[0.12em] text-faint uppercase">{label}</dt>
       <dd className="mt-1 flex items-baseline gap-1.5">
         <span
           data-readout
@@ -346,7 +346,7 @@ function Metric({
         >
           {value}
         </span>
-        {suffix ? <span className="font-mono text-[10.5px] text-faint">{suffix}</span> : null}
+        {suffix ? <span className="font-mono text-[13px] text-faint">{suffix}</span> : null}
       </dd>
     </div>
   );

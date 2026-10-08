@@ -100,13 +100,13 @@ export function BatchCase({
       {/* ── The bin, and what is drawing from it ── */}
       <div className="rounded-card border border-line bg-surface p-3.5">
         <div className="flex flex-wrap items-baseline gap-2">
-          <p className="flex items-center gap-1.5 font-mono text-[9.5px] tracking-[0.14em] text-faint uppercase">
+          <p className="flex items-center gap-1.5 font-mono text-[12.5px] tracking-[0.14em] text-faint uppercase">
             <Boxes className="size-3" aria-hidden />
             {BATCH.product}
           </p>
           <SystemChip label="Batch" value={BATCH.batchCode} tone={frozen ? "warn" : "neutral"} />
           {frozen ? (
-            <span className="inline-flex items-center gap-1 rounded-full border border-info-500/50 bg-info-500/10 px-2.5 py-1 font-mono text-[9.5px] tracking-[0.12em] text-info-500 uppercase">
+            <span className="inline-flex items-center gap-1 rounded-full border border-info-500/50 bg-info-500/10 px-2.5 py-1 font-mono text-[12.5px] tracking-[0.12em] text-info-500 uppercase">
               <Snowflake className="size-3" aria-hidden />
               Frozen pending inspection
             </span>
@@ -116,7 +116,7 @@ export function BatchCase({
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {/* Units in the bin */}
           <div>
-            <p className="font-mono text-[9px] tracking-[0.12em] text-faint uppercase">Units in bin</p>
+            <p className="font-mono text-[12px] tracking-[0.12em] text-faint uppercase">Units in bin</p>
             <div className="mt-1.5 flex flex-wrap gap-1" aria-label={`${BATCH.units} units of batch ${BATCH.batchCode}`}>
               {Array.from({ length: BATCH.units }).map((_, index) => (
                 <motion.span
@@ -131,14 +131,14 @@ export function BatchCase({
                 />
               ))}
             </div>
-            <p className="mt-2 font-mono text-[11px] text-mid">
+            <p className="mt-2 font-mono text-[12px] text-mid">
               {BATCH.units} units · {frozen ? "held" : "available to pick"}
             </p>
           </div>
 
           {/* Live exposure */}
           <div>
-            <p className="font-mono text-[9px] tracking-[0.12em] text-faint uppercase">Active customer exposure</p>
+            <p className="font-mono text-[12px] tracking-[0.12em] text-faint uppercase">Active customer exposure</p>
             <p className="mt-1.5 flex items-baseline gap-2">
               <motion.span
                 key={exposed}
@@ -171,7 +171,7 @@ export function BatchCase({
 
       {/* ── What you do, in the order you do it ── */}
       <div>
-        <p className="font-mono text-[9.5px] tracking-[0.14em] text-faint uppercase">Available actions</p>
+        <p className="font-mono text-[12.5px] tracking-[0.14em] text-faint uppercase">Available actions</p>
         <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
           {dealt.map((action) => {
             const spec = BATCH.actions[action];
@@ -195,7 +195,7 @@ export function BatchCase({
                 >
                   <span
                     className={cn(
-                      "mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border font-mono text-[10px]",
+                      "mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border font-mono text-[13px]",
                       taken ? "border-ember-500 bg-ember-500 text-void" : "border-line-strong text-faint",
                     )}
                     aria-hidden
@@ -204,7 +204,7 @@ export function BatchCase({
                   </span>
                   <span className="min-w-0">
                     <span className="block text-[12.5px] font-semibold text-hi">{spec.label}</span>
-                    <span className={cn("block text-[10.5px]", risky ? "text-warn-500" : "text-lo")}>{spec.detail}</span>
+                    <span className={cn("block text-[13px]", risky ? "text-warn-500" : "text-lo")}>{spec.detail}</span>
                   </span>
                 </button>
               </li>

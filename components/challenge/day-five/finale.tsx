@@ -108,13 +108,13 @@ export function CustomerFinale({
               )}
             >
               <div className="flex items-baseline justify-between gap-2">
-                <span className="font-mono text-[9.5px] tracking-[0.14em] text-faint uppercase">
+                <span className="font-mono text-[12.5px] tracking-[0.14em] text-faint uppercase">
                   {customer.name} · {customer.order}
                 </span>
                 <NodeMark state={recovery.protected ? "clear" : "broken"} />
               </div>
               <p className="mt-1.5 text-[13.5px] leading-snug font-semibold text-hi">{customer.headline}</p>
-              <p className="mt-1 font-mono text-[10.5px] text-lo">{customer.basket}</p>
+              <p className="mt-1 font-mono text-[13px] text-lo">{customer.basket}</p>
 
               <CustomerJourney className="mt-3" compact states={journeyFor(id)} />
 
@@ -139,7 +139,7 @@ export function CustomerFinale({
               {/* What is on this customer now */}
               <div className="mt-3 min-h-[42px] rounded-md border border-dashed border-line-strong p-2">
                 {mine.length === 0 && finale.spend[id] === 0 ? (
-                  <p className="text-center text-[10.5px] text-faint">
+                  <p className="text-center text-[13px] text-faint">
                     {held ? "Drop a resource here" : "Nothing assigned"}
                   </p>
                 ) : (
@@ -150,7 +150,7 @@ export function CustomerFinale({
                           type="button"
                           disabled={finale.confirmed}
                           onClick={() => onAssign(resource, null)}
-                          className="inline-flex min-h-8 items-center gap-1 rounded-full border border-ember-500/50 bg-ember-500/10 px-2.5 py-1 font-mono text-[10px] text-hi focus-visible:ring-2 focus-visible:ring-ember-500 focus-visible:outline-none"
+                          className="inline-flex min-h-8 items-center gap-1 rounded-full border border-ember-500/50 bg-ember-500/10 px-2.5 py-1 font-mono text-[13px] text-hi focus-visible:ring-2 focus-visible:ring-ember-500 focus-visible:outline-none"
                         >
                           {RESOURCES[resource].label}
                           <X className="size-2.5 text-lo" aria-hidden />
@@ -158,7 +158,7 @@ export function CustomerFinale({
                       </li>
                     ))}
                     {finale.spend[id] > 0 ? (
-                      <li className="inline-flex items-center rounded-full border border-flux-400/50 bg-flux-500/10 px-2.5 py-1 font-mono text-[10px] text-flux-400">
+                      <li className="inline-flex items-center rounded-full border border-flux-400/50 bg-flux-500/10 px-2.5 py-1 font-mono text-[13px] text-flux-400">
                         ₹{finale.spend[id]}
                       </li>
                     ) : null}
@@ -182,7 +182,7 @@ export function CustomerFinale({
 
               {/* Discretionary money, in fixed steps */}
               <div className="mt-2 flex items-center gap-2">
-                <span className="font-mono text-[9.5px] tracking-[0.12em] text-faint uppercase">Fund</span>
+                <span className="font-mono text-[12.5px] tracking-[0.12em] text-faint uppercase">Fund</span>
                 <button
                   type="button"
                   disabled={finale.confirmed || finale.spend[id] === 0}
@@ -226,7 +226,7 @@ export function CustomerFinale({
       {/* ── The shared dock ── */}
       <div className="sticky bottom-0 z-10 rounded-card border border-line-strong bg-obsidian/92 p-3 backdrop-blur-md">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="font-mono text-[9.5px] tracking-[0.14em] text-faint uppercase">Shared resources</p>
+          <p className="font-mono text-[12.5px] tracking-[0.14em] text-faint uppercase">Shared resources</p>
           <SystemChip label="Fund left" value={`₹${left} / ${FUND_TOTAL}`} tone={left === 0 ? "warn" : "neutral"} />
         </div>
         <ul className="mt-2.5 flex flex-wrap gap-1.5">
@@ -258,7 +258,7 @@ export function CustomerFinale({
                   )}
                 >
                   <span className="text-[12px] font-semibold text-hi">{spec.label}</span>
-                  <span className="font-mono text-[9.5px] text-faint">
+                  <span className="font-mono text-[12.5px] text-faint">
                     {on ? `On ${CUSTOMERS[on].name}` : spec.detail}
                   </span>
                 </button>

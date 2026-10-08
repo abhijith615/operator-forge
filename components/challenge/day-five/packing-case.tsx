@@ -17,6 +17,7 @@ import { packingOutcome, packingSafety } from "@/lib/challenge/day-five/outcome"
 import { PACKING } from "@/lib/challenge/day-five/scenario";
 import type { BagId, Day5State, PackExtra, PackItemId } from "@/lib/challenge/day-five/types";
 import { easing } from "@/lib/motion";
+import { ItemPhoto } from "@/components/challenge/day-five/item-photo";
 import { cn } from "@/lib/utils";
 
 const BAGS: BagId[] = ["bag1", "bag2"];
@@ -80,7 +81,7 @@ export function PackingCase({
             over ? "border-warn-500/50 bg-warn-500/[0.08]" : "border-line-strong bg-surface",
           )}
         >
-          <span className="font-mono text-[9px] tracking-[0.12em] text-faint uppercase">CTD</span>
+          <span className="font-mono text-[12px] tracking-[0.12em] text-faint uppercase">CTD</span>
           <motion.span
             key={ctd}
             initial={reduced ? false : { y: -4, opacity: 0.6 }}
@@ -91,7 +92,7 @@ export function PackingCase({
           >
             {ctd}s
           </motion.span>
-          <span className="font-mono text-[9.5px] text-faint">/ {PACKING.target}</span>
+          <span className="font-mono text-[12.5px] text-faint">/ {PACKING.target}</span>
         </span>
       </div>
 
@@ -122,7 +123,7 @@ export function PackingCase({
                 isTarget && "outline-1 outline-ember-500/60 outline-dashed",
               )}
             >
-              <p className="flex items-center gap-1.5 font-mono text-[9.5px] tracking-[0.14em] text-faint uppercase">
+              <p className="flex items-center gap-1.5 font-mono text-[12.5px] tracking-[0.14em] text-faint uppercase">
                 <ShoppingBag className="size-3" aria-hidden />
                 {PACKING.bags[bag]}
                 {mixed ? (
@@ -135,7 +136,7 @@ export function PackingCase({
 
               <ul className="mt-2.5 space-y-1.5">
                 {here.length === 0 ? (
-                  <li className="rounded border border-dashed border-line-strong px-2 py-6 text-center text-[10.5px] text-faint">
+                  <li className="rounded border border-dashed border-line-strong px-2 py-6 text-center text-[13px] text-faint">
                     {held ? "Drop here" : "Empty"}
                   </li>
                 ) : (
@@ -163,12 +164,13 @@ export function PackingCase({
                                 : "border-line bg-elevated",
                         )}
                       >
+                        <ItemPhoto id={item.id} size={36} className="mb-1.5" />
                         <span className="block text-[12px] font-semibold text-hi">{item.name}</span>
                         <span className="mt-0.5 flex flex-wrap items-baseline gap-x-2">
-                          <span className="font-mono text-[9.5px] text-faint">{item.detail}</span>
+                          <span className="font-mono text-[12.5px] text-faint">{item.detail}</span>
                           <span
                             className={cn(
-                              "font-mono text-[9px] tracking-[0.1em] uppercase",
+                              "font-mono text-[12px] tracking-[0.1em] uppercase",
                               item.kind === "chemical" ? "text-alert-500" : item.kind === "openFood" ? "text-ion-400" : "text-faint",
                             )}
                           >
@@ -217,8 +219,8 @@ export function PackingCase({
               )}
             >
               <span className="block text-[12.5px] font-semibold text-hi">{spec.label}</span>
-              <span className="block text-[10.5px] text-lo">{spec.detail}</span>
-              <span className="mt-1 block font-mono text-[9.5px] text-faint">
+              <span className="block text-[13px] text-lo">{spec.detail}</span>
+              <span className="mt-1 block font-mono text-[12.5px] text-faint">
                 +{spec.seconds}s · ₹{spec.cost}
               </span>
             </button>
