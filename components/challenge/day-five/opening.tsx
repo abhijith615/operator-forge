@@ -68,7 +68,7 @@ export function DayFiveOpening({ onStart }: { onStart: () => void }) {
         </motion.p>
 
         <motion.div {...rise(step >= 1)} className="mt-5">
-          <p className="font-mono text-[11px] tracking-[0.3em] text-ember-500 uppercase">
+          <p className="font-mono text-[12px] tracking-[0.3em] text-ember-500 uppercase">
             Day 5 · {DAY_FIVE_BRIEF.store}
           </p>
           <h1 className="mt-2 text-[clamp(2.1rem,7vw,3.4rem)] leading-[0.95] font-semibold tracking-[-0.045em] text-hi">
@@ -80,11 +80,18 @@ export function DayFiveOpening({ onStart }: { onStart: () => void }) {
         <motion.ul {...rise(step >= 2)} className="mt-7 space-y-2.5" aria-label="Orders in flight">
           {OPENING_ORDERS.map((order, index) => {
             const broken = order.breaksAt !== null;
+            /**
+             * The one order that went through cleanly steps back so the four
+             * that break can carry the screen — but only steps back. At 0.18
+             * it read as a rendering fault rather than as the control, which
+             * is the opposite of its job: the point of #8419 is that the
+             * operator can see what a whole journey looks like.
+             */
             const faded = step >= 4 && !broken;
             return (
               <motion.li
                 key={order.id}
-                animate={{ opacity: faded ? 0.18 : 1 }}
+                animate={{ opacity: faded ? 0.62 : 1 }}
                 transition={{ duration: 0.6, ease: easing.outExpo }}
                 className={cn(
                   "rounded-card border px-3.5 py-3",
@@ -92,11 +99,19 @@ export function DayFiveOpening({ onStart }: { onStart: () => void }) {
                 )}
               >
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="font-mono text-[11px] text-mid">{order.label}</span>
+                  <span className="font-mono text-[12px] text-mid">{order.label}</span>
                   <span
                     className={cn(
-                      "font-mono text-[9.5px] tracking-[0.12em] uppercase",
-                      step >= 3 && broken ? (order.breaksAt === "use" ? "text-alert-500" : "text-warn-500") : "text-faint",
+                      "font-mono text-[12.5px] tracking-[0.12em] uppercase",
+                      step >= 3 && broken
+                        ? order.breaksAt === "use"
+                          ? "text-alert-500"
+                          : "text-warn-500"
+                        : // Delivered is the good outcome; it should not be
+                          // the same grey as "in flight".
+                          step >= 3
+                          ? "text-ion-400"
+                          : "text-faint",
                     )}
                   >
                     {step >= 3 ? order.note : "In flight"}
@@ -126,7 +141,7 @@ export function DayFiveOpening({ onStart }: { onStart: () => void }) {
           {...rise(step >= 5)}
           className="mt-5 rounded-card border border-ember-500/35 bg-ember-500/[0.05] p-4"
         >
-          <p className="font-mono text-[10px] tracking-[0.14em] text-ember-500 uppercase">
+          <p className="font-mono text-[13px] tracking-[0.14em] text-ember-500 uppercase">
             Cluster Manager · 6:42 PM
           </p>
           {OPENING_MESSAGES.manager.map((line) => (
