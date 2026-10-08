@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { DayOneSimulation } from "@/components/challenge/simulation";
 import { replayBlocked, requireChallengeAccess } from "@/lib/challenge/access";
+import { recordDayOpen } from "@/lib/challenge/opens";
 
 export const metadata: Metadata = {
   title: "Day 1 · The 180-Second Shift",
@@ -23,6 +24,9 @@ export default async function DayOnePage() {
   // exception, because they are testing the day rather than competing on it;
   // `replayBlocked` is where that rule lives.
   if (await replayBlocked(1)) redirect("/challenge/day-1/scorecard");
+
+  // Counted only once the page is actually going to render a shift.
+  await recordDayOpen(1);
 
   return <DayOneSimulation operatorName={operator.fullName} />;
 }

@@ -537,7 +537,10 @@ as $$
     r.operator_id = auth.uid()
   from public.challenge_runs r
   join public.operators o on o.id = r.operator_id
+  join auth.users u on u.id = r.operator_id
   where r.day = p_day
+    -- Admins play to test, not to compete (see replayBlocked in the app).
+    and not exists (select 1 from public.admins a where lower(a.email) = lower(u.email))
   order by r.score desc, r.completed_at asc
   limit greatest(1, least(p_limit, 200));
 $$;
@@ -554,11 +557,18 @@ as $$
   with mine as (
     select score from public.challenge_runs
     where day = p_day and operator_id = auth.uid()
+  ),
+  -- The field excludes admins, for the same reason the leaderboard does.
+  field as (
+    select r.score
+    from public.challenge_runs r
+    join auth.users u on u.id = r.operator_id
+    where r.day = p_day
+      and not exists (select 1 from public.admins a where lower(a.email) = lower(u.email))
   )
   select
-    ((select count(*) from public.challenge_runs r
-       where r.day = p_day and r.score > (select score from mine)) + 1)::integer,
-    (select count(*) from public.challenge_runs where day = p_day)::integer,
+    ((select count(*) from field where field.score > (select score from mine)) + 1)::integer,
+    (select count(*) from field)::integer,
     (select score from mine)::integer;
 $$;
 
@@ -1254,3 +1264,90 @@ $$;
 revoke all on function public.admin_set_ama_attended(uuid, boolean) from public;
 revoke all on function public.admin_set_ama_attended(uuid, boolean) from anon;
 grant execute on function public.admin_set_ama_attended(uuid, boolean) to authenticated;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Day opens and the participant report
+-- ═══════════════════════════════════════════════════════════════════════════
+--
+-- challenge_runs only ever sees a shift that finished, so somebody who opened
+-- Day 3 and left was invisible: drop-off inside a day could not be measured.
+-- challenge_day_opens is the other half. It records the first time each day's
+-- page rendered a shift — arrival, not the moment the clock started.
+
+create table if not exists public.challenge_day_opens (
+  operator_id uuid not null references auth.users (id) on delete cascade,
+  day integer not null check (day between 1 and 5),
+  first_opened_at timestamptz not null default now(),
+  primary key (operator_id, day)
+);
+
+alter table public.challenge_day_opens enable row level security;
+-- No policies on purpose. Writes go through record_day_open(), reads through
+-- admin_challenge_report().
+
+create or replace function public.record_day_open(p_day integer)
+returns void
+language plpgsql security definer set search_path = ''
+as $$
+begin
+  if auth.uid() is null or p_day not between 1 and 5 then
+    return;
+  end if;
+  insert into public.challenge_day_opens (operator_id, day)
+  values (auth.uid(), p_day)
+  on conflict (operator_id, day) do nothing;
+end;
+$$;
+
+revoke all on function public.record_day_open(integer) from public;
+revoke all on function public.record_day_open(integer) from anon;
+grant execute on function public.record_day_open(integer) to authenticated;
+
+-- One row per registrant with the five days as a json array. Admins only, and
+-- admin accounts are left out of it.
+create or replace function public.admin_challenge_report()
+returns table (
+  registration_id uuid, full_name text, phone text, email text,
+  registered_at timestamptz, paid_at timestamptz, days jsonb
+)
+language plpgsql stable security definer set search_path = ''
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorised' using errcode = '42501';
+  end if;
+
+  return query
+  select
+    r.id, r.name,
+    coalesce(nullif(trim(r.phone), ''), o.whatsapp),
+    r.email, r.created_at, r.paid_at,
+    coalesce((
+      select jsonb_agg(
+        jsonb_build_object(
+          'day', d.day,
+          'opened_at', op.first_opened_at,
+          'completed_at', cr.completed_at,
+          'duration_ms', cr.duration_ms,
+          'score', cr.score,
+          'band', cr.band,
+          'sop_breaches', cr.sop_breaches,
+          'competencies', coalesce(cr.result -> 'competencies', '[]'::jsonb)
+        ) order by d.day
+      )
+      from generate_series(1, 5) as d(day)
+      left join public.challenge_runs cr on cr.operator_id = u.id and cr.day = d.day
+      left join public.challenge_day_opens op on op.operator_id = u.id and op.day = d.day
+    ), '[]'::jsonb)
+  from public.challenge_registrations r
+  left join auth.users u on lower(u.email) = r.email
+  left join public.operators o on o.id = u.id
+  where not exists (select 1 from public.admins a where lower(a.email) = r.email)
+  order by r.created_at;
+end;
+$$;
+
+revoke all on function public.admin_challenge_report() from public;
+revoke all on function public.admin_challenge_report() from anon;
+grant execute on function public.admin_challenge_report() to authenticated;

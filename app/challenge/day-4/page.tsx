@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { DayFourSimulation } from "@/components/challenge/day-four/simulation";
 import { replayBlocked, requireChallengeAccess } from "@/lib/challenge/access";
+import { recordDayOpen } from "@/lib/challenge/opens";
 
 export const metadata: Metadata = {
   title: "Day 4 · Clear the Floor",
@@ -16,6 +17,9 @@ export default async function DayFourPage() {
 
   // Played once, like every other day.
   if (await replayBlocked(4)) redirect("/challenge/day-4/scorecard");
+
+  // Counted only once the page is actually going to render a shift.
+  await recordDayOpen(4);
 
   return <DayFourSimulation operatorName={operator.fullName} />;
 }

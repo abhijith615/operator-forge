@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 
+import { Download } from "lucide-react";
+
 import { AdminView } from "@/components/admin/admin-view";
 import { PageHeader, PageShell } from "@/components/shell/page-header";
+import { Button } from "@/components/ui/button";
 import { readAdminSnapshot, requireAdmin } from "@/lib/admin/queries";
 
 export const metadata: Metadata = {
@@ -26,6 +29,18 @@ export default async function AdminPage() {
         title="Who has been through"
         description="Live, straight from the database. Refreshes on its own."
       />
+
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <Button asChild variant="secondary" size="md">
+          <a href="/api/admin/report" download>
+            <Download />
+            Download participant report (Excel)
+          </a>
+        </Button>
+        <p className="text-[12.5px] text-lo">
+          Everyone registered, with day-by-day scores, skills, drop-off and start times.
+        </p>
+      </div>
 
       {snapshot ? (
         <AdminView initial={snapshot} />

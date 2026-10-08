@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { DayFiveSimulation } from "@/components/challenge/day-five/simulation";
 import { replayBlocked, requireChallengeAccess } from "@/lib/challenge/access";
+import { recordDayOpen } from "@/lib/challenge/opens";
 
 export const metadata: Metadata = {
   title: "Day 5 · Protect the Promise",
@@ -17,6 +18,9 @@ export default async function DayFivePage() {
 
   // Played once, like every other day.
   if (await replayBlocked(5)) redirect("/challenge/day-5/scorecard");
+
+  // Counted only once the page is actually going to render a shift.
+  await recordDayOpen(5);
 
   return <DayFiveSimulation operatorName={operator.fullName} />;
 }
