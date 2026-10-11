@@ -1351,3 +1351,336 @@ $$;
 revoke all on function public.admin_challenge_report() from public;
 revoke all on function public.admin_challenge_report() from anon;
 grant execute on function public.admin_challenge_report() to authenticated;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Hiring Test
+-- ═══════════════════════════════════════════════════════════════════════════
+--
+-- A separate product from the 7-Day Challenge. Nothing here reads or writes a
+-- challenge table.
+--
+-- What is stored is what the candidate did — the ordered list of actions — and
+-- never a score. The result is recomputed from those actions by the same
+-- deterministic engine whenever somebody opens it, so there is no number in
+-- this database a candidate could have written, and a scoring fix applies to
+-- every past attempt at once.
+--
+-- Neither table has a policy. Everything goes through the functions below:
+-- a candidate can start, append to and finish their own attempt, and only an
+-- admin can read anybody's.
+
+create table if not exists public.hiring_assessments (
+  id uuid primary key default gen_random_uuid(),
+  candidate_id uuid not null references auth.users (id) on delete cascade,
+  candidate_email text not null,
+  -- Reserved for employer accounts and invite campaigns, which do not exist yet.
+  employer_id uuid,
+  campaign_id text,
+  role_id text not null default 'asm',
+  assessment_version text not null,
+  scenario_variant text not null check (scenario_variant in ('A', 'B', 'C')),
+  status text not null default 'in_progress'
+    check (status in ('in_progress', 'completed', 'expired')),
+  started_at timestamptz not null default now(),
+  completed_at timestamptz,
+  device_type text,
+  actions jsonb not null default '[]'::jsonb
+    check (jsonb_typeof(actions) = 'array')
+);
+
+comment on table public.hiring_assessments is
+  'One attempt at the Hiring Test. Holds the candidate''s actions; the result is replayed from them, never stored.';
+
+create index if not exists hiring_assessments_candidate_idx
+  on public.hiring_assessments (candidate_id, started_at desc);
+
+alter table public.hiring_assessments enable row level security;
+
+create table if not exists public.hiring_events (
+  id bigint generated always as identity primary key,
+  assessment_id uuid not null references public.hiring_assessments (id) on delete cascade,
+  recorded_at timestamptz not null default now(),
+  real_ms bigint,
+  sim_time integer,
+  event_type text not null,
+  entity_id text,
+  payload jsonb not null default '{}'::jsonb
+);
+
+comment on table public.hiring_events is
+  'Hiring Test telemetry: every action with the store before and after it, and the session''s visibility and connection changes.';
+
+create index if not exists hiring_events_assessment_idx
+  on public.hiring_events (assessment_id, id);
+
+alter table public.hiring_events enable row level security;
+
+-- Thirty minutes, and a little over for a slow connection on the last save.
+create or replace function public.hiring_deadline(p_started timestamptz)
+returns timestamptz
+language sql immutable set search_path = ''
+as $$ select p_started + interval '30 minutes 90 seconds' $$;
+
+-- The candidate's latest attempt, if there is one. Closes it if time ran out
+-- while they were away.
+create or replace function public.hiring_current(p_campaign text default null)
+returns table (
+  id uuid, scenario_variant text, status text, started_at timestamptz,
+  completed_at timestamptz, actions jsonb, server_now timestamptz
+)
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    return;
+  end if;
+
+  update public.hiring_assessments a
+     set status = 'expired', completed_at = a.started_at + interval '30 minutes'
+   where a.candidate_id = v_uid
+     and a.status = 'in_progress'
+     and now() > public.hiring_deadline(a.started_at);
+
+  return query
+  select a.id, a.scenario_variant, a.status, a.started_at, a.completed_at, a.actions, now()
+    from public.hiring_assessments a
+   where a.candidate_id = v_uid
+     and coalesce(a.campaign_id, '') = coalesce(p_campaign, '')
+   order by a.started_at desc
+   limit 1;
+end;
+$$;
+
+-- Start the clock. One attempt per candidate per campaign; an attempt already
+-- under way is handed back rather than replaced. Admins may sit it again.
+-- The form is chosen here, from the account, so it cannot be picked.
+create or replace function public.hiring_start(
+  p_version text,
+  p_device text default null,
+  p_role text default 'asm',
+  p_campaign text default null
+)
+returns table (
+  id uuid, scenario_variant text, status text, started_at timestamptz,
+  completed_at timestamptz, actions jsonb, server_now timestamptz
+)
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_email text;
+  v_existing public.hiring_assessments;
+  v_previous integer;
+  v_variant text;
+begin
+  if v_uid is null then
+    raise exception 'not signed in' using errcode = '42501';
+  end if;
+
+  select a.* into v_existing
+    from public.hiring_current(p_campaign) c
+    join public.hiring_assessments a on a.id = c.id;
+
+  if found and (v_existing.status = 'in_progress' or not public.is_admin()) then
+    return query
+    select v_existing.id, v_existing.scenario_variant, v_existing.status, v_existing.started_at,
+           v_existing.completed_at, v_existing.actions, now();
+    return;
+  end if;
+
+  select lower(u.email) into v_email from auth.users u where u.id = v_uid;
+  select count(*) into v_previous from public.hiring_assessments a where a.candidate_id = v_uid;
+  v_variant := (array['A', 'B', 'C'])[1 + ((abs(hashtext(v_uid::text)) + v_previous) % 3)];
+
+  return query
+  insert into public.hiring_assessments as a
+    (candidate_id, candidate_email, campaign_id, role_id, assessment_version, scenario_variant, device_type)
+  values (
+    v_uid, coalesce(v_email, ''), nullif(left(p_campaign, 80), ''),
+    case when p_role in ('asm', 'sm') then p_role else 'asm' end,
+    left(p_version, 16), v_variant, nullif(left(p_device, 16), '')
+  )
+  returning a.id, a.scenario_variant, a.status, a.started_at, a.completed_at, a.actions, now();
+end;
+$$;
+
+-- Save progress. Append-only: what has been saved must be the start of what is
+-- being saved, so an earlier decision cannot be changed once its consequences
+-- have been seen.
+create or replace function public.hiring_sync(p_id uuid, p_actions jsonb)
+returns boolean
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_saved jsonb;
+  v_length integer;
+begin
+  if auth.uid() is null or jsonb_typeof(p_actions) <> 'array' or jsonb_array_length(p_actions) > 800 then
+    return false;
+  end if;
+
+  select a.actions into v_saved
+    from public.hiring_assessments a
+   where a.id = p_id and a.candidate_id = auth.uid() and a.status = 'in_progress'
+     and now() <= public.hiring_deadline(a.started_at)
+     for update;
+  if not found then
+    return false;
+  end if;
+
+  v_length := jsonb_array_length(v_saved);
+  if jsonb_array_length(p_actions) < v_length then
+    return false;
+  end if;
+  if v_length > 0 and (
+    select jsonb_agg(e.value order by e.ordinality)
+      from jsonb_array_elements(p_actions) with ordinality e
+     where e.ordinality <= v_length
+  ) is distinct from v_saved then
+    return false;
+  end if;
+
+  update public.hiring_assessments a set actions = p_actions where a.id = p_id;
+  return true;
+end;
+$$;
+
+-- Finish. Inside the time limit the final actions are saved and the attempt is
+-- completed; after it, whatever was last saved stands and the attempt is
+-- recorded as having run out of time. Nothing already saved is discarded.
+create or replace function public.hiring_complete(p_id uuid, p_actions jsonb)
+returns text
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_row public.hiring_assessments;
+begin
+  if auth.uid() is null then
+    return null;
+  end if;
+
+  perform public.hiring_sync(p_id, p_actions);
+
+  select a.* into v_row from public.hiring_assessments a
+   where a.id = p_id and a.candidate_id = auth.uid()
+     for update;
+  if not found then
+    return null;
+  end if;
+  if v_row.status <> 'in_progress' then
+    return v_row.status;
+  end if;
+
+  update public.hiring_assessments a
+     set status = case when now() <= public.hiring_deadline(a.started_at) then 'completed' else 'expired' end,
+         completed_at = least(now(), a.started_at + interval '30 minutes')
+   where a.id = p_id
+  returning a.status into v_row.status;
+
+  return v_row.status;
+end;
+$$;
+
+-- Telemetry, in batches, for the candidate's own attempt.
+create or replace function public.hiring_log(p_id uuid, p_events jsonb)
+returns void
+language plpgsql security definer set search_path = ''
+as $$
+begin
+  if auth.uid() is null or jsonb_typeof(p_events) <> 'array' or jsonb_array_length(p_events) > 200 then
+    return;
+  end if;
+  if not exists (
+    select 1 from public.hiring_assessments a where a.id = p_id and a.candidate_id = auth.uid()
+  ) then
+    return;
+  end if;
+  if (select count(*) from public.hiring_events e where e.assessment_id = p_id) > 4000 then
+    return;
+  end if;
+
+  insert into public.hiring_events (assessment_id, real_ms, sim_time, event_type, entity_id, payload)
+  select
+    p_id,
+    case when e.value ->> 'realMs' ~ '^[0-9]{1,12}$' then (e.value ->> 'realMs')::bigint end,
+    case when e.value ->> 'simTime' ~ '^[0-9]{1,6}$' then (e.value ->> 'simTime')::integer end,
+    left(coalesce(e.value ->> 'eventType', 'unknown'), 40),
+    left(e.value ->> 'entityId', 60),
+    coalesce(e.value -> 'payload', '{}'::jsonb)
+  from jsonb_array_elements(p_events) e;
+end;
+$$;
+
+-- Admins only: every attempt, newest first. Results are replayed by the app.
+create or replace function public.admin_hiring_assessments()
+returns table (
+  id uuid, candidate_email text, role_id text, campaign_id text, assessment_version text,
+  scenario_variant text, status text, started_at timestamptz, completed_at timestamptz,
+  device_type text, actions jsonb
+)
+language plpgsql stable security definer set search_path = ''
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorised' using errcode = '42501';
+  end if;
+  return query
+  select a.id, a.candidate_email, a.role_id, a.campaign_id, a.assessment_version,
+         a.scenario_variant, a.status, a.started_at, a.completed_at, a.device_type, a.actions
+    from public.hiring_assessments a
+   order by a.started_at desc
+   limit 500;
+end;
+$$;
+
+-- Admins only: one attempt, with a count of what the session did around it.
+create or replace function public.admin_hiring_assessment(p_id uuid)
+returns table (
+  id uuid, candidate_email text, role_id text, campaign_id text, assessment_version text,
+  scenario_variant text, status text, started_at timestamptz, completed_at timestamptz,
+  device_type text, actions jsonb, session jsonb
+)
+language plpgsql stable security definer set search_path = ''
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorised' using errcode = '42501';
+  end if;
+  return query
+  select a.id, a.candidate_email, a.role_id, a.campaign_id, a.assessment_version,
+         a.scenario_variant, a.status, a.started_at, a.completed_at, a.device_type, a.actions,
+         coalesce((
+           select jsonb_object_agg(s.event_type, s.n)
+             from (
+               select e.event_type, count(*) as n
+                 from public.hiring_events e
+                where e.assessment_id = a.id
+                  and e.event_type in ('hidden', 'visible', 'offline', 'online', 'resume', 'warning_5', 'warning_1', 'expired')
+                group by e.event_type
+             ) s
+         ), '{}'::jsonb)
+    from public.hiring_assessments a
+   where a.id = p_id;
+end;
+$$;
+
+revoke all on function public.hiring_deadline(timestamptz) from public, anon;
+revoke all on function public.hiring_current(text) from public, anon;
+revoke all on function public.hiring_start(text, text, text, text) from public, anon;
+revoke all on function public.hiring_sync(uuid, jsonb) from public, anon;
+revoke all on function public.hiring_complete(uuid, jsonb) from public, anon;
+revoke all on function public.hiring_log(uuid, jsonb) from public, anon;
+revoke all on function public.admin_hiring_assessments() from public, anon;
+revoke all on function public.admin_hiring_assessment(uuid) from public, anon;
+
+grant execute on function public.hiring_deadline(timestamptz) to authenticated;
+grant execute on function public.hiring_current(text) to authenticated;
+grant execute on function public.hiring_start(text, text, text, text) to authenticated;
+grant execute on function public.hiring_sync(uuid, jsonb) to authenticated;
+grant execute on function public.hiring_complete(uuid, jsonb) to authenticated;
+grant execute on function public.hiring_log(uuid, jsonb) to authenticated;
+grant execute on function public.admin_hiring_assessments() to authenticated;
+grant execute on function public.admin_hiring_assessment(uuid) to authenticated;

@@ -1,5 +1,6 @@
 import type { Viewport } from "next";
 
+import { HiringSection } from "@/components/home/hiring-section";
 import { HomeFooter } from "@/components/home/home-footer";
 import { HomeNav } from "@/components/home/home-nav";
 import { FinalCta } from "@/components/landing/final-cta";
@@ -23,6 +24,7 @@ export default function LandingPage() {
       <main id="main" className="relative overflow-x-clip">
         <Hero />
         <Platform />
+        <HiringSection />
         <FinalCta />
       </main>
       <HomeFooter />

@@ -155,6 +155,46 @@ nothing at all when there is no cohort, because a rank of one is flattery.
 
 ---
 
+## The Hiring Test
+
+A separate product for employers, at `/hiring-test`: a 30-minute work-sample
+simulation for Assistant Store Manager and Store Manager candidates. It shares
+the sign-in, the design system and the database with the rest of the site and
+nothing else — no challenge table is read or written, and there is no path
+from one product into the other.
+
+| Route | Who | What |
+| --- | --- | --- |
+| `/hiring-test` | anyone | What it is and what an employer gets |
+| `/hiring-test/assessment` | candidate, signed in by email link | Positioning → the shift → the candidate's profile |
+| `/hiring-test/results/sample` | anyone | A simulated candidate's employer profile |
+| `/hiring-test/results` and `/results/[id]` | admins | Every attempt, and each one's employer profile |
+
+How it is put together, in `lib/hiring/`:
+
+- **`engine.ts` + `model.ts`** — one store, as a pure function from the
+  candidate's actions to its state. Twelve named people, four stations, a
+  demand curve and a surge. Store time moves when the manager spends
+  attention, not when a tap lands, so nothing rewards clicking quickly.
+- **`scoring.ts`** — thirty-four behaviours across five competencies, each
+  scored 0–3 by a fixed rule from what the engine recorded. No model assigns,
+  adjusts or flags anything. Weights live in `weights.ts` and nowhere else.
+- **`forms.ts`** — three parallel forms. Same people and decisions; a different
+  high-value line, nil-pick line, and station the surge lands on.
+- **`server.ts` + `actions.ts`** — the database stores the ordered actions and
+  never a score. A result is replayed from them on the server each time it is
+  opened, and saves are append-only, so there is no number a candidate could
+  have written and no earlier decision they can change.
+
+`npm run test:hiring` runs seven test managers (balanced leader, strong ASM,
+individual hero, command-and-control, fast reactor, over-analyser, SLA-first)
+through all three forms and asserts that each is read the way it should be,
+that an early decision changes a later scene, and that the forms stay within a
+few points of each other. `-- -v` prints every behaviour score;
+`-- --trace individualHero B` prints one shift action by action.
+
+---
+
 ## Quick start
 
 ```bash
@@ -300,6 +340,7 @@ finished a shift it reports no cohort, and the leaderboard says so.
 | `npm run start` | Serve the production build |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
+| `npm run test:hiring` | Hiring Test persona and causality checks |
 
 ---
 

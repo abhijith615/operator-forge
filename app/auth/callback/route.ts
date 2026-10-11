@@ -43,7 +43,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(LOGIN_ROUTE, origin));
   }
 
-  if (!operator.onboarded) {
+  // A Hiring Test candidate is not an operator: they came to sit one
+  // assessment, and are not asked for a name and a WhatsApp number first.
+  const candidate = next === "/hiring-test" || next.startsWith("/hiring-test/");
+
+  if (!operator.onboarded && !candidate) {
     const url = new URL(ONBOARDING_ROUTE, origin);
     url.searchParams.set("next", next);
     return NextResponse.redirect(url);

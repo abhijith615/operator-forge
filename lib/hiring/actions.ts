@@ -1,0 +1,170 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+
+import type { FormState } from "@/lib/auth/form-state";
+import { magicLinkSchema } from "@/lib/auth/schema";
+import { getOperator } from "@/lib/auth/session";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { absoluteUrl } from "@/lib/utils";
+
+import {
+  candidateProfileFrom,
+  readCurrentAttempt,
+  resultFrom,
+  type CandidateProfile,
+} from "./server";
+import type { FormId, Stamped } from "./types";
+import { ASSESSMENT_VERSION } from "./weights";
+
+const ASSESSMENT_ROUTE = "/hiring-test/assessment";
+
+/* ── Signing in ───────────────────────────────────────────────────────── */
+
+/**
+ * The candidate's way in: an email address and a link sent to it.
+ *
+ * The same sign-in the rest of the site uses, pointed back at the assessment
+ * instead of at the operator onboarding — a candidate is not an operator and
+ * is not asked for a WhatsApp number.
+ */
+export async function sendHiringLink(_prev: FormState, formData: FormData): Promise<FormState> {
+  const parsed = magicLinkSchema.safeParse({ email: formData.get("email") });
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Check the email address.",
+      fieldErrors: { email: parsed.error.issues[0]?.message },
+    };
+  }
+
+  const supabase = await getSupabaseServerClient();
+  if (!supabase) {
+    return { status: "error", message: "Sign-in is not available in this environment." };
+  }
+
+  const { error } = await supabase.auth.signInWithOtp({
+    email: parsed.data.email,
+    options: {
+      emailRedirectTo: absoluteUrl(`/auth/callback?next=${encodeURIComponent(ASSESSMENT_ROUTE)}`),
+    },
+  });
+  if (error) return { status: "error", message: error.message };
+
+  return {
+    status: "success",
+    message: `Link sent to ${parsed.data.email}. Open it on this device to begin. It expires in 60 minutes.`,
+  };
+}
+
+/** Sitting it under a different address: sign out, and back to the entry screen. */
+export async function switchHiringAccount(): Promise<void> {
+  const supabase = await getSupabaseServerClient();
+  if (supabase) await supabase.auth.signOut();
+  revalidatePath("/", "layout");
+  redirect(ASSESSMENT_ROUTE);
+}
+
+/* ── The attempt ──────────────────────────────────────────────────────── */
+
+export interface StartedAttempt {
+  id: string;
+  form: FormId;
+  status: "in_progress" | "completed" | "expired";
+  startedAt: number;
+  serverNow: number;
+  actions: Stamped[];
+}
+
+/** Pressing START SHIFT. The clock is the database's, and starts here. */
+export async function startAssessment(device: string): Promise<StartedAttempt | null> {
+  const operator = await getOperator();
+  if (!operator) return null;
+  const supabase = await getSupabaseServerClient();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase.rpc("hiring_start", {
+    p_version: ASSESSMENT_VERSION,
+    p_device: ["mobile", "tablet", "desktop"].includes(device) ? device : "unknown",
+    p_role: "asm",
+    p_campaign: null,
+  });
+  const row = (Array.isArray(data) ? data[0] : data) as
+    | { id: string; scenario_variant: FormId; status: StartedAttempt["status"]; started_at: string; actions: unknown; server_now: string }
+    | undefined;
+  if (error || !row) return null;
+
+  return {
+    id: row.id,
+    form: row.scenario_variant,
+    status: row.status,
+    startedAt: Date.parse(row.started_at),
+    serverNow: Date.parse(row.server_now),
+    actions: Array.isArray(row.actions) ? (row.actions as Stamped[]) : [],
+  };
+}
+
+const tidy = (actions: Stamped[]): Stamped[] =>
+  (Array.isArray(actions) ? actions : []).slice(0, 800).map((entry) => ({ a: entry.a, at: Math.round(Number(entry.at) || 0) }));
+
+/** Progress, saved as the candidate goes. The database only accepts additions. */
+export async function syncAssessment(id: string, actions: Stamped[]): Promise<boolean> {
+  const supabase = await getSupabaseServerClient();
+  if (!supabase) return false;
+  const { data, error } = await supabase.rpc("hiring_sync", { p_id: id, p_actions: tidy(actions) });
+  return !error && data === true;
+}
+
+export interface TelemetryEvent {
+  eventType: string;
+  realMs: number;
+  simTime: number;
+  entityId?: string;
+  payload: Record<string, unknown>;
+}
+
+export async function logAssessment(id: string, events: TelemetryEvent[]): Promise<boolean> {
+  const supabase = await getSupabaseServerClient();
+  if (!supabase || events.length === 0) return false;
+  const { error } = await supabase.rpc("hiring_log", { p_id: id, p_events: events.slice(0, 200) });
+  return !error;
+}
+
+/**
+ * The shift is over, or the thirty minutes are.
+ *
+ * The profile handed back is built from what the database holds after the
+ * final save, not from what the browser sent, so a save the database refused
+ * cannot appear in it.
+ */
+export async function completeAssessment(id: string, actions: Stamped[]): Promise<CandidateProfile | null> {
+  const supabase = await getSupabaseServerClient();
+  if (!supabase) return null;
+
+  const { error } = await supabase.rpc("hiring_complete", { p_id: id, p_actions: tidy(actions) });
+  if (error) return null;
+
+  const attempt = await readCurrentAttempt();
+  if (!attempt || attempt.id !== id || attempt.status === "in_progress") return null;
+
+  const { result, incomplete } = resultFrom(attempt.scenario_variant, attempt.actions);
+
+  // The evidence the result rests on, alongside the rest of the telemetry.
+  await supabase.rpc("hiring_log", {
+    p_id: id,
+    p_events: result.evidence.map((evidence) => ({
+      eventType: "evidence",
+      simTime: evidence.simTime ?? 0,
+      entityId: evidence.behaviourId,
+      payload: {
+        assessmentVersion: ASSESSMENT_VERSION,
+        scenarioVariant: attempt.scenario_variant,
+        evidenceObject: evidence,
+      },
+    })),
+  });
+
+  revalidatePath("/hiring-test", "layout");
+  return candidateProfileFrom(result, incomplete);
+}
