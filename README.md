@@ -168,7 +168,7 @@ from one product into the other.
 | `/hiring-test` | anyone | What it is and what an employer gets |
 | `/hiring-test/assessment` | candidate, signed in by email link | Positioning → the shift → the candidate's profile |
 | `/hiring-test/results/sample` | anyone | A simulated candidate's employer profile |
-| `/hiring-test/results` and `/results/[id]` | admins | Every attempt, and each one's employer profile |
+| `/hiring-test/results` and `/results/[id]` | admins | Every attempt, each one's employer profile, extra time, and the item-level export |
 
 How it is put together, in `lib/hiring/`:
 
@@ -179,6 +179,19 @@ How it is put together, in `lib/hiring/`:
 - **`scoring.ts`** — thirty-four behaviours across five competencies, each
   scored 0–3 by a fixed rule from what the engine recorded. No model assigns,
   adjusts or flags anything. Weights live in `weights.ts` and nowhere else.
+  Behaviours that come from the same decision are grouped (`DECISIONS`,
+  twenty-one of them), and a competency is the plain average of its decisions,
+  so one choice cannot count several times.
+- **Consent and extra time** — the start screen shows what is recorded and who
+  sees it, and the shift cannot start until the candidate agrees
+  (`hiring_begin` refuses without it). An admin can arrange 25%, 50% or 100%
+  extra time for an email address at `/hiring-test/results` before the
+  candidate starts; the limit is fixed on the attempt and never shown on a
+  result.
+- **`export.ts`** — `/hiring-test/results/export` (admins) downloads one row
+  per finished attempt with every decision and behaviour as a column, blank
+  where a moment was not reached, plus a codebook. It is the file reliability,
+  factor and fairness analysis are run on.
 - **`forms.ts`** — three parallel forms. Same people and decisions; a different
   high-value line, nil-pick line, and station the surge lands on.
 - **Unfinished shifts** — if the thirty minutes end first, moments that were

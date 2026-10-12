@@ -25,6 +25,8 @@ export interface Attempt {
   startedAt: number;
   /** Server clock minus this device's clock, so the timer cannot be moved by changing the phone's time. */
   skew: number;
+  /** Seconds this attempt was given: thirty minutes, plus any extra time arranged. */
+  limit: number;
   /** A practice run that is never saved or scored. */
   local: boolean;
 }

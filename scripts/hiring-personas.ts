@@ -10,7 +10,7 @@ import { expire, replay } from "../lib/hiring/engine";
 import { allSuggestions, answer } from "../lib/hiring/guide";
 import { clockLabel, outputOf } from "../lib/hiring/model";
 import { PERSONAS, sitShift, type PersonaId, type Style } from "../lib/hiring/personas";
-import { scoreAssessment, type AssessmentResult } from "../lib/hiring/scoring";
+import { DECISIONS, scoreAssessment, type AssessmentResult } from "../lib/hiring/scoring";
 import type { FormId, HiringState } from "../lib/hiring/types";
 import { COMPETENCIES, assessmentWeights } from "../lib/hiring/weights";
 
@@ -108,8 +108,34 @@ const perCompetency = Object.fromEntries(COMPETENCIES.map((id) => [id, sample.ev
 check("evidence opportunities: 10 / 8 / 6 / 6 / 4",
   perCompetency.teamManagement === 10 && perCompetency.inventoryManagement === 8 && perCompetency.timePrioritisation === 6 &&
     perCompetency.criticalThinking === 6 && perCompetency.customerFirst === 4, JSON.stringify(perCompetency));
-check("no single behaviour is more than a fifth of its competency",
-  COMPETENCIES.every((id) => 1 / perCompetency[id]! <= 0.25));
+/* ── One decision, one score ──────────────────────────────────────────── */
+
+const grouped = DECISIONS.flatMap((decision) => decision.behaviours);
+check("every behaviour belongs to exactly one decision",
+  grouped.length === sample.evidence.length && new Set(grouped).size === grouped.length &&
+    sample.evidence.every((e) => grouped.includes(e.behaviourId)), `${grouped.length} grouped, ${sample.evidence.length} scored`);
+check("a decision's behaviours all sit in its own competency",
+  DECISIONS.every((decision) => decision.behaviours.every((id) => sample.evidence.find((e) => e.behaviourId === id)!.competencyId === decision.competencyId)));
+const perDecision = Object.fromEntries(COMPETENCIES.map((id) => [id, DECISIONS.filter((d) => d.competencyId === id).length]));
+check("decisions per competency: 5 / 4 / 4 / 4 / 4, so none is more than a quarter of its competency",
+  perDecision.teamManagement === 5 && COMPETENCIES.slice(1).every((id) => perDecision[id] === 4), JSON.stringify(perDecision));
+check("a competency is the plain average of its decisions",
+  sample.competencies.every((c) => {
+    const own = sample.decisions.filter((d) => d.competencyId === c.id && d.observed);
+    return c.score === Math.round((own.reduce((sum, d) => sum + d.earned / d.available, 0) / own.length) * 100);
+  }));
+
+// Closing the case badly is one bad decision, not three: it can cost Inventory
+// a quarter of its score and no more, whatever is done with the three parts of it.
+{
+  const base = PERSONAS.balancedLeader;
+  const good = scoreAssessment(sitShift("A", base).state);
+  const badClose = scoreAssessment(
+    sitShift("A", { ...base, kase: { ...base.kase, units: ["writeoff", "writeoff", "theft"], steps: ["writeOff", "accuse"], controls: ["remindTeam"] } }).state,
+  );
+  const drop = comp(good, "inventoryManagement") - comp(badClose, "inventoryManagement");
+  check("one badly closed case costs Inventory at most a quarter", drop > 0 && drop <= 25, `${comp(good, "inventoryManagement")} → ${comp(badClose, "inventoryManagement")}`);
+}
 
 for (const form of FORMS) {
   const tag = (name: string) => `[${form}] ${name}`;
@@ -255,8 +281,9 @@ for (const form of FORMS) {
       half.outcomeTitle === "SHIFT NOT COMPLETED", `${half.observed}/${half.opportunities}`);
 
   check(tag("unreached moments are left out, not scored as zero"),
-    half.competencies.every((c) => (c.observed === 0 ? c.score === 0 && c.available === 0 : c.score === Math.round((c.earned / (c.observed * 3)) * 100))) &&
-      half.overall > 60, `overall ${half.overall}; ${half.competencies.map((c) => `${c.score}(${c.observed}/${c.opportunities})`).join(" ")}`);
+    half.competencies.every((c) => (c.decisions === 0 ? c.score === 0 && c.available === 0 : c.score > 0)) &&
+      half.decisions.filter((d) => !d.observed).every((d) => d.score === 0 && d.available === 0) &&
+      half.overall > 60, `overall ${half.overall}; ${half.competencies.map((c) => `${c.score}(${c.decisions}/${c.decisionsTotal})`).join(" ")}`);
 
   check(tag("an unfinished shift is never indicated as Strong"),
     !half.indication.startsWith("STRONG") && !cutAt(0.9).indication.startsWith("STRONG"), half.indication);

@@ -1066,12 +1066,14 @@ function customerEvents(state: HiringState): Draft[] {
   }
 
   /* U3 · does not buy an internal metric with the customer */
+  // The bag and the nil pick are scored by U1 and U2. Counting them here as
+  // well would score one decision twice inside the same competency, so this
+  // reads only the two other moments a number could be bought at a customer's
+  // expense: stopping the store to search, and holding orders back.
   const trades: string[] = [];
-  if (bag?.by === "unchanged") trades.push("dispatched the unsegregated bag to hold CTD");
   if (state.bn.moves.some((m) => m.kind === "slowRelease")) trades.push("slowed order release, which lengthens every customer's promise");
   if (state.kase.disposition?.steps.includes("closeStore")) trades.push("stopped order release to search for one unit");
-  if (n === "delisted") trades.push(`took ${form.nilPick.item} off sale with stock in the building`);
-  const reachedAll = bag !== null || state.plan !== null;
+  const reachedAll = state.arrivals.customer !== undefined;
   if (!reachedAll && trades.length === 0) {
     out.push(notReached("U3", C, "Metrics versus the customer", "Does not optimise internal metrics at customer expense."));
   } else {
@@ -1082,10 +1084,10 @@ function customerEvents(state: HiringState): Draft[] {
       title: u3 === 3 ? "Never bought a metric with a customer's order" : "Protected a number at a customer's expense",
       claim: "Does not optimise internal metrics at customer expense.",
       simTime: null,
-      stateBefore: "Four moments in the shift offered a better-looking number in exchange for a worse customer outcome.",
+      stateBefore: "Twice in the shift, holding customers' orders back would have made the store's own numbers easier: stopping order release to search for a missing unit, and slowing release at the bottleneck.",
       candidateAction: trades.length ? `Candidate ${trades.join("; ")}.` : "Took none of them.",
       timingContext: "Across the shift",
-      stateAfter: `${trades.length} of 4 taken.`,
+      stateAfter: `${trades.length} of 2 taken.`,
       score: u3 as 0 | 1 | 3,
       behaviourTags: u3 === 3 ? ["customer_over_metric"] : ["metric_over_customer"],
       counter: trades.length >= 2,
@@ -1164,7 +1166,12 @@ export interface CompetencyResult {
   id: CompetencyId;
   label: string;
   weight: number;
+  /** The average of its decisions' scores. */
   score: number;
+  /** Decisions reached, of those the competency is built from. */
+  decisions: number;
+  decisionsTotal: number;
+  /** Raw behaviour points, for reference. The score is not this ratio. */
   earned: number;
   available: number;
   strength: EvidenceStrength;
@@ -1182,6 +1189,8 @@ export interface AssessmentResult {
   observed: number;
   opportunities: number;
   competencies: CompetencyResult[];
+  /** One per decision. Competency scores are averages of these. */
+  decisions: DecisionResult[];
   evidence: EvidenceEvent[];
   flags: ControlFlag[];
   indication: string;
@@ -1234,19 +1243,72 @@ function reached(event: EvidenceEvent): boolean {
   return !event.behaviourTags.includes("not_reached");
 }
 
-function strengthOf(events: EvidenceEvent[]): { strength: EvidenceStrength; observed: number } {
-  const seen = events.filter(reached);
-  const share = seen.length / events.length;
-  const mean = seen.reduce((s, e) => s + e.score, 0) / (seen.length || 1);
-  const spread = Math.sqrt(seen.reduce((s, e) => s + (e.score - mean) ** 2, 0) / (seen.length || 1));
-  // Plenty of opportunities, taken, and pointing the same way.
-  const strength: EvidenceStrength =
-    seen.length >= 4 && share >= 0.85 && spread <= 1.0
-      ? "STRONG EVIDENCE"
-      : seen.length >= 3 && share >= 0.6
-        ? "MODERATE EVIDENCE"
-        : "LIMITED EVIDENCE";
-  return { strength, observed: seen.length };
+/**
+ * The decisions the behaviours come out of.
+ *
+ * Several behaviours are read from one decision: closing the case is scored
+ * for how the units were classified, what was done about the unresolved one
+ * and which control was restored — three behaviours, one moment of judgement.
+ * Summing them as three would let that one moment count three times, and a
+ * candidate who got it wrong would look three times worse than one who got a
+ * single-behaviour decision wrong.
+ *
+ * So behaviours are grouped by the decision they come from, each decision is
+ * scored once (the share of its behaviours' points earned), and a competency
+ * is the plain average of its decisions. Every behaviour is in exactly one.
+ */
+export const DECISIONS: { id: string; competencyId: CompetencyId; label: string; behaviours: string[] }[] = [
+  { id: "floor", competencyId: "teamManagement", label: "Building the floor", behaviours: ["T1", "T2"] },
+  { id: "gap", competencyId: "teamManagement", label: "Covering the absence", behaviours: ["T3", "T4"] },
+  { id: "riya", competencyId: "teamManagement", label: "A slow new starter", behaviours: ["T5", "T6"] },
+  { id: "arjun", competencyId: "teamManagement", label: "An unhappy expert", behaviours: ["T7", "T8"] },
+  { id: "delegation", competencyId: "teamManagement", label: "Who did the work", behaviours: ["T9", "T10"] },
+
+  { id: "count", competencyId: "inventoryManagement", label: "Counting the cage", behaviours: ["I1", "I2", "I7"] },
+  { id: "records", competencyId: "inventoryManagement", label: "Reading the records", behaviours: ["I3"] },
+  { id: "disposition", competencyId: "inventoryManagement", label: "Closing the case", behaviours: ["I4", "I5", "I8"] },
+  { id: "nilpick", competencyId: "inventoryManagement", label: "The nil pick", behaviours: ["I6"] },
+
+  { id: "surge", competencyId: "timePrioritisation", label: "Getting ahead of the surge", behaviours: ["P1", "P2"] },
+  { id: "triage", competencyId: "timePrioritisation", label: "Three problems, one manager", behaviours: ["P3"] },
+  { id: "attention", competencyId: "timePrioritisation", label: "The manager's own time", behaviours: ["P6"] },
+  { id: "plan", competencyId: "timePrioritisation", label: "The final plan", behaviours: ["P4", "P5"] },
+
+  { id: "diagnosis", competencyId: "criticalThinking", label: "Reading the bottleneck", behaviours: ["C1", "C3"] },
+  { id: "intervention", competencyId: "criticalThinking", label: "Changing the floor", behaviours: ["C2"] },
+  { id: "verification", competencyId: "criticalThinking", label: "Testing the change", behaviours: ["C4", "C5"] },
+  { id: "focus", competencyId: "criticalThinking", label: "How much was looked at", behaviours: ["C6"] },
+
+  { id: "bag", competencyId: "customerFirst", label: "The bag at P2", behaviours: ["U1"] },
+  { id: "complete", competencyId: "customerFirst", label: "A complete order", behaviours: ["U2"] },
+  { id: "trades", competencyId: "customerFirst", label: "Numbers versus the customer", behaviours: ["U3"] },
+  { id: "recovery", competencyId: "customerFirst", label: "A late order", behaviours: ["U4"] },
+];
+
+export interface DecisionResult {
+  id: string;
+  competencyId: CompetencyId;
+  label: string;
+  behaviours: string[];
+  /** False where none of its behaviours was reached. */
+  observed: boolean;
+  /** 0–100: points earned over points available, across the behaviours reached. */
+  score: number;
+  earned: number;
+  available: number;
+}
+
+/** How much the decisions seen support a competency score: how many, how complete, how consistent. */
+function strengthOf(decisions: DecisionResult[]): EvidenceStrength {
+  const seen = decisions.filter((d) => d.observed).map((d) => (d.earned / d.available) * 3);
+  const share = seen.length / decisions.length;
+  const mean = seen.reduce((s, v) => s + v, 0) / (seen.length || 1);
+  const spread = Math.sqrt(seen.reduce((s, v) => s + (v - mean) ** 2, 0) / (seen.length || 1));
+  return seen.length >= 4 && share >= 0.85 && spread <= 0.75
+    ? "STRONG EVIDENCE"
+    : seen.length >= 3 && share >= 0.6
+      ? "MODERATE EVIDENCE"
+      : "LIMITED EVIDENCE";
 }
 
 const PROBES: Record<string, { area: string; probe: string }> = {
@@ -1366,21 +1428,31 @@ export function scoreAssessment(state: HiringState): AssessmentResult {
 
   // A competency is scored on the moments the candidate reached. One they never
   // got to says nothing about them, and scoring it as zero would say something.
+  const byId = new Map(evidence.map((event) => [event.behaviourId, event]));
+  const decisions: DecisionResult[] = DECISIONS.map((decision) => {
+    const seen = decision.behaviours.map((id) => byId.get(id)!).filter(reached);
+    const earned = seen.reduce((sum, e) => sum + e.score, 0);
+    const available = seen.length * 3;
+    return { ...decision, observed: seen.length > 0, score: available ? Math.round((earned / available) * 100) : 0, earned, available };
+  });
+
+  // Each decision counts once, however many behaviours were read from it.
   const competencies: CompetencyResult[] = COMPETENCIES.map((id) => {
     const events = byCompetency[id];
     const seen = events.filter(reached);
-    const earned = seen.reduce((sum, e) => sum + e.score, 0);
-    const available = seen.length * 3;
-    const { strength, observed } = strengthOf(events);
+    const own = decisions.filter((d) => d.competencyId === id);
+    const made = own.filter((d) => d.observed);
     return {
       id,
       label: COMPETENCY_LABEL[id],
       weight: assessmentWeights[id],
-      score: available ? Math.round((earned / available) * 100) : 0,
-      earned,
-      available,
-      strength,
-      observed,
+      score: made.length ? Math.round((made.reduce((sum, d) => sum + d.earned / d.available, 0) / made.length) * 100) : 0,
+      decisions: made.length,
+      decisionsTotal: own.length,
+      earned: seen.reduce((sum, e) => sum + e.score, 0),
+      available: seen.length * 3,
+      strength: strengthOf(own),
+      observed: seen.length,
       opportunities: events.length,
     };
   });
@@ -1393,9 +1465,9 @@ export function scoreAssessment(state: HiringState): AssessmentResult {
   // On a finished shift that is exactly Team × 0.30 + Inventory × 0.25 + …;
   // on an unfinished one, a competency seen once cannot carry a tenth of the
   // result on that one moment.
-  const seenWeight = competencies.reduce((sum, c) => sum + c.weight * (c.observed / c.opportunities), 0);
+  const seenWeight = competencies.reduce((sum, c) => sum + c.weight * (c.decisions / c.decisionsTotal), 0);
   const overall = seenWeight
-    ? Math.round(competencies.reduce((sum, c) => sum + c.score * c.weight * (c.observed / c.opportunities), 0) / seenWeight)
+    ? Math.round(competencies.reduce((sum, c) => sum + c.score * c.weight * (c.decisions / c.decisionsTotal), 0) / seenWeight)
     : 0;
 
   // Where something downstream needs a number for every competency, an
@@ -1562,6 +1634,7 @@ export function scoreAssessment(state: HiringState): AssessmentResult {
     observed,
     opportunities,
     competencies,
+    decisions,
     evidence,
     flags,
     indication,
@@ -1576,7 +1649,7 @@ export function scoreAssessment(state: HiringState): AssessmentResult {
       strongest: best.slice(0, 3).map((e) => ({ title: e.title, text: e.laterConsequence ?? e.stateAfter })),
       development: {
         label: lowest.label,
-        text: `${incomplete ? "Your lowest of those you reached" : "Your lowest of the five"}. ${lowest.earned} of ${lowest.available} points across ${lowest.observed} moment${lowest.observed === 1 ? "" : "s"} in the shift.`,
+        text: `${incomplete ? "Your lowest of those you reached" : "Your lowest of the five"}, across ${lowest.decisions} decision${lowest.decisions === 1 ? "" : "s"} in the shift.`,
       },
       // Always three: the weakest moments first, then the partial ones, then the
       // standing advice for the lowest competency.

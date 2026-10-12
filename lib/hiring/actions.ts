@@ -9,14 +9,16 @@ import { getOperator } from "@/lib/auth/session";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { absoluteUrl } from "@/lib/utils";
 
+import { CONSENT_VERSION } from "./content";
 import {
   candidateProfileFrom,
+  isMissing,
   readCurrentAttempt,
   resultFrom,
   type CandidateProfile,
 } from "./server";
 import type { FormId, Stamped } from "./types";
-import { ASSESSMENT_VERSION } from "./weights";
+import { ASSESSMENT_SECONDS, ASSESSMENT_VERSION } from "./weights";
 
 const ASSESSMENT_ROUTE = "/hiring-test/assessment";
 
@@ -74,24 +76,38 @@ export interface StartedAttempt {
   status: "in_progress" | "completed" | "expired";
   startedAt: number;
   serverNow: number;
+  /** Seconds this attempt has: thirty minutes, plus any extra time arranged. */
+  limit: number;
   actions: Stamped[];
 }
 
-/** Pressing START SHIFT. The clock is the database's, and starts here. */
-export async function startAssessment(device: string): Promise<StartedAttempt | null> {
+/**
+ * Pressing START SHIFT. The clock is the database's, and starts here.
+ *
+ * Only with consent: the candidate has to have ticked the data notice, and the
+ * version of the notice they agreed to is recorded with the attempt. A call
+ * without it starts nothing.
+ */
+export async function startAssessment(device: string, consented: boolean): Promise<StartedAttempt | null> {
+  if (consented !== true) return null;
   const operator = await getOperator();
   if (!operator) return null;
   const supabase = await getSupabaseServerClient();
   if (!supabase) return null;
 
-  const { data, error } = await supabase.rpc("hiring_start", {
+  const p_device = ["mobile", "tablet", "desktop"].includes(device) ? device : "unknown";
+  let { data, error } = await supabase.rpc("hiring_begin", {
     p_version: ASSESSMENT_VERSION,
-    p_device: ["mobile", "tablet", "desktop"].includes(device) ? device : "unknown",
+    p_consent_version: CONSENT_VERSION,
+    p_device,
     p_role: "asm",
     p_campaign: null,
   });
+  if (isMissing(error)) {
+    ({ data, error } = await supabase.rpc("hiring_start", { p_version: ASSESSMENT_VERSION, p_device, p_role: "asm", p_campaign: null }));
+  }
   const row = (Array.isArray(data) ? data[0] : data) as
-    | { id: string; scenario_variant: FormId; status: StartedAttempt["status"]; started_at: string; actions: unknown; server_now: string }
+    | { id: string; scenario_variant: FormId; status: StartedAttempt["status"]; started_at: string; actions: unknown; server_now: string; time_limit_seconds?: number }
     | undefined;
   if (error || !row) return null;
 
@@ -101,8 +117,30 @@ export async function startAssessment(device: string): Promise<StartedAttempt | 
     status: row.status,
     startedAt: Date.parse(row.started_at),
     serverNow: Date.parse(row.server_now),
+    limit: row.time_limit_seconds ?? ASSESSMENT_SECONDS,
     actions: Array.isArray(row.actions) ? (row.actions as Stamped[]) : [],
   };
+}
+
+/* ── Extra time ───────────────────────────────────────────────────────── */
+
+/**
+ * Arrange, change or withdraw extra time for a candidate's email address.
+ * Admins only — the database checks, and refuses anybody else.
+ */
+export async function setAccommodation(formData: FormData): Promise<void> {
+  const supabase = await getSupabaseServerClient();
+  if (!supabase) return;
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const percent = Number(formData.get("percent") ?? 0);
+  const note = String(formData.get("note") ?? "").trim();
+  if (!email || ![0, 25, 50, 100].includes(percent)) return;
+  await supabase.rpc("admin_hiring_set_accommodation", {
+    p_email: email,
+    p_extra_seconds: Math.round((ASSESSMENT_SECONDS * percent) / 100),
+    p_note: note || null,
+  });
+  revalidatePath("/hiring-test/results");
 }
 
 const tidy = (actions: Stamped[]): Stamped[] =>
@@ -132,7 +170,7 @@ export async function logAssessment(id: string, events: TelemetryEvent[]): Promi
 }
 
 /**
- * The shift is over, or the thirty minutes are.
+ * The shift is over, or the time is.
  *
  * The profile handed back is built from what the database holds after the
  * final save, not from what the browser sent, so a save the database refused

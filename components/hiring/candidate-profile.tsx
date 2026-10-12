@@ -43,7 +43,7 @@ export function CandidateProfile({
 
         {profile.timedOut ? (
           <p className="mt-4 rounded-[14px] border border-line-strong bg-white/[0.03] px-3.5 py-3 text-[13.5px] leading-snug text-mid">
-            The thirty minutes ran out before the shift did. You reached {profile.observed} of {profile.opportunities}{" "}
+            The time ran out before the shift did. You reached {profile.observed} of {profile.opportunities}{" "}
             assessed moments, and this profile is built only from those. Parts you did not reach are not scored against you.
           </p>
         ) : null}

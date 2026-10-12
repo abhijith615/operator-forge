@@ -175,7 +175,7 @@ export function EmployerProfile({ result, meta }: { result: AssessmentResult; me
           <section className="mt-3 rounded-[20px] border border-warn-500/40 bg-warn-500/[0.07] p-5 sm:p-6" aria-label="Shift not completed">
             <p className="font-mono text-[12px] font-semibold tracking-[0.18em] text-warn-500 uppercase">Shift not completed</p>
             <p className="mt-2 text-[15.5px] font-semibold text-hi">
-              {result.observed} of {result.opportunities} assessed moments were reached before the thirty minutes ended.
+              {result.observed} of {result.opportunities} assessed moments were reached before the time ended.
             </p>
             <p className="mt-1 text-[13.5px] leading-snug text-mid">
               Scores cover only the moments reached; nothing unreached counts against the candidate. A competency seen
@@ -231,7 +231,7 @@ export function EmployerProfile({ result, meta }: { result: AssessmentResult; me
                 </div>
                 <p className={cn("mt-1.5 text-[12.5px]", competency.observed < competency.opportunities ? "text-warn-500" : "text-lo")}>
                   {competency.observed
-                    ? `${competency.earned} of ${competency.available} points · ${competency.observed} of ${competency.opportunities} moments observed`
+                    ? `${competency.decisions} of ${competency.decisionsTotal} decisions · ${competency.observed} of ${competency.opportunities} behaviours observed`
                     : `None of the ${competency.opportunities} moments was reached`}
                 </p>
               </li>
@@ -317,7 +317,9 @@ export function EmployerProfile({ result, meta }: { result: AssessmentResult; me
         <section className="mt-8">
           <h2 className={cn(eyebrow, "text-ember-500")}>Behavioural evidence</h2>
           <p className="mt-1.5 text-[13.5px] leading-snug text-mid">
-            Thirty-four observations. Each scores 0 to 3; a competency is the points earned over the points available.
+            Thirty-four behaviours, read from twenty-one decisions. Each behaviour scores 0 to 3. A decision is scored
+            once, as the share of its behaviours’ points earned, and a competency is the average of its decisions — so
+            one decision cannot count several times.
           </p>
           <div className="mt-4 space-y-3">
             {COMPETENCIES.map((id) => {
@@ -328,15 +330,31 @@ export function EmployerProfile({ result, meta }: { result: AssessmentResult; me
                   <summary className="flex cursor-pointer list-none items-baseline justify-between gap-3 px-5 py-4 sm:px-6 [&::-webkit-details-marker]:hidden">
                     <span className="text-[16px] font-semibold text-hi uppercase">{COMPETENCY_LABEL[id]}</span>
                     <span className="tabular text-[13.5px] text-mid">
-                      {competency.score} · {events.length} observations
+                      {competency.observed ? competency.score : "Not observed"} · {competency.decisionsTotal} decisions
                       <span className="ml-2 text-lo group-open:hidden">Show</span>
                       <span className="ml-2 hidden text-lo group-open:inline">Hide</span>
                     </span>
                   </summary>
-                  <div className="space-y-2.5 px-3 pb-4 sm:px-5">
-                    {events.map((event) => (
-                      <EvidenceCard key={event.behaviourId} event={event} />
-                    ))}
+                  <div className="space-y-5 px-3 pb-4 sm:px-5">
+                    {result.decisions
+                      .filter((decision) => decision.competencyId === id)
+                      .map((decision) => (
+                        <section key={decision.id} aria-label={decision.label}>
+                          <div className="mb-2 flex items-baseline justify-between gap-3 border-b border-line pb-1.5">
+                            <h3 className="font-mono text-[12px] tracking-[0.14em] text-mid uppercase">{decision.label}</h3>
+                            <span className="tabular shrink-0 text-[13.5px] font-semibold text-hi">
+                              {decision.observed ? decision.score : "Not reached"}
+                            </span>
+                          </div>
+                          <div className="space-y-2.5">
+                            {events
+                              .filter((event) => decision.behaviours.includes(event.behaviourId))
+                              .map((event) => (
+                                <EvidenceCard key={event.behaviourId} event={event} />
+                              ))}
+                          </div>
+                        </section>
+                      ))}
                   </div>
                 </details>
               );
@@ -356,7 +374,8 @@ export function EmployerProfile({ result, meta }: { result: AssessmentResult; me
             <li>Every score is assigned by fixed rules from what the candidate did in the simulated store. No AI assigns, adjusts or overrides a score or a flag.</li>
             <li>Timing is operational — before or after a queue breached — never how fast somebody tapped. Language, typing speed and device are not scored.</li>
             <li>Evidence strength reflects how many moments were observed and how consistently they pointed the same way. It is not a statistical confidence interval; there is not yet the data to support one.</li>
-            <li>A competency is scored on the moments the candidate reached. If the thirty minutes end first, unreached moments are left out rather than scored as zero, each competency counts in proportion to how much of it was seen, and the indication is capped: never “Strong” on an unfinished shift, and “Additional assessment” when under half of it was reached.</li>
+            <li>Several behaviours can be read from one decision. They are scored together as that decision, once, and a competency is the average of its decisions. A decision can still be evidence for two different competencies where it shows two different things — the nil pick shows inventory discipline and whether the customer got a complete order.</li>
+            <li>A competency is scored on the moments the candidate reached. If the time ends first, unreached moments are left out rather than scored as zero, each competency counts in proportion to how much of it was seen, and the indication is capped: never “Strong” on an unfinished shift, and “Additional assessment” when under half of it was reached.</li>
             <li>This is a work sample from one thirty-minute shift. Use it alongside an interview, not instead of one.</li>
           </ul>
           {!meta.sample ? (

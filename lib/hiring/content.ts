@@ -61,12 +61,14 @@ export const PHASE_SECONDS: Record<Phase, number> = {
  * `behind` is the seconds by which the part the candidate is still in has
  * overrun its guide, or zero.
  */
-export function paceOf(elapsed: number, phaseIndex: number): { marker: number; behind: number } {
+export function paceOf(elapsed: number, phaseIndex: number, limit = 1800): { marker: number; behind: number } {
+  // Somebody given extra time has every part stretched by the same proportion.
+  const stretch = limit / 1800;
   let start = 0;
   let marker = 1;
   let due = 0;
   PHASES.forEach((phase, index) => {
-    const length = PHASE_SECONDS[phase];
+    const length = PHASE_SECONDS[phase] * stretch;
     if (elapsed >= start && elapsed < start + length) marker = (index + (elapsed - start) / length) / PHASES.length;
     start += length;
     if (index === phaseIndex) due = start;
@@ -341,6 +343,44 @@ export const LATE_ORDER_FIXES: { id: LateOrderFix; label: string }[] = [
   { id: "informPriority", label: "Tell the customer now, priority rider" },
   { id: "voucher", label: "Send a ₹200 voucher" },
   { id: "cancel", label: "Cancel and refund" },
+];
+
+/* ── Consent ──────────────────────────────────────────────────────────── */
+
+/** Where a candidate writes to ask for extra time, a copy of their data, or its deletion. */
+export const HIRING_CONTACT = "hello@operatorforge.in";
+
+/**
+ * The version of the notice below. Recorded with each attempt, so it is always
+ * possible to say what a given candidate agreed to. Change it whenever the
+ * notice changes in substance.
+ */
+export const CONSENT_VERSION = "2026-10-12";
+
+/**
+ * What is collected and what is done with it, in the candidate's terms.
+ *
+ * Every line here has to stay true of the code. If the simulation starts
+ * recording something else, or showing it to somebody else, this changes
+ * first and the version above with it.
+ */
+export const DATA_NOTICE: { title: string; text: string }[] = [
+  {
+    title: "What we record",
+    text: "Your email address; every decision you make in the simulation and when you made it; whether you are on a phone, tablet or computer; when the page was hidden, reloaded or lost its connection; and the topics you ask the assistant about (not the words you type).",
+  },
+  {
+    title: "What it is used for",
+    text: "To produce your profile and an assessment of how you ran the shift, for hiring. It is scored by fixed rules. No AI model scores you, and nothing rejects you automatically — a person decides.",
+  },
+  {
+    title: "Who sees it",
+    text: "Operator Forge, and the employer who asked you to take this test, if one did. You see your own profile when the shift ends.",
+  },
+  {
+    title: "Your choices",
+    text: "Taking the test is your choice. You can ask for a copy of your data, withdraw your consent or have your attempt deleted at any time by writing to the address below.",
+  },
 ];
 
 /* ── Before the shift ─────────────────────────────────────────────────── */

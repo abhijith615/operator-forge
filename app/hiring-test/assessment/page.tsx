@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 import { CandidateEntry, HiringAssessment } from "@/components/hiring/assessment";
 import { getOperator } from "@/lib/auth/session";
 import type { StartedAttempt } from "@/lib/hiring/actions";
-import { candidateProfileFrom, readCurrentAttempt, resultFrom } from "@/lib/hiring/server";
+import { candidateProfileFrom, readCurrentAttempt, readTimeLimit, resultFrom } from "@/lib/hiring/server";
+import { ASSESSMENT_SECONDS } from "@/lib/hiring/weights";
 
 export const metadata: Metadata = {
   title: "Hiring Test — Dark Store Manager Simulation",
@@ -32,7 +33,7 @@ export default async function HiringAssessmentPage({
 
   if (attempt && attempt.status !== "in_progress") {
     const { result, incomplete } = resultFrom(attempt.scenario_variant, attempt.actions);
-    return <HiringAssessment email={operator.email} initial={null} profile={candidateProfileFrom(result, incomplete)} />;
+    return <HiringAssessment email={operator.email} initial={null} profile={candidateProfileFrom(result, incomplete)} limit={ASSESSMENT_SECONDS} />;
   }
 
   const initial: StartedAttempt | null = attempt
@@ -42,9 +43,13 @@ export default async function HiringAssessmentPage({
         status: attempt.status,
         startedAt: Date.parse(attempt.started_at),
         serverNow: attempt.server_now ? Date.parse(attempt.server_now) : Date.now(),
+        limit: attempt.time_limit_seconds ?? ASSESSMENT_SECONDS,
         actions: attempt.actions,
       }
     : null;
 
-  return <HiringAssessment email={operator.email} initial={initial} profile={null} />;
+  // Nothing started yet: say how long they will have before they agree to start.
+  const limit = initial ? initial.limit : await readTimeLimit();
+
+  return <HiringAssessment email={operator.email} initial={initial} profile={null} limit={limit} />;
 }

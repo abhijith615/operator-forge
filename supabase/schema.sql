@@ -1694,3 +1694,397 @@ grant execute on function public.hiring_complete(uuid, jsonb) to authenticated;
 grant execute on function public.hiring_log(uuid, jsonb) to authenticated;
 grant execute on function public.admin_hiring_assessments() to authenticated;
 grant execute on function public.admin_hiring_assessment(uuid) to authenticated;
+
+
+-- ── Consent, per-attempt time limits and extra-time accommodations ──────────
+--
+-- Additive only: new columns, one new table, new functions, and two existing
+-- functions replaced in place with the same signature. Nothing is dropped, so
+-- the code already deployed keeps working before and after this runs.
+--
+-- Left in place from the first release and no longer called once the new code
+-- is live: hiring_start, admin_hiring_assessments, admin_hiring_assessment,
+-- hiring_deadline(timestamptz). They can be dropped at any later point.
+
+-- The time this attempt was given, and the consent it was started under.
+alter table public.hiring_assessments
+  add column if not exists time_limit_seconds integer not null default 1800
+    check (time_limit_seconds between 1800 and 5400),
+  add column if not exists consented_at timestamptz,
+  add column if not exists consent_version text;
+
+-- Extra time, arranged by an admin for a named candidate before they start.
+-- An accommodation, so it is never shown on a result: it changes how long the
+-- candidate has, and nothing about how they are scored.
+create table if not exists public.hiring_accommodations (
+  email text primary key,
+  extra_seconds integer not null check (extra_seconds between 60 and 3600),
+  note text,
+  granted_at timestamptz not null default now()
+);
+
+comment on table public.hiring_accommodations is
+  'Extra assessment time arranged for a candidate, by email, before they start. Admin-managed; never shown on a result.';
+
+alter table public.hiring_accommodations enable row level security;
+
+-- The attempt's own time limit, and a little over for a slow connection on the last save.
+create or replace function public.hiring_deadline(p_started timestamptz, p_limit integer)
+returns timestamptz
+language sql immutable set search_path = ''
+as $$ select p_started + make_interval(secs => p_limit + 90) $$;
+
+-- How long the signed-in candidate will be given: thirty minutes, plus any
+-- extra time arranged for their email address.
+create or replace function public.hiring_time_limit()
+returns integer
+language sql stable security definer set search_path = ''
+as $$
+  select 1800 + coalesce((
+    select h.extra_seconds
+      from public.hiring_accommodations h
+      join auth.users u on lower(u.email) = h.email
+     where u.id = auth.uid()
+  ), 0)
+$$;
+
+-- First-release reader, kept for code that still calls it. Same shape as
+-- before; now closes an overdue attempt by that attempt's own limit.
+create or replace function public.hiring_current(p_campaign text default null)
+returns table (
+  id uuid, scenario_variant text, status text, started_at timestamptz,
+  completed_at timestamptz, actions jsonb, server_now timestamptz
+)
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    return;
+  end if;
+
+  update public.hiring_assessments a
+     set status = 'expired', completed_at = a.started_at + make_interval(secs => a.time_limit_seconds)
+   where a.candidate_id = v_uid
+     and a.status = 'in_progress'
+     and now() > public.hiring_deadline(a.started_at, a.time_limit_seconds);
+
+  return query
+  select a.id, a.scenario_variant, a.status, a.started_at, a.completed_at, a.actions, now()
+    from public.hiring_assessments a
+   where a.candidate_id = v_uid
+     and coalesce(a.campaign_id, '') = coalesce(p_campaign, '')
+   order by a.started_at desc
+   limit 1;
+end;
+$$;
+
+-- The candidate's latest attempt, with the time it was given. Closes it if
+-- that time ran out while they were away.
+create or replace function public.hiring_attempt(p_campaign text default null)
+returns table (
+  id uuid, scenario_variant text, status text, started_at timestamptz,
+  completed_at timestamptz, actions jsonb, server_now timestamptz, time_limit_seconds integer
+)
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    return;
+  end if;
+
+  update public.hiring_assessments a
+     set status = 'expired', completed_at = a.started_at + make_interval(secs => a.time_limit_seconds)
+   where a.candidate_id = v_uid
+     and a.status = 'in_progress'
+     and now() > public.hiring_deadline(a.started_at, a.time_limit_seconds);
+
+  return query
+  select a.id, a.scenario_variant, a.status, a.started_at, a.completed_at, a.actions, now(), a.time_limit_seconds
+    from public.hiring_assessments a
+   where a.candidate_id = v_uid
+     and coalesce(a.campaign_id, '') = coalesce(p_campaign, '')
+   order by a.started_at desc
+   limit 1;
+end;
+$$;
+
+-- Start the clock. Refused without consent to the data notice the candidate
+-- was shown. One attempt per candidate per campaign; an attempt already under
+-- way is handed back rather than replaced. Admins may sit it again. The form
+-- and the time limit are decided here, from the account, so neither can be
+-- picked.
+create or replace function public.hiring_begin(
+  p_version text,
+  p_consent_version text,
+  p_device text default null,
+  p_role text default 'asm',
+  p_campaign text default null
+)
+returns table (
+  id uuid, scenario_variant text, status text, started_at timestamptz,
+  completed_at timestamptz, actions jsonb, server_now timestamptz, time_limit_seconds integer
+)
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_email text;
+  v_existing public.hiring_assessments;
+  v_previous integer;
+  v_variant text;
+  v_limit integer;
+begin
+  if v_uid is null then
+    raise exception 'not signed in' using errcode = '42501';
+  end if;
+
+  select a.* into v_existing
+    from public.hiring_attempt(p_campaign) c
+    join public.hiring_assessments a on a.id = c.id;
+
+  if found and (v_existing.status = 'in_progress' or not public.is_admin()) then
+    return query
+    select v_existing.id, v_existing.scenario_variant, v_existing.status, v_existing.started_at,
+           v_existing.completed_at, v_existing.actions, now(), v_existing.time_limit_seconds;
+    return;
+  end if;
+
+  if coalesce(trim(p_consent_version), '') = '' then
+    raise exception 'consent is required to start' using errcode = '22023';
+  end if;
+
+  select lower(u.email) into v_email from auth.users u where u.id = v_uid;
+  select count(*) into v_previous from public.hiring_assessments a where a.candidate_id = v_uid;
+  v_variant := (array['A', 'B', 'C'])[1 + ((abs(hashtext(v_uid::text)) + v_previous) % 3)];
+  v_limit := public.hiring_time_limit();
+
+  return query
+  insert into public.hiring_assessments as a
+    (candidate_id, candidate_email, campaign_id, role_id, assessment_version, scenario_variant,
+     device_type, time_limit_seconds, consented_at, consent_version)
+  values (
+    v_uid, coalesce(v_email, ''), nullif(left(p_campaign, 80), ''),
+    case when p_role in ('asm', 'sm') then p_role else 'asm' end,
+    left(p_version, 16), v_variant, nullif(left(p_device, 16), ''),
+    v_limit, now(), left(p_consent_version, 24)
+  )
+  returning a.id, a.scenario_variant, a.status, a.started_at, a.completed_at, a.actions, now(), a.time_limit_seconds;
+end;
+$$;
+
+-- Save progress. Append-only: what has been saved must be the start of what is
+-- being saved, so an earlier decision cannot be changed once its consequences
+-- have been seen. Same signature as before; now honours the attempt's own limit.
+create or replace function public.hiring_sync(p_id uuid, p_actions jsonb)
+returns boolean
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_saved jsonb;
+  v_length integer;
+begin
+  if auth.uid() is null or jsonb_typeof(p_actions) <> 'array' or jsonb_array_length(p_actions) > 800 then
+    return false;
+  end if;
+
+  select a.actions into v_saved
+    from public.hiring_assessments a
+   where a.id = p_id and a.candidate_id = auth.uid() and a.status = 'in_progress'
+     and now() <= public.hiring_deadline(a.started_at, a.time_limit_seconds)
+     for update;
+  if not found then
+    return false;
+  end if;
+
+  v_length := jsonb_array_length(v_saved);
+  if jsonb_array_length(p_actions) < v_length then
+    return false;
+  end if;
+  if v_length > 0 and (
+    select jsonb_agg(e.value order by e.ordinality)
+      from jsonb_array_elements(p_actions) with ordinality e
+     where e.ordinality <= v_length
+  ) is distinct from v_saved then
+    return false;
+  end if;
+
+  update public.hiring_assessments a set actions = p_actions where a.id = p_id;
+  return true;
+end;
+$$;
+
+-- Finish. Inside the time limit the final actions are saved and the attempt is
+-- completed; after it, whatever was last saved stands and the attempt is
+-- recorded as having run out of time. Nothing already saved is discarded.
+create or replace function public.hiring_complete(p_id uuid, p_actions jsonb)
+returns text
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_row public.hiring_assessments;
+begin
+  if auth.uid() is null then
+    return null;
+  end if;
+
+  perform public.hiring_sync(p_id, p_actions);
+
+  select a.* into v_row from public.hiring_assessments a
+   where a.id = p_id and a.candidate_id = auth.uid()
+     for update;
+  if not found then
+    return null;
+  end if;
+  if v_row.status <> 'in_progress' then
+    return v_row.status;
+  end if;
+
+  update public.hiring_assessments a
+     set status = case when now() <= public.hiring_deadline(a.started_at, a.time_limit_seconds) then 'completed' else 'expired' end,
+         completed_at = least(now(), a.started_at + make_interval(secs => a.time_limit_seconds))
+   where a.id = p_id
+  returning a.status into v_row.status;
+
+  return v_row.status;
+end;
+$$;
+
+-- Admins only: every attempt, newest first, with the time each was given and
+-- a count of what its session did. Results are replayed by the app.
+create or replace function public.admin_hiring_list()
+returns table (
+  id uuid, candidate_email text, role_id text, campaign_id text, assessment_version text,
+  scenario_variant text, status text, started_at timestamptz, completed_at timestamptz,
+  device_type text, actions jsonb, time_limit_seconds integer, consented_at timestamptz, session jsonb
+)
+language plpgsql stable security definer set search_path = ''
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorised' using errcode = '42501';
+  end if;
+  return query
+  select a.id, a.candidate_email, a.role_id, a.campaign_id, a.assessment_version,
+         a.scenario_variant,
+         -- Time gone is over, whether or not the candidate came back.
+         case when a.status = 'in_progress' and now() > public.hiring_deadline(a.started_at, a.time_limit_seconds) then 'expired' else a.status end,
+         a.started_at,
+         coalesce(a.completed_at, case when now() > public.hiring_deadline(a.started_at, a.time_limit_seconds) then a.started_at + make_interval(secs => a.time_limit_seconds) end),
+         a.device_type, a.actions, a.time_limit_seconds, a.consented_at,
+         coalesce((
+           select jsonb_object_agg(s.event_type, s.n)
+             from (
+               select e.event_type, count(*) as n
+                 from public.hiring_events e
+                where e.assessment_id = a.id
+                  and e.event_type in ('hidden', 'visible', 'offline', 'online', 'resume', 'warning_5', 'warning_1', 'expired', 'assistant', 'consent')
+                group by e.event_type
+             ) s
+         ), '{}'::jsonb)
+    from public.hiring_assessments a
+   order by a.started_at desc
+   limit 2000;
+end;
+$$;
+
+-- Admins only: one attempt.
+create or replace function public.admin_hiring_one(p_id uuid)
+returns table (
+  id uuid, candidate_email text, role_id text, campaign_id text, assessment_version text,
+  scenario_variant text, status text, started_at timestamptz, completed_at timestamptz,
+  device_type text, actions jsonb, time_limit_seconds integer, consented_at timestamptz, session jsonb
+)
+language plpgsql stable security definer set search_path = ''
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorised' using errcode = '42501';
+  end if;
+  return query
+  select a.id, a.candidate_email, a.role_id, a.campaign_id, a.assessment_version,
+         a.scenario_variant,
+         case when a.status = 'in_progress' and now() > public.hiring_deadline(a.started_at, a.time_limit_seconds) then 'expired' else a.status end,
+         a.started_at,
+         coalesce(a.completed_at, case when now() > public.hiring_deadline(a.started_at, a.time_limit_seconds) then a.started_at + make_interval(secs => a.time_limit_seconds) end),
+         a.device_type, a.actions, a.time_limit_seconds, a.consented_at,
+         coalesce((
+           select jsonb_object_agg(s.event_type, s.n)
+             from (
+               select e.event_type, count(*) as n
+                 from public.hiring_events e
+                where e.assessment_id = a.id
+                  and e.event_type in ('hidden', 'visible', 'offline', 'online', 'resume', 'warning_5', 'warning_1', 'expired', 'assistant', 'consent')
+                group by e.event_type
+             ) s
+         ), '{}'::jsonb)
+    from public.hiring_assessments a
+   where a.id = p_id;
+end;
+$$;
+
+-- Admins only: who has extra time arranged.
+create or replace function public.admin_hiring_accommodations()
+returns table (email text, extra_seconds integer, note text, granted_at timestamptz)
+language plpgsql stable security definer set search_path = ''
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorised' using errcode = '42501';
+  end if;
+  return query
+  select h.email, h.extra_seconds, h.note, h.granted_at
+    from public.hiring_accommodations h
+   order by h.granted_at desc;
+end;
+$$;
+
+-- Admins only: arrange, change or withdraw extra time for an email address.
+-- Applies to attempts started afterwards; one already under way keeps the time
+-- it was started with.
+create or replace function public.admin_hiring_set_accommodation(p_email text, p_extra_seconds integer, p_note text default null)
+returns void
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_email text := lower(trim(coalesce(p_email, '')));
+begin
+  if not public.is_admin() then
+    raise exception 'not authorised' using errcode = '42501';
+  end if;
+  if v_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then
+    raise exception 'not an email address' using errcode = '22023';
+  end if;
+
+  if coalesce(p_extra_seconds, 0) <= 0 then
+    delete from public.hiring_accommodations h where h.email = v_email;
+    return;
+  end if;
+
+  insert into public.hiring_accommodations as h (email, extra_seconds, note)
+  values (v_email, least(p_extra_seconds, 3600), nullif(left(trim(coalesce(p_note, '')), 200), ''))
+  on conflict (email) do update
+     set extra_seconds = excluded.extra_seconds, note = excluded.note, granted_at = now();
+end;
+$$;
+
+revoke all on function public.hiring_deadline(timestamptz, integer) from public, anon;
+revoke all on function public.hiring_time_limit() from public, anon;
+revoke all on function public.hiring_attempt(text) from public, anon;
+revoke all on function public.hiring_begin(text, text, text, text, text) from public, anon;
+revoke all on function public.admin_hiring_list() from public, anon;
+revoke all on function public.admin_hiring_one(uuid) from public, anon;
+revoke all on function public.admin_hiring_accommodations() from public, anon;
+revoke all on function public.admin_hiring_set_accommodation(text, integer, text) from public, anon;
+
+grant execute on function public.hiring_deadline(timestamptz, integer) to authenticated;
+grant execute on function public.hiring_time_limit() to authenticated;
+grant execute on function public.hiring_attempt(text) to authenticated;
+grant execute on function public.hiring_begin(text, text, text, text, text) to authenticated;
+grant execute on function public.admin_hiring_list() to authenticated;
+grant execute on function public.admin_hiring_one(uuid) to authenticated;
+grant execute on function public.admin_hiring_accommodations() to authenticated;
+grant execute on function public.admin_hiring_set_accommodation(text, integer, text) to authenticated;

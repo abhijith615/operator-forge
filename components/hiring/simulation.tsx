@@ -86,7 +86,7 @@ function beatFor(from: SceneId, state: HiringState): Beat | null {
 
 function useRemaining(attempt: Attempt): number {
   const read = React.useCallback(
-    () => Math.max(0, ASSESSMENT_SECONDS - Math.floor((Date.now() + attempt.skew - attempt.startedAt) / 1000)),
+    () => Math.max(0, (attempt.limit ?? ASSESSMENT_SECONDS) - Math.floor((Date.now() + attempt.skew - attempt.startedAt) / 1000)),
     [attempt],
   );
   const [remaining, setRemaining] = React.useState(read);
@@ -222,7 +222,8 @@ export function Simulation({ attempt, onFinished }: { attempt: Attempt; onFinish
   const props = { state, act };
   const playback = scene === "outcome";
   // Where the thirty minutes are against where the candidate is. A guide only.
-  const pace = paceOf(ASSESSMENT_SECONDS - remaining, phaseIndex);
+  const limit = attempt.limit ?? ASSESSMENT_SECONDS;
+  const pace = paceOf(limit - remaining, phaseIndex, limit);
   const behindMinutes = Math.floor(pace.behind / 60);
 
   return (

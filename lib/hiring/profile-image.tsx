@@ -78,7 +78,7 @@ export async function renderCandidateProfileImage(profile: CandidateProfile, ema
     150;
 
   const readiness = String(profile.overall);
-  const timedOutNote = `The thirty minutes ran out before the shift did. Built from the ${profile.observed} of ${profile.opportunities} assessed moments reached.`;
+  const timedOutNote = `The time ran out before the shift did. Built from the ${profile.observed} of ${profile.opportunities} assessed moments reached.`;
   const footer = "From one 30-minute simulated shift. One input to a hiring decision, alongside an interview. operatorforge.in";
 
   return new ImageResponse(

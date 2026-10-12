@@ -15,9 +15,10 @@ import {
   switchHiringAccount,
   type StartedAttempt,
 } from "@/lib/hiring/actions";
-import { POSITIONING } from "@/lib/hiring/content";
+import { CONSENT_VERSION, DATA_NOTICE, HIRING_CONTACT, POSITIONING } from "@/lib/hiring/content";
 import type { CandidateProfile as Profile } from "@/lib/hiring/server";
 import { deviceType } from "@/lib/hiring/view";
+import { ASSESSMENT_SECONDS } from "@/lib/hiring/weights";
 import { useHiringStore, type Attempt } from "@/stores/hiring-store";
 
 import { CandidateProfile } from "./candidate-profile";
@@ -93,7 +94,36 @@ export function CandidateEntry({ error }: { error?: string }) {
 
 /* ── Before the shift ─────────────────────────────────────────────────── */
 
-function Positioning({ email, starting, onStart, failed }: { email: string; starting: boolean; onStart: () => void; failed: boolean }) {
+/** "30 minutes", "37 minutes 30 seconds". */
+function spoken(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return `${minutes} minutes${rest ? ` ${rest} seconds` : ""}`;
+}
+
+/**
+ * The last screen before the clock starts.
+ *
+ * What the shift is, how long the candidate has, what is recorded about them
+ * and who sees it — and a box to tick. Start Shift does nothing until it is
+ * ticked, and the server will not start an attempt without it either.
+ */
+function Positioning({
+  email,
+  limit,
+  starting,
+  onStart,
+  failed,
+}: {
+  email: string;
+  limit: number;
+  starting: boolean;
+  onStart: () => void;
+  failed: boolean;
+}) {
+  const [agreed, setAgreed] = React.useState(false);
+  const extra = limit - ASSESSMENT_SECONDS;
+
   return (
     <Frame>
       <p className="mt-10 font-mono text-[12px] tracking-[0.22em] text-ember-500 uppercase">Hiring Test</p>
@@ -109,10 +139,57 @@ function Positioning({ email, starting, onStart, failed }: { email: string; star
       </ul>
 
       <p className="mt-6 rounded-[14px] border border-line-strong bg-white/[0.03] px-3.5 py-3 text-[13px] leading-snug text-mid">
-        The thirty minutes start when you press Start Shift and do not pause. You have one attempt. If the page reloads
-        or your connection drops, you come back to where you were. The bar at the top shows the six parts of the
-        shift: yellow is where you are, and the white mark is where the time is.
+        You have <span className="font-semibold text-hi">{spoken(limit)}</span>
+        {extra > 0 ? " — that includes the extra time arranged for you" : ""}. The time starts when you press Start
+        Shift and does not pause. You have one attempt. If the page reloads or your connection drops, you come back
+        to where you were. The bar at the top shows the six parts of the shift: yellow is where you are, and the
+        white mark is where the time is.
       </p>
+
+      <p className="mt-3 text-[13px] leading-snug text-lo">
+        Need extra time or another adjustment because of a disability or a health condition? Write to{" "}
+        <a href={`mailto:${HIRING_CONTACT}?subject=Hiring%20Test%20%E2%80%94%20adjustment`} className="text-mid underline underline-offset-4 hover:text-hi">
+          {HIRING_CONTACT}
+        </a>{" "}
+        before you start. It is arranged in advance and is not shown on your result.
+      </p>
+
+      <section aria-labelledby="hiring-notice" className="mt-6 rounded-[16px] border border-line-strong bg-surface p-4">
+        <h2 id="hiring-notice" className="font-mono text-[11.5px] tracking-[0.18em] text-lo uppercase">
+          Your data
+        </h2>
+        <dl className="mt-3 space-y-3">
+          {DATA_NOTICE.map((item) => (
+            <div key={item.title}>
+              <dt className="text-[13.5px] font-semibold text-hi">{item.title}</dt>
+              <dd className="mt-0.5 text-[13px] leading-snug text-mid">{item.text}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="mt-3 text-[13px] leading-snug text-mid">
+          Contact:{" "}
+          <a href={`mailto:${HIRING_CONTACT}`} className="text-hi underline underline-offset-4">
+            {HIRING_CONTACT}
+          </a>
+          . More in the{" "}
+          <a href="/privacy" target="_blank" rel="noreferrer" className="text-hi underline underline-offset-4">
+            privacy policy
+          </a>
+          .
+        </p>
+
+        <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-[12px] border border-line-strong bg-white/[0.03] p-3">
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={(event) => setAgreed(event.target.checked)}
+            className="mt-0.5 size-5 shrink-0 accent-[#f5c400]"
+          />
+          <span className="text-[13.5px] leading-snug text-hi">
+            I have read this, and I agree to take the assessment and to my data being used as described.
+          </span>
+        </label>
+      </section>
 
       {failed ? (
         <p role="alert" className="mt-3 text-[13px] text-alert-500">
@@ -120,9 +197,10 @@ function Positioning({ email, starting, onStart, failed }: { email: string; star
         </p>
       ) : null}
 
-      <PrimaryButton className="mt-6 sm:w-full" disabled={starting} onClick={onStart}>
+      <PrimaryButton className="mt-6 sm:w-full" disabled={starting || !agreed} onClick={onStart}>
         {starting ? "Opening the store…" : "Start shift"}
       </PrimaryButton>
+      {!agreed ? <p className="mt-2 text-center text-[12.5px] text-lo">Tick the box above to start.</p> : null}
 
       <form action={switchHiringAccount} className="mt-5 text-center text-[13px] text-lo">
         Signed in as <span className="break-all text-mid">{email}</span>.{" "}
@@ -141,6 +219,7 @@ const toAttempt = (started: StartedAttempt): Attempt => ({
   form: started.form,
   startedAt: started.startedAt,
   skew: started.serverNow - Date.now(),
+  limit: started.limit,
   local: false,
 });
 
@@ -155,10 +234,13 @@ export function HiringAssessment({
   email,
   initial,
   profile: finished,
+  limit,
 }: {
   email: string;
   initial: StartedAttempt | null;
   profile: Profile | null;
+  /** Seconds this candidate will be given if they start now. */
+  limit: number;
 }) {
   const router = useRouter();
   const [phase, setPhase] = React.useState<"loading" | "ready" | "running" | "saving" | "stuck" | "finished">(
@@ -188,11 +270,15 @@ export function HiringAssessment({
     setStarting(true);
     setFailed(false);
     try {
-      const started = await startAssessment(deviceType());
+      // Reaching here means the box was ticked: the button is dead until it is.
+      const started = await startAssessment(deviceType(), true);
       if (!started) {
         setFailed(true);
       } else if (started.status === "in_progress") {
-        useHiringStore.getState().begin(toAttempt(started), started.actions);
+        const store = useHiringStore.getState();
+        store.begin(toAttempt(started), started.actions);
+        // Kept with the attempt's own record of events, as well as on the attempt.
+        if (started.actions.length === 0) useHiringStore.getState().note("consent", { version: CONSENT_VERSION });
         setPhase("running");
       } else {
         // Already sat. The server has the profile.
@@ -226,7 +312,7 @@ export function HiringAssessment({
 
   if (phase === "finished" && profile) return <CandidateProfile profile={profile} email={email} />;
   if (phase === "running" && attempt) return <Simulation attempt={attempt} onFinished={finish} />;
-  if (phase === "ready") return <Positioning email={email} starting={starting} onStart={start} failed={failed} />;
+  if (phase === "ready") return <Positioning email={email} limit={limit} starting={starting} onStart={start} failed={failed} />;
 
   return (
     <Frame>
