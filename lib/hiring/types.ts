@@ -304,6 +304,8 @@ export interface HiringState {
     constraintAtStart: Station | null;
     /** The stage the Floor Lead blames. It is never the one that is stuck. */
     blamed: Station | null;
+    /** Where each person moved at the bottleneck was standing beforehand. */
+    origins: Record<string, Station>;
     viewed: string[];
     viewedBeforeAct: string[];
     reply: string | null;

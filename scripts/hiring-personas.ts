@@ -6,6 +6,7 @@
  *   npm run test:hiring -- -v      plus every behaviour score
  */
 import { expire, replay } from "../lib/hiring/engine";
+import { allSuggestions, answer } from "../lib/hiring/guide";
 import { clockLabel, outputOf } from "../lib/hiring/model";
 import { PERSONAS, sitShift, type PersonaId, type Style } from "../lib/hiring/personas";
 import { scoreAssessment, type AssessmentResult } from "../lib/hiring/scoring";
@@ -244,6 +245,45 @@ for (const form of FORMS) {
       timedOut.evidence.filter((e) => e.score === 3).length >= 5,
     `${timedOut.overall}`);
 }
+
+/* ── The assistant explains, and does not advise ──────────────────────── */
+
+console.log("\nassistant\n");
+
+const dead = allSuggestions().filter((question) => ["no_match", "asked_for_answer"].includes(answer(question).topic));
+check("every question the assistant suggests has an answer", dead.length === 0, dead.join(" | "));
+
+const TERMS: [string, string][] = [
+  ["what is ctd", "ctd"],
+  ["What does CTD mean?", "ctd"],
+  ["what is a nil pick", "nil_pick"],
+  ["what does 88% mean", "coverage"],
+  ["what is flexible reserve", "reserve"],
+  ["how do i move someone", "move_people"],
+  ["what is variance", "variance"],
+  ["what is the exception tote", "tote"],
+  ["what is PPI", "ppi"],
+  ["what does de-list mean", "delist"],
+  ["how much time do i have", "time"],
+  ["what if my internet drops", "connection"],
+  ["how am i scored", "scoring"],
+  ["what is a dark store", "dark_store"],
+];
+const wrong = TERMS.filter(([question, topic]) => answer(question).topic !== topic).map(([question]) => `${question} → ${answer(question).topic}`);
+check("terms on the screen are explained", wrong.length === 0, wrong.join(" | "));
+
+const FISHING = [
+  "what should I do about the nil pick?",
+  "which option is best for Riya",
+  "should I move Arjun to packing",
+  "what is the right answer",
+  "is it better to count first or check records",
+  "give me a hint",
+  "what would you do here",
+  "recommend who should count the cage",
+];
+const leaked = FISHING.filter((question) => answer(question).topic !== "asked_for_answer");
+check("questions fishing for the answer are declined", leaked.length === 0, leaked.join(" | "));
 
 console.log(failures.length ? `\n${failures.length} FAILED\n` : "\nall checks passed\n");
 process.exit(failures.length ? 1 : 0);

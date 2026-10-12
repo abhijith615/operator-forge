@@ -115,6 +115,7 @@ export function EmployerProfile({ result, meta }: { result: AssessmentResult; me
     ["Left the tab", session.hidden ?? 0],
     ["Lost connection", session.offline ?? 0],
     ["Resumed after a reload", session.resume ?? 0],
+    ["Asked the assistant", session.assistant ?? 0],
   ];
 
   return (

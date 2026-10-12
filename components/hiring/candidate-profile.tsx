@@ -1,3 +1,5 @@
+import { Download } from "lucide-react";
+
 import type { CandidateProfile as Profile } from "@/lib/hiring/server";
 import { cn } from "@/lib/utils";
 
@@ -10,7 +12,16 @@ import { cn } from "@/lib/utils";
  * are for the person deciding, and showing them here would turn a profile
  * into an answer key for the next candidate.
  */
-export function CandidateProfile({ profile, email }: { profile: Profile; email: string }) {
+export function CandidateProfile({
+  profile,
+  email,
+  downloadHref = "/hiring-test/assessment/download",
+}: {
+  profile: Profile;
+  email: string;
+  /** Where the PNG of this profile comes from. Null hides the button. */
+  downloadHref?: string | null;
+}) {
   return (
     <div className="min-h-dvh bg-void text-hi">
       <main id="main" className="mx-auto max-w-3xl px-4 pt-10 pb-20 sm:pt-14">
@@ -19,6 +30,16 @@ export function CandidateProfile({ profile, email }: { profile: Profile; email: 
           Your dark store manager profile
         </h1>
         <p className="mt-2 text-[14px] break-all text-lo">{email}</p>
+        {downloadHref ? (
+          <a
+            href={downloadHref}
+            download
+            className="mt-4 inline-flex min-h-[46px] items-center gap-2 rounded-full bg-ember-500 px-5 text-[13.5px] font-bold tracking-[0.06em] text-void uppercase transition-[filter] hover:brightness-110"
+          >
+            <Download className="size-4" aria-hidden />
+            Download profile
+          </a>
+        ) : null}
 
         {profile.timedOut ? (
           <p className="mt-4 rounded-[14px] border border-line-strong bg-white/[0.03] px-3.5 py-3 text-[13.5px] leading-snug text-mid">

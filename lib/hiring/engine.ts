@@ -100,6 +100,7 @@ export function initialState(form: FormId): HiringState {
       coverageAtStart: null,
       constraintAtStart: null,
       blamed: null,
+      origins: {},
       viewed: [],
       viewedBeforeAct: [],
       reply: null,
@@ -870,6 +871,7 @@ function apply(state: HiringState, action: Action): string[] {
 function applyIntervention(state: HiringState, step: Intervention): void {
   switch (step.kind) {
     case "move":
+      if (state.assign[step.emp] !== undefined) state.bn.origins[step.emp] ??= state.assign[step.emp]!;
       move(state, step.emp, step.to, "bottleneckMove");
       break;
     case "addSlot":

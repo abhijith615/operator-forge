@@ -28,14 +28,28 @@ export function Eyebrow({ className, ...props }: React.ComponentProps<"p">) {
   return <p className={cn("font-mono text-[11.5px] tracking-[0.18em] text-lo uppercase", className)} {...props} />;
 }
 
-export function SceneHeading({ eyebrow, title, sub }: { eyebrow: string; title: string; sub?: string }) {
+export function SceneHeading({
+  eyebrow,
+  title,
+  sub,
+  media,
+}: {
+  eyebrow: string;
+  title: string;
+  sub?: string;
+  /** A picture of the thing the scene is about, shown beside the title. */
+  media?: React.ReactNode;
+}) {
   return (
-    <header className="mb-4">
-      <Eyebrow className="text-ember-500">{eyebrow}</Eyebrow>
-      <h1 className="mt-1.5 text-[24px] leading-[1.1] font-semibold tracking-[-0.03em] text-hi text-balance sm:text-[28px]">
-        {title}
-      </h1>
-      {sub ? <p className="mt-2 text-[14.5px] leading-relaxed text-mid">{sub}</p> : null}
+    <header className="mb-4 flex items-center gap-3.5">
+      {media}
+      <div className="min-w-0">
+        <Eyebrow className="text-ember-500">{eyebrow}</Eyebrow>
+        <h1 className="mt-1.5 text-[24px] leading-[1.1] font-semibold tracking-[-0.03em] text-hi text-balance sm:text-[28px]">
+          {title}
+        </h1>
+        {sub ? <p className="mt-2 text-[14.5px] leading-relaxed text-mid">{sub}</p> : null}
+      </div>
     </header>
   );
 }

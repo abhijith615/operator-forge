@@ -60,7 +60,7 @@ function typed(draft: Draft): EvidenceEvent {
         : rest.score === 0
           ? "NOT_SHOWN"
           : "PARTIAL";
-  return { ...rest, evidenceType, opportunityToDemonstrate: true };
+  return { ...rest, evidenceType, opportunityToDemonstrate: !missed };
 }
 
 const notReached = (
@@ -170,7 +170,7 @@ function teamEvents(state: HiringState): Draft[] {
       stateBefore: "Two of fourteen absent, demand forecast +38% at 18:00.",
       candidateAction: `Candidate ${listed(choices.map((c) => did[c]!)) || "took no action"}.`,
       timingContext: "Thirty minutes before the peak",
-      stateAfter: `Weakest critical station projected at ${pct(projectedMin)} for 18:00.`,
+      stateAfter: `Weakest station projected at ${pct(projectedMin)} for 18:00.`,
       score: score as 0 | 1 | 2 | 3,
       behaviourTags: over ? ["overstaffed"] : score >= 2 ? ["capacity_built"] : ["understaffed"],
     });
@@ -444,7 +444,7 @@ function inventoryEvents(state: HiringState): Draft[] {
       title: score === 3 ? "Established the count before theorising" : score === 2 ? "Went to the records before knowing the size of the gap" : "Never established what was physically there",
       claim: "Establishes physical count before conclusions.",
       simTime: k.openedAt,
-      stateBefore: "System said 12. Nobody had looked at the shelf.",
+      stateBefore: `System said ${hv.system}. Nobody had looked at the shelf.`,
       candidateAction: k.firstMove === "count" ? "First action was the physical count." : k.firstMove === "records" ? "Opened the records first, and counted afterwards." : "Did not count.",
       timingContext: "First move on the case",
       stateAfter: k.countOwner !== null ? "Every later conclusion was against a known physical number." : "No physical number to reason from.",
@@ -594,7 +594,7 @@ function inventoryEvents(state: HiringState): Draft[] {
       claim: "Investigates Nil Picks before de-listing.",
       simTime: when(state, "nilpick"),
       stateBefore: `${form.nilPick.item}: system ${form.nilPick.system}, shelf 0. Order ${form.nilPick.order} waiting.`,
-      candidateAction: n.searchOwner ? `Had ${n.searchOwner === "me" ? "a personal search made" : `${nameOf(n.searchOwner)} search`}, then ${NIL[n.outcome]}.` : n.viewed.length ? `Checked ${n.viewed.join(", ")}, then ${NIL[n.outcome]}.` : `Without checking any other location, ${NIL[n.outcome]}.`,
+      candidateAction: n.searchOwner ? `${n.searchOwner === "me" ? "Searched personally" : `Had ${nameOf(n.searchOwner)} search`}, then ${NIL[n.outcome]}.` : n.viewed.length ? `Checked ${n.viewed.join(", ")}, then ${NIL[n.outcome]}.` : `Without checking any other location, ${NIL[n.outcome]}.`,
       timingContext: "While an order waited",
       stateAfter: n.outcome === "replenished" ? "Two crates were in inbound, never put away. Shelf restocked; order shipped complete." : "Seventeen units stayed in inbound. The order went short or the line went off sale.",
       score: i6 as 0 | 1 | 3,
@@ -618,7 +618,7 @@ function inventoryEvents(state: HiringState): Draft[] {
       title: i7 === 3 ? "Gave the count to the person trained for it" : selfCount ? "Did the recount personally" : countFit > 0 ? "Gave the count to somebody not trained for it" : "Did not use the team on the case",
       claim: "Uses team members appropriately for counts and follow-up.",
       simTime: k.openedAt,
-      stateBefore: "Farhan is count-trained and cleared for high-value. He was on picking.",
+      stateBefore: `Farhan is count-trained and cleared for high-value. He was on ${STATION_LABEL[state.assign.farhan ?? "picking"].split(" /")[0]!.toLowerCase()}.`,
       candidateAction: `Count: ${k.countOwner ? nameOf(k.countOwner) : "nobody"}. Records: ${k.recordsOwner ? nameOf(k.recordsOwner) : k.viewed.length ? "the manager" : "nobody"}.`,
       timingContext: "During the investigation",
       stateAfter: selfCount ? "The manager was off the floor for five minutes while the surge landed." : countFit >= 0.9 ? "Counted in four minutes while the manager stayed available." : "The count took longer and pulled somebody off a station that needed them.",
@@ -702,10 +702,12 @@ function timeEvents(state: HiringState): Draft[] {
     out.push({
       behaviourId: "P3",
       competencyId: C,
-      title: p3 === 3 ? "Dealt with the two things costing orders, now" : constraintNow ? "Dealt with the main constraint and left the aisle" : "Left the biggest problem for later",
+      title: !real
+        ? aisleNow ? "Had the aisle cleared; the surge station was already covered" : "Left the blocked aisle for later"
+        : p3 === 3 ? "Dealt with the two things costing orders, now" : constraintNow ? "Dealt with the main constraint and left the aisle" : "Left the biggest problem for later",
       claim: "Handles higher-impact problems first.",
       simTime: when(state, "triage"),
-      stateBefore: `${form.surgeHeadline} at ${pct(cover)} coverage; Aisle C blocked (routes a third longer); the variance follow-up still open.`,
+      stateBefore: `${form.surgeHeadline}: ${STATION_LABEL[constraint].toLowerCase()} at ${pct(cover)} of what it was being asked for; Aisle C blocked (routes a third longer); the variance follow-up still open.`,
       candidateAction: `${form.surgeHeadline}: ${word[tri.constraint.mode]}${tri.constraint.owner ? ` to ${nameOf(tri.constraint.owner)}` : ""}. Aisle C: ${word[tri.aisle.mode]}${tri.aisle.owner ? ` to ${nameOf(tri.aisle.owner)}` : ""}. Follow-up: ${word[tri.followUp.mode]}${tri.followUp.owner ? ` to ${nameOf(tri.followUp.owner)}` : ""}.`,
       timingContext: "One personal attention slot available",
       stateAfter: constraintNow ? "The constraint had capacity added within the minute." : "The constraint kept growing through to the next decision.",
@@ -855,7 +857,7 @@ function criticalEvents(state: HiringState): Draft[] {
       candidateAction: acted ? `Candidate ${b.moves.map(describeMove).join("; ")}.` : "Made no change.",
       timingContext: at(when(state, "bottleneck")),
       stateAfter: b.after ? `After three minutes: ${STATION_LABEL[constraint].toLowerCase()} at ${pct(b.after.coverage[constraint])}, packing queue ${b.after.packingQueue}, CTD ${b.after.ctd}s.` : "The system was not run after the change.",
-      laterConsequence: helped && b.after ? resilienceLine(state) : undefined,
+      laterConsequence: helped && b.after ? resilienceOf(state)?.text : undefined,
       score: c2 as 0 | 1 | 2 | 3,
       behaviourTags: fine && !hurt ? ["floor_held"] : c2 === 3 ? ["constraint_targeted"] : hurt ? ["symptom_fed"] : ["constraint_missed"],
       counter: hurt && !helped,
@@ -958,22 +960,44 @@ function describeMove(move: Intervention): string {
 }
 
 /** The cross-scenario story: did the team built earlier absorb the move made later? */
-function resilienceLine(state: HiringState): string | undefined {
+function resilienceOf(state: HiringState): { text: string; held: boolean } | undefined {
   const moved = state.bn.moves.find((m): m is Extract<Intervention, { kind: "move" }> => m.kind === "move");
-  if (!moved || !state.bn.after) return undefined;
-  const picking = state.bn.after.coverage.picking;
-  const developed = (state.riya.choices ?? []).some((c) => c === "moveAB" || c === "pair");
-  if (BY_ID[moved.emp]?.skills.picking && state.bn.coverageAtStart && moved.to !== "picking") {
-    if (picking >= 0.9) {
-      return developed
-        ? `Moving ${nameOf(moved.emp)} cost picking a hand; with Riya developed earlier, picking still held at ${pct(picking)}.`
-        : `Picking held at ${pct(picking)} after ${nameOf(moved.emp)} moved.`;
-    }
-    return developed
-      ? `Picking fell to ${pct(picking)} after ${nameOf(moved.emp)} moved, even with Riya's improvement.`
-      : `Picking fell to ${pct(picking)} after ${nameOf(moved.emp)} moved. Riya, undeveloped, could not absorb it.`;
+  const after = state.bn.after;
+  if (!moved || !after) return undefined;
+  // The station that gave somebody up is the one that has to absorb it.
+  const from = state.bn.origins[moved.emp];
+  if (!from || from === moved.to) return undefined;
+
+  const left = after.coverage[from];
+  const held = left >= 0.9;
+  const name = nameOf(moved.emp);
+  const place = STATION_LABEL[from].split(" /")[0]!.toLowerCase();
+  const destination = STATION_LABEL[moved.to].split(" /")[0]!.toLowerCase();
+
+  if (from !== "picking") {
+    return {
+      held,
+      text: held
+        ? `Moving ${name} to ${destination} took a hand from ${place}, which still stood at ${pct(left)} afterwards.`
+        : `Moving ${name} to ${destination} took a hand from ${place}, which fell to ${pct(left)}.`,
+    };
   }
-  return undefined;
+
+  const developed = (state.riya.choices ?? []).some((c) => c === "moveAB" || c === "pair");
+  if (held) {
+    return {
+      held,
+      text: developed
+        ? `Moving ${name} to ${destination} cost picking a hand; with Riya developed earlier, picking still held at ${pct(left)}.`
+        : `Picking held at ${pct(left)} after ${name} moved to ${destination}.`,
+    };
+  }
+  return {
+    held,
+    text: developed
+      ? `Picking fell to ${pct(left)} after ${name} moved to ${destination}, even with Riya's improvement.`
+      : `Picking fell to ${pct(left)} after ${name} moved to ${destination}. Riya, undeveloped, could not absorb it.`,
+  };
 }
 
 /* ── Customer-first ───────────────────────────────────────────────────── */
@@ -1348,10 +1372,9 @@ export function scoreAssessment(state: HiringState): AssessmentResult {
 
   /* Cross-scenario evidence: the part no single decision shows. */
   const crossScenario: AssessmentResult["crossScenario"] = [];
-  const line = resilienceLine(state);
+  const line = resilienceOf(state);
   if (line) {
-    const held = (state.bn.after?.coverage.picking ?? 0) >= 0.9;
-    crossScenario.push({ title: "Team resilience", rating: held ? "Strong" : "Exposed", text: line });
+    crossScenario.push({ title: "Team resilience", rating: line.held ? "Strong" : "Exposed", text: line.text });
   } else if (state.riya.choices && state.outcome) {
     const out = state.outcome.riyaOutput;
     const picking = state.outcome.pickingAtPeak;
@@ -1399,8 +1422,13 @@ export function scoreAssessment(state: HiringState): AssessmentResult {
     const now = state.triageAt.coverage[c];
     crossScenario.push({
       title: "The floor built at 17:26 met the surge at 17:39",
-      rating: now >= 0.95 ? "Strong" : now >= 0.85 ? "Mixed" : "Exposed",
-      text: `${STATION_LABEL[c]} was set at ${pct(then)} of the forecast in the floor build. When the surge landed it stood at ${pct(now)}, with the queue at ${state.triageAt.packingQueue} and CTD at ${state.triageAt.ctd}s.`,
+      // The station the surge hit can be fine while the store is behind somewhere else.
+      rating: now >= 0.95 ? (state.triageAt.ctd <= CTD_TARGET ? "Strong" : "Mixed") : now >= 0.85 ? "Mixed" : "Exposed",
+      text:
+        `${STATION_LABEL[c]} was set at ${pct(then)} of the forecast in the floor build. When the surge landed it stood at ${pct(now)}, with ${state.triageAt.ordersWaiting} orders waiting and CTD at ${state.triageAt.ctd}s.` +
+        (now >= 0.95 && state.triageAt.ctd > CTD_TARGET
+          ? ` The station the surge hit was covered; the store was behind elsewhere (picking ${pct(state.triageAt.coverage.picking)}, packing ${pct(state.triageAt.coverage.packing)}, dispatch ${pct(state.triageAt.coverage.dispatch)}).`
+          : ""),
     });
   }
 

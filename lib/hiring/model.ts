@@ -368,6 +368,7 @@ export function advanceTo(state: HiringState, target: number): void {
     const sent = Math.min(state.flow.dispQ, disp);
     state.flow.dispQ -= sent;
 
+    const minuteBefore = Math.floor(state.clock / 60);
     state.clock += dt;
 
     // A store this far behind is switched off in the app until it catches up.
@@ -388,7 +389,7 @@ export function advanceTo(state: HiringState, target: number): void {
     const now = metricsOf(state);
     if (now.ctd > state.maxCtd) state.maxCtd = now.ctd;
     if (now.ctd > CTD_TARGET && state.firstBreachAt === null) state.firstBreachAt = state.clock;
-    if (state.clock % 60 === 0) {
+    if (Math.floor(state.clock / 60) > minuteBefore) {
       state.trace.push({
         t: state.clock,
         ctd: now.ctd,

@@ -181,6 +181,10 @@ How it is put together, in `lib/hiring/`:
   adjusts or flags anything. Weights live in `weights.ts` and nowhere else.
 - **`forms.ts`** — three parallel forms. Same people and decisions; a different
   high-value line, nil-pick line, and station the surge lands on.
+- **`guide.ts`** — the in-shift assistant. Written answers, not a model call:
+  it explains any word, number or control on the screen, declines to say what
+  to decide, and says the same thing to every candidate. Only the topic of a
+  question is logged.
 - **`server.ts` + `actions.ts`** — the database stores the ordered actions and
   never a score. A result is replayed from them on the server each time it is
   opened, and saves are append-only, so there is no number a candidate could

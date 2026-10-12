@@ -13,6 +13,7 @@ import { ASSESSMENT_SECONDS } from "@/lib/hiring/weights";
 import { cn, formatDuration } from "@/lib/utils";
 import { useHiringStore, type Attempt } from "@/stores/hiring-store";
 
+import { HiringAssistant } from "./assistant";
 import { CustomerBag, FinalCall, Outcome } from "./scenes/closing";
 import { Absence, Floor } from "./scenes/floor";
 import { Handover } from "./scenes/handover";
@@ -234,6 +235,8 @@ export function Simulation({ attempt, onFinished }: { attempt: Attempt; onFinish
                 </span>
               )}
             </p>
+            <div className="flex items-center gap-2">
+            <HiringAssistant />
             <p
               className={cn(
                 "tabular flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[14px] font-semibold",
@@ -251,6 +254,7 @@ export function Simulation({ attempt, onFinished }: { attempt: Attempt; onFinish
               <Timer className="size-3.5" aria-hidden />
               {attempt.local ? "Practice" : formatDuration(remaining)}
             </p>
+            </div>
           </div>
 
           <ol className="mt-2.5 flex gap-1" aria-label="Where you are in the shift">

@@ -28,6 +28,8 @@ import type { CaseStep, ControlFix, UnitCall } from "@/lib/hiring/types";
 import { PERSONAL_COST, moverOptions, ownerOptions } from "@/lib/hiring/view";
 import { cn } from "@/lib/utils";
 
+import { ItemPhoto } from "../item-photo";
+
 import {
   ActionBar,
   Card,
@@ -82,7 +84,11 @@ export function HighValueCase({ state, act }: SceneProps) {
 
   return (
     <>
-      <SceneHeading eyebrow={`${clockLabel(k.openedAt)} · High-value alert`} title={hv.item} />
+      <SceneHeading
+        eyebrow={`${clockLabel(k.openedAt)} · High-value alert`}
+        title={hv.item}
+        media={<ItemPhoto id={hv.photo} alt={hv.item} />}
+      />
 
       <div className="grid grid-cols-3 gap-2">
         <Stat label="System" value={hv.system} />
@@ -331,7 +337,12 @@ export function NilPick({ state, act }: SceneProps) {
 
   return (
     <>
-      <SceneHeading eyebrow={`${clockLabel(state.arrivals.nilpick ?? state.clock)} · Nil pick reported`} title={nil.item} sub={`Order ${nil.order} is waiting on it.`} />
+      <SceneHeading
+        eyebrow={`${clockLabel(state.arrivals.nilpick ?? state.clock)} · Nil pick reported`}
+        title={nil.item}
+        sub={`Order ${nil.order} is waiting on it.`}
+        media={<ItemPhoto id={nil.photo} alt={nil.item} />}
+      />
 
       <div className="grid grid-cols-2 gap-2">
         <Stat label="System" value={nil.system} />

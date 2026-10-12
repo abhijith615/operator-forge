@@ -221,7 +221,7 @@ export function caseRecords(form: FormId): Record<string, { note: string; rows: 
         { time: "11:14", text: "Arjun · pick", value: "authorised" },
         { time: "12:29", text: "Farhan · pick", value: "authorised" },
         { time: "14:43", text: "Arjun · pick", value: "authorised" },
-        { time: "15:20", text: "Deputy Manager · audit walk", value: "authorised" },
+        { time: "15:20", text: "Assistant Store Manager · audit walk", value: "authorised" },
         { time: "16:02", text: "Farhan · pick (other line)", value: "authorised" },
       ],
     },

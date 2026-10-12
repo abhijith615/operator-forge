@@ -16,10 +16,14 @@ import type { FormId, Station } from "./types";
  * measured.
  */
 
+/** The six items that have a picture: one high-value line and one staple per form. */
+export type ItemPhotoId = "earbuds" | "serum" | "smartwatch" | "milk" | "eggs" | "bread";
+
 export interface FormContent {
   id: FormId;
   highValue: {
     item: string;
+    photo: ItemPhotoId;
     unitValue: number;
     system: number;
     physical: number;
@@ -30,6 +34,7 @@ export interface FormContent {
   };
   nilPick: {
     item: string;
+    photo: ItemPhotoId;
     system: number;
     order: string;
   };
@@ -48,13 +53,14 @@ export const FORMS: Record<FormId, FormContent> = {
     id: "A",
     highValue: {
       item: "Wireless earbuds",
+      photo: "earbuds",
       unitValue: 3999,
       system: 12,
       physical: 9,
       scanOrder: "#5417",
       cancelledOrder: "#5391",
     },
-    nilPick: { item: "Milk 1L", system: 17, order: "#5462" },
+    nilPick: { item: "Milk 1L", photo: "milk", system: 17, order: "#5462" },
     handover: { lakshmi: "picking", joseph: "dispatch", anjali: "replenishment" },
     constraint: "packing",
     surgeFactor: 1.15,
@@ -65,13 +71,14 @@ export const FORMS: Record<FormId, FormContent> = {
     id: "B",
     highValue: {
       item: "Premium face serum",
+      photo: "serum",
       unitValue: 2799,
       system: 14,
       physical: 11,
       scanOrder: "#6120",
       cancelledOrder: "#6088",
     },
-    nilPick: { item: "Eggs (tray of 6)", system: 22, order: "#6171" },
+    nilPick: { item: "Eggs (tray of 6)", photo: "eggs", system: 22, order: "#6171" },
     handover: { lakshmi: "packing", joseph: "packing", deepa: "dispatch", anjali: "replenishment" },
     constraint: "dispatch",
     surgeFactor: 1.15,
@@ -82,13 +89,14 @@ export const FORMS: Record<FormId, FormContent> = {
     id: "C",
     highValue: {
       item: "Smartwatch",
+      photo: "smartwatch",
       unitValue: 4499,
       system: 10,
       physical: 7,
       scanOrder: "#7302",
       cancelledOrder: "#7277",
     },
-    nilPick: { item: "Bread (400 g loaf)", system: 19, order: "#7345" },
+    nilPick: { item: "Bread (400 g loaf)", photo: "bread", system: 19, order: "#7345" },
     handover: { lakshmi: "packing", joseph: "dispatch", anjali: "picking" },
     constraint: "replenishment",
     surgeFactor: 1.5,

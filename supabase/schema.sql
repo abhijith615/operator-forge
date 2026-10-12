@@ -1629,7 +1629,12 @@ begin
   end if;
   return query
   select a.id, a.candidate_email, a.role_id, a.campaign_id, a.assessment_version,
-         a.scenario_variant, a.status, a.started_at, a.completed_at, a.device_type, a.actions
+         a.scenario_variant,
+         -- Thirty minutes gone is over, whether or not the candidate came back.
+         case when a.status = 'in_progress' and now() > public.hiring_deadline(a.started_at) then 'expired' else a.status end,
+         a.started_at,
+         coalesce(a.completed_at, case when now() > public.hiring_deadline(a.started_at) then a.started_at + interval '30 minutes' end),
+         a.device_type, a.actions
     from public.hiring_assessments a
    order by a.started_at desc
    limit 500;
@@ -1651,14 +1656,19 @@ begin
   end if;
   return query
   select a.id, a.candidate_email, a.role_id, a.campaign_id, a.assessment_version,
-         a.scenario_variant, a.status, a.started_at, a.completed_at, a.device_type, a.actions,
+         a.scenario_variant,
+         -- Thirty minutes gone is over, whether or not the candidate came back.
+         case when a.status = 'in_progress' and now() > public.hiring_deadline(a.started_at) then 'expired' else a.status end,
+         a.started_at,
+         coalesce(a.completed_at, case when now() > public.hiring_deadline(a.started_at) then a.started_at + interval '30 minutes' end),
+         a.device_type, a.actions,
          coalesce((
            select jsonb_object_agg(s.event_type, s.n)
              from (
                select e.event_type, count(*) as n
                  from public.hiring_events e
                 where e.assessment_id = a.id
-                  and e.event_type in ('hidden', 'visible', 'offline', 'online', 'resume', 'warning_5', 'warning_1', 'expired')
+                  and e.event_type in ('hidden', 'visible', 'offline', 'online', 'resume', 'warning_5', 'warning_1', 'expired', 'assistant')
                 group by e.event_type
              ) s
          ), '{}'::jsonb)

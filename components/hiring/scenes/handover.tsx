@@ -54,7 +54,7 @@ export function Handover({ state, act }: SceneProps) {
       </div>
 
       <Card className="mt-3">
-        <Speech who="Deputy Manager" role="outgoing shift" lines={HANDOVER_LINES} />
+        <Speech who="Assistant Store Manager" role="outgoing shift" lines={HANDOVER_LINES} />
       </Card>
 
       <Eyebrow className="mt-5 mb-2">Before you take it</Eyebrow>
