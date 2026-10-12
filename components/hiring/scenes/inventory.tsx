@@ -52,7 +52,7 @@ const inr = (value: number) => `₹${value.toLocaleString("en-IN")}`;
 /* ── The high-value variance ──────────────────────────────────────────── */
 
 /**
- * A system number and a shelf nobody has looked at.
+ * A system number and a cage nobody has looked in.
  *
  * Counting, reading the records and closing the case are all available from
  * the first second, in any order, by the manager or by somebody sent. None of
@@ -108,7 +108,7 @@ export function HighValueCase({ state, act }: SceneProps) {
           <QuietButton onClick={() => setSheet("count")}>Start a count</QuietButton>
         ) : known ? (
           <p className="text-[14.5px] text-hi">
-            Counted by {k.countOwner === "me" ? "you" : nameOf(k.countOwner)} at {clockLabel(k.countDoneAt!)}: <span className="font-semibold">{hv.physical}</span> on the shelf.
+            Counted by {k.countOwner === "me" ? "you" : nameOf(k.countOwner)} at {clockLabel(k.countDoneAt!)}: <span className="font-semibold">{hv.physical}</span> in the cage.
           </p>
         ) : (
           <p className="text-[14.5px] text-mid">
@@ -172,12 +172,12 @@ export function HighValueCase({ state, act }: SceneProps) {
         {reading && records[reading] ? <Records rows={records[reading]!.rows} /> : null}
       </Sheet>
 
-      {/* 17:39 — the evening arrives while the manager is in the cage. */}
+      {/* 06:09 — the morning arrives while the manager is in the cage. */}
       <Sheet
         open={interrupted && sheet === null && reading === null}
         onOpenChange={() => undefined}
         dismissable={false}
-        title={`${form.surgeHeadline} is rising`}
+        title={form.surgeAlert}
         description={form.surgeDetail}
       >
         <div className="grid grid-cols-2 gap-2">
@@ -191,7 +191,7 @@ export function HighValueCase({ state, act }: SceneProps) {
               Hand the record pull to…
             </Choice>
           ) : null}
-          <Choice go onClick={() => setSheet("stepOut")} detail={`Step out and put somebody on ${STATION_LABEL[form.constraint].toLowerCase()}.`}>
+          <Choice go onClick={() => setSheet("stepOut")} detail={form.constraint === "riders" ? "Step out and put somebody on the rider handover." : `Step out and put somebody on ${STATION_LABEL[form.constraint].toLowerCase()}.`}>
             Return to the floor
           </Choice>
         </div>
@@ -206,9 +206,9 @@ export function HighValueCase({ state, act }: SceneProps) {
       <OwnerSheet
         open={sheet === "stepOut"}
         onOpenChange={() => setSheet(null)}
-        title={`Move to ${STATION_LABEL[form.constraint].toLowerCase()}`}
-        description="Who do you move?"
-        options={moverOptions(state, form.constraint)}
+        title={form.constraint === "riders" ? "Rider handover" : `Send to ${STATION_LABEL[form.constraint].toLowerCase()}`}
+        description={form.constraint === "riders" ? "Who goes to the handover point?" : "Who do you send? They stay on it."}
+        options={form.constraint === "riders" ? ownerOptions(state, "riders") : moverOptions(state, form.constraint)}
         onPick={(move) => act({ t: "caseInterrupt", choice: "stepOut", move })}
       />
     </>
@@ -346,7 +346,7 @@ export function NilPick({ state, act }: SceneProps) {
 
       <div className="grid grid-cols-2 gap-2">
         <Stat label="System" value={nil.system} />
-        <Stat label="Shelf" value={0} tone="caution" />
+        <Stat label="In the bin" value={0} tone="caution" />
       </div>
 
       <Eyebrow className="mt-5 mb-2">Look for it</Eyebrow>
@@ -369,14 +369,14 @@ export function NilPick({ state, act }: SceneProps) {
 
       {found && (searched || n.viewed.includes("replenArea")) ? (
         <Notice tone="good" className="mt-2">
-          {nil.system} units are on the inbound pallet, received 16:40 and not put away.
+          {nil.system} units are in a crate on the inward dock, received at 04:30 and not put away.
         </Notice>
       ) : null}
 
       <Eyebrow className="mt-5 mb-2">Decide</Eyebrow>
       <div className="grid gap-2 sm:grid-cols-2">
-        <Choice go disabled={!found} onClick={() => setSheet("restock")} detail={found ? "Stock the shelf and ship the order complete." : "Nothing found to replenish with yet."}>
-          Replenish the shelf
+        <Choice go disabled={!found} onClick={() => setSheet("restock")} detail={found ? "Fill the bin and ship the order complete." : "Nothing found to put away yet."}>
+          Put the crate away
         </Choice>
         <Choice go onClick={() => act({ t: "nilResolve", how: "authorise" })} detail="Ship the order without it. Refund the line.">
           Authorise the nil pick
@@ -407,8 +407,8 @@ export function NilPick({ state, act }: SceneProps) {
       <OwnerSheet
         open={sheet === "restock"}
         onOpenChange={() => setSheet(null)}
-        title={`Restock the ${nil.item}`}
-        description="Who brings it to the shelf?"
+        title={`Put away the ${nil.item}`}
+        description="Who gets it into the bin?"
         options={ownerOptions(state, "replenish")}
         self={{ note: PERSONAL_COST.replenish }}
         onPick={(owner) => act({ t: "nilResolve", how: "replenish", owner })}

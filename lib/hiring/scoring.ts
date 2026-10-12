@@ -1,14 +1,14 @@
 import { initialState, unitEvidence } from "./engine";
-import { FLOOR_LEAD_SAYS, PROCESS_FIX, formFor } from "./forms";
-import { CTD_TARGET, PEAK_AT, SCHEDULE, clockLabel, floorHolding, projectedPeak, taskFit } from "./model";
-import { BY_ID, ROSTER, STATION_LABEL, nameOf } from "./roster";
+import { FLOOR_LEAD_SAYS, formFor } from "./forms";
+import { CTD_TARGET, PEAK_AT, SCHEDULE, clockLabel, floorHolding, isLocked, projectedPeak, taskFit } from "./model";
+import { BY_ID, ROSTER, STATION_LABEL, STATION_PLACE, nameOf } from "./roster";
 import {
   type EvidenceEvent,
   type EvidenceType,
   type HiringState,
   type Intervention,
   type SceneId,
-  type Station,
+  type Stage,
 } from "./types";
 import {
   ASSESSMENT_VERSION,
@@ -42,6 +42,14 @@ function listed(items: string[]): string {
   return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }
 const at = (clock: number | null) => (clock === null ? "" : clockLabel(clock));
+
+/** A stage, as it reads in the middle of a sentence. */
+const STAGE_WORD: Record<Stage, string> = {
+  picking: "picking",
+  putaway: "putaway",
+  auditing: "auditing",
+  riders: "the rider handover",
+};
 
 type Draft = Omit<EvidenceEvent, "evidenceType" | "opportunityToDemonstrate"> & {
   counter?: boolean;
@@ -85,8 +93,8 @@ const notReached = (
 
 /* ── Team ─────────────────────────────────────────────────────────────── */
 
-/** What the board said about the floor the outgoing shift left. */
-function inheritedFloor(state: HiringState): Record<Station, number> {
+/** What the board said about the floor the night shift left. */
+function inheritedFloor(state: HiringState): Record<Stage, number> {
   return projectedPeak(initialState(state.form));
 }
 
@@ -100,20 +108,20 @@ function teamEvents(state: HiringState): Draft[] {
     out.push(notReached("T1", C, "Station coverage", "Covers all critical operating stations."));
   } else {
     const p = state.floor.projected;
-    const critical = Math.min(p.picking, p.packing, p.dispatch);
     const uncovered = state.floor.uncovered;
-    const lowest = Math.min(critical, p.replenishment);
+    // The three an order depends on: somebody to pick it, stock in the bin, a rider to take it.
+    const lowest = Math.min(p.picking, p.putaway, p.riders);
     const score = uncovered.length ? 0 : lowest >= 0.85 ? 3 : lowest >= 0.8 ? 2 : lowest >= 0.55 ? 1 : 0;
     out.push({
       behaviourId: "T1",
       competencyId: C,
-      title: score === 3 ? "Built a floor that covered every station" : uncovered.length ? "Left a station with nobody on it" : "Left a station thin going into the evening",
+      title: score === 3 ? "Built a floor that covered picking, putaway and riders" : uncovered.length ? "Left a workflow with nobody on it" : "Left one part of the store thin going into the rush",
       claim: "Covers all critical operating stations.",
       simTime: state.floor.lockedAt,
-      stateBefore: `Inherited floor: picking ${pct(was.picking)}, packing ${pct(was.packing)}, dispatch ${pct(was.dispatch)}, replenishment ${pct(was.replenishment)} of the 18:00 forecast.`,
-      candidateAction: `Set the floor at picking ${pct(p.picking)}, packing ${pct(p.packing)}, dispatch ${pct(p.dispatch)}, replenishment ${pct(p.replenishment)}.`,
-      timingContext: "Before the evening build",
-      stateAfter: uncovered.length ? `Nobody assigned to ${uncovered.map((s) => STATION_LABEL[s]).join(", ")}.` : `Weakest station at ${pct(lowest)} of forecast.`,
+      stateBefore: `Inherited floor: picking ${pct(was.picking)}, putaway ${pct(was.putaway)}, riders ${pct(was.riders)} of the 06:30 forecast.`,
+      candidateAction: `Set the floor at picking ${pct(p.picking)}, putaway ${pct(p.putaway)}, riders ${pct(p.riders)}.`,
+      timingContext: "Before the breakfast build",
+      stateAfter: uncovered.length ? `Nobody assigned to ${uncovered.map((s) => STATION_LABEL[s]).join(", ")}.` : `Weakest at ${pct(lowest)} of forecast.`,
       score: score as 0 | 1 | 2 | 3,
       behaviourTags: uncovered.length ? ["station_uncovered"] : score === 3 ? ["balanced_floor"] : ["thin_station"],
       counter: uncovered.length > 0,
@@ -135,13 +143,13 @@ function teamEvents(state: HiringState): Draft[] {
       title: score === 3 ? "Put trained people where they were trained" : "Left people working outside what they are trained for",
       claim: "Matches people to jobs based on capability.",
       simTime: state.floor.lockedAt,
-      stateBefore: "Twelve associates, each trained at one or two stations.",
+      stateBefore: "Twelve associates, each trained for one or two of picking, putaway and auditing.",
       candidateAction:
         misplaced.length === 0
-          ? "Every associate is at a station they are trained for."
+          ? "Every associate is on work they are trained for."
           : `${misplaced.map((e) => `${e.name} on ${STATION_LABEL[state.assign[e.id]!].toLowerCase()}`).join("; ")} — outside their training.`,
       timingContext: "Floor build",
-      stateAfter: `${12 - misplaced.length} of 12 at a station they are trained for.`,
+      stateAfter: `${12 - misplaced.length} of 12 on work they are trained for.`,
       score: score as 0 | 1 | 2 | 3,
       behaviourTags: score === 3 ? ["skill_matched"] : ["skill_mismatch"],
     });
@@ -156,9 +164,9 @@ function teamEvents(state: HiringState): Draft[] {
     let score = projectedMin >= 0.93 ? 3 : projectedMin >= 0.85 ? 2 : projectedMin >= 0.8 ? 1 : 0;
     if (over && score === 3) score = 2;
     const did: Record<string, string> = {
-      onDemand: "booked a four-hour on-demand picker",
+      onDemand: "booked a four-hour agency picker",
       reallocate: "reallocated internally",
-      extend: "asked a day-shift associate to stay",
+      extend: "asked an overnight associate to stay",
       short: "chose to run short",
     };
     out.push({
@@ -167,10 +175,10 @@ function teamEvents(state: HiringState): Draft[] {
       title: score === 3 ? "Closed the staffing gap before the peak" : over ? "Covered the gap, and paid for more picking than the peak needed" : "Went into the peak short",
       claim: "Builds sufficient peak capacity.",
       simTime: state.absence.at,
-      stateBefore: "Two of fourteen absent, demand forecast +38% at 18:00.",
+      stateBefore: "Two of fourteen absent, demand forecast +38% at 06:30.",
       candidateAction: `Candidate ${listed(choices.map((c) => did[c]!)) || "took no action"}.`,
       timingContext: "Thirty minutes before the peak",
-      stateAfter: `Weakest station projected at ${pct(projectedMin)} for 18:00.`,
+      stateAfter: `Weakest of picking, putaway and riders projected at ${pct(projectedMin)} for 06:30.`,
       score: score as 0 | 1 | 2 | 3,
       behaviourTags: over ? ["overstaffed"] : score >= 2 ? ["capacity_built"] : ["understaffed"],
     });
@@ -182,22 +190,22 @@ function teamEvents(state: HiringState): Draft[] {
   } else {
     const reserve = state.floor.reserve;
     const p = state.floor.projected;
-    const thin = Math.min(p.picking, p.packing, p.dispatch, p.replenishment) < 0.8;
-    // People who are spare because the floor is lopsided are not a reserve.
+    const thin = Math.min(p.picking, p.putaway, p.riders) < 0.8;
+    // Devices that are open because the floor is lopsided are not a reserve.
     const score = thin ? Math.min(1, reserve.length) : reserve.length >= 2 ? 3 : reserve.length === 1 ? 2 : 0;
     out.push({
       behaviourId: "T4",
       competencyId: C,
-      title: score === 3 ? "Kept people free to move when the evening changed" : score === 2 ? "Kept one person who could be moved" : thin ? "Had people spare on one station while another ran short" : "Built a floor with nobody spare to move",
+      title: score === 3 ? "Left devices open for the rush without starving their own work" : score === 2 ? "Left one device the app could call on" : thin ? "Had hands spare in one place while another ran short" : "Built a floor with nobody the app could call on",
       claim: "Preserves flexible, cross-trained capacity.",
       simTime: state.absence?.at ?? state.floor.lockedAt,
-      stateBefore: "Seven associates are cross-trained for a second station.",
+      stateBefore: "An unlocked device on putaway or auditing is sent orders when volume spikes. A locked one never is.",
       candidateAction:
         reserve.length > 0
-          ? `${reserve.map(nameOf).join(", ")} could be released to a second station without breaking the first.`
-          : "Every cross-trained associate was needed where they stood.",
-      timingContext: "Going into the evening",
-      stateAfter: thin ? `${reserve.length} movable, with a station under 80% of forecast.` : `Flexible reserve: ${reserve.length}.`,
+          ? `${reserve.map(nameOf).join(", ")} ${reserve.length === 1 ? "was" : "were"} left unlocked, on work that could spare them.`
+          : "No device was left where the app could send it orders without starving its own work.",
+      timingContext: "Going into the morning",
+      stateAfter: thin ? `${reserve.length} open to orders, with part of the store under 80% of forecast.` : `Flexible reserve: ${reserve.length}.`,
       score: score as 0 | 1 | 2 | 3,
       behaviourTags: score >= 2 ? ["reserve_kept"] : ["no_reserve"],
     });
@@ -209,54 +217,58 @@ function teamEvents(state: HiringState): Draft[] {
     out.push(notReached("T5", C, "Performance diagnosis", "Diagnoses employee performance correctly."));
     out.push(notReached("T6", C, "Developing people", "Develops people rather than simply removing them."));
   } else {
-    const developed = choices.includes("moveAB") || choices.includes("pair") || choices.includes("coachLater");
-    const punitive = choices.includes("warn") || choices.includes("removePicking");
+    const developed = choices.includes("lockPutaway") || choices.includes("pair") || choices.includes("phaseLater");
+    const punitive = choices.includes("warn") || choices.includes("returnAgency") || choices.includes("target");
     const t5 = punitive ? 0 : developed ? (state.riya.inspected ? 3 : 2) : state.riya.inspected ? 1 : 0;
     const label: Record<string, string> = {
-      moveAB: "moved her to Zones A and B for the peak",
-      pair: "paired her with an expert",
-      coachLater: "booked Zone C coaching for after the peak",
-      keep: "left her where she was",
-      removePicking: "took her off picking",
-      moveToPacking: "moved her to packing",
+      lockPutaway: "locked her device to putaway",
+      pair: "paired her with a putaway hand to learn the bins",
+      phaseLater: "planned her first picking shift for after the rush",
+      keep: "left things as they were",
+      target: "kept her on orders with the 16-second target",
+      returnAgency: "sent her back to the agency",
       warn: "issued a performance warning",
     };
     out.push({
       behaviourId: "T5",
       competencyId: C,
-      title: t5 === 3 ? "Read the data and found a location problem, not a people problem" : punitive ? "Treated a location problem as a performance problem" : "Acted on Riya without reading her numbers",
+      title: t5 === 3 ? "Read the record and found an induction problem, not a people problem" : punitive ? "Treated an induction slip as a performance problem" : "Acted on Riya without reading her record",
       claim: "Diagnoses employee performance correctly.",
       simTime: when(state, "riya"),
-      stateBefore: "Floor Lead: \"Riya is slow again. Should I pull her?\" PPI 21.4 sec, improving daily; 99.7% accurate; slow only in Zone C.",
-      candidateAction: `${state.riya.inspected ? "Opened her numbers, then" : "Without opening her numbers,"} ${choices.map((c) => label[c]).join(" and ")}.`,
-      timingContext: "Eleven days into her induction",
-      stateAfter: punitive ? "The cause — lookalike SKUs in Zone C — was not addressed." : developed ? "The cause was identified as Zone C, not ability." : "No change.",
+      stateBefore: "Floor Lead: \"Riya did thirty-one seconds an item this morning. Should I send her back to the agency?\" Day 2; her induction is putaway only; her device had been unlocked at 05:10 and the app had sent her 14 orders; no mis-picks.",
+      candidateAction: `${state.riya.inspected ? "Opened her record, then" : "Without opening her record,"} ${choices.map((c) => label[c]).join(" and ")}.`,
+      timingContext: "On her second day",
+      stateAfter: punitive ? "The cause — a new joiner's device left open to orders — was not addressed." : developed ? "The cause was identified as the device and the induction, not ability." : "No change.",
       score: t5 as 0 | 1 | 2 | 3,
       behaviourTags: punitive ? ["misdiagnosed"] : state.riya.inspected ? ["evidence_before_people_decision"] : ["acted_without_data"],
-      counter: choices.includes("warn"),
+      counter: choices.includes("warn") || choices.includes("returnAgency"),
     });
 
-    const t6 = punitive ? 0 : choices.includes("pair") || (choices.includes("moveAB") && choices.includes("coachLater")) ? 3 : choices.includes("moveAB") || choices.includes("coachLater") ? 2 : 1;
+    const t6 = punitive ? 0 : choices.includes("pair") || (choices.includes("lockPutaway") && choices.includes("phaseLater")) ? 3 : choices.includes("lockPutaway") || choices.includes("phaseLater") ? 2 : 1;
     const riyaLater = state.outcome?.riyaOutput ?? 0;
     out.push({
       behaviourId: "T6",
       competencyId: C,
-      title: t6 === 3 ? "Developed a new starter instead of removing her" : punitive ? "Removed or warned a new starter who was improving" : t6 === 2 ? "Protected the peak, with half a development plan" : "Left a new starter to work it out alone",
+      title: t6 === 3 ? "Developed a new joiner instead of removing her" : punitive ? "Pressed, warned or removed a new joiner on her second day" : t6 === 2 ? "Protected a new joiner, with half a development plan" : "Left a new joiner to work it out alone",
       claim: "Develops people rather than simply removing them.",
       simTime: when(state, "riya"),
-      stateBefore: "Riya's picking output: 62% of a trained picker.",
+      stateBefore: "Riya's putaway rate: 55% of a trained hand. On orders: 32 seconds an item against a 16-second standard.",
       candidateAction: `Candidate ${choices.map((c) => label[c]).join(" and ")}.`,
       timingContext: "Before the peak",
-      stateAfter: riyaLater > 0 ? `By 18:10 her output was ${pct(riyaLater)} of a trained picker.` : "By 18:10 she was not picking.",
+      stateAfter: riyaLater > 0 ? `By 06:40 she was putting away at ${pct(riyaLater)} of a trained hand.` : "By 06:40 she was not on putaway.",
       laterConsequence:
-        riyaLater >= 0.84
-          ? "Picking held through the peak with Riya carrying a near-full load."
-          : state.assign.riya !== "picking"
-            ? "Picking went into the peak a person short."
-            : "She stayed slow through Zone C for the whole peak.",
+        riyaLater >= 0.8
+          ? "Putaway held through the rush with Riya carrying a near-full load."
+          : state.assign.riya === undefined
+            ? "Putaway went into the rush a hand short."
+            : state.riya.leftAt !== null
+              ? "She did not come back from her break. The agency says she is not returning."
+              : !isLocked(state, "riya")
+                ? "The app kept sending her orders through the rush, and the crates she was on stayed on the dock."
+                : "She stayed on putaway at a learner's pace through the rush.",
       score: t6 as 0 | 1 | 2 | 3,
       behaviourTags: t6 === 3 ? ["developed_people"] : punitive ? ["removed_not_developed"] : ["partial_development"],
-      counter: choices.includes("warn"),
+      counter: choices.includes("warn") || choices.includes("returnAgency"),
     });
   }
 
@@ -271,11 +283,11 @@ function teamEvents(state: HiringState): Draft[] {
     out.push({
       behaviourId: "T7",
       competencyId: C,
-      title: t7 === 3 ? "Took a grievance off the floor and settled it" : harsh ? "Met a grievance with pressure" : "Handled a grievance in front of the picking line",
+      title: t7 === 3 ? "Took a grievance off the floor and settled it" : harsh ? "Met a grievance with pressure" : "Handled a grievance in front of the other pickers",
       claim: "Handles conflict without damaging throughput.",
       simTime: when(state, "arjun"),
-      stateBefore: "Arjun, the store's fastest picker: \"Last week's incentive still hasn't come. Why should I extend tonight?\"",
-      candidateAction: `Spoke to him ${state.arjun.place === "aside" ? "away from the line" : "on the floor"}${harsh === 2 ? ", and threatened his record" : harsh === 1 ? ", and overrode him" : ""}.`,
+      stateBefore: "Arjun, the store's fastest picker, at the end of an overnight shift: \"Last week's incentive still hasn't come. Why should I stay on for your rush?\"",
+      candidateAction: `Spoke to him ${state.arjun.place === "aside" ? "away from the other pickers" : "on the floor"}${harsh === 2 ? ", and threatened his record" : harsh === 1 ? ", and overrode him" : ""}.`,
       timingContext: "Twenty-five minutes before the peak",
       stateAfter: `Arjun: ${ARJUN_STATE[state.arjun.outcome]}.`,
       score: t7 as 0 | 1 | 2 | 3,
@@ -308,10 +320,10 @@ function teamEvents(state: HiringState): Draft[] {
       stateAfter: `Team trust ${state.trust >= 66 ? "rose" : state.trust <= 56 ? "fell" : "held"}. Arjun: ${ARJUN_STATE[state.arjun.outcome]}.`,
       laterConsequence:
         state.arjun.outcome === "willing"
-          ? "He stayed through the peak and covered a second station at full pace when asked."
+          ? "He stayed through the peak and covered other work at full pace when asked."
           : state.arjun.outcome === "leaving"
-            ? "He left at 18:00, as the peak began."
-            : "He stayed, and moved to a second station more slowly than he can.",
+            ? "He left at 06:30, as the peak began."
+            : "He stayed, and covered other work more slowly than he can.",
       score: t8 as 0 | 1 | 2 | 3,
       behaviourTags: reply.clarify === "promise" ? ["unsupported_promise"] : t8 === 3 ? ["honest_verified"] : t8 === 0 ? ["dismissive"] : ["unverified_answer"],
       counter: reply.request === "threat",
@@ -385,7 +397,7 @@ const ARJUN_STATE: Record<HiringState["arjun"]["outcome"], string> = {
   willing: "staying through the peak, willingly",
   reluctant: "staying through the peak, reluctantly",
   resentful: "staying, resentful",
-  leaving: "leaving at 18:00",
+  leaving: "leaving at 06:30",
 };
 const ACK = { recognise: "Recognised that he had hit his target.", neutral: "Acknowledged the concern.", dismiss: "Brushed the concern aside." };
 const CLARIFY = {
@@ -421,11 +433,11 @@ function inventoryEvents(state: HiringState): Draft[] {
     out.push({
       behaviourId: "I1",
       competencyId: C,
-      title: score ? "Verified a system alert on the shelf" : "Left a high-value variance uncounted",
+      title: score ? "Verified a system alert in the cage" : "Left a high-value variance uncounted",
       claim: "Detects physical-system mismatch.",
       simTime: k.openedAt,
       stateBefore: `Alert: ${hv.item}, system ${hv.system}, physical unknown, ₹${hv.unitValue.toLocaleString("en-IN")} a unit.`,
-      candidateAction: score ? `Ordered a physical count (${k.countOwner === "me" ? "counted personally" : `by ${nameOf(k.countOwner!)}`}).` : "Deferred it to the night audit.",
+      candidateAction: score ? `Ordered a physical count (${k.countOwner === "me" ? "counted personally" : `by ${nameOf(k.countOwner!)}`}).` : "Left it for the next routine count.",
       timingContext: "On the alert",
       stateAfter: score ? `Physical ${hv.physical}. Variance −${hv.system - hv.physical}, exposure ${exposure}.` : "Variance unknown.",
       score: score as 0 | 3,
@@ -444,7 +456,7 @@ function inventoryEvents(state: HiringState): Draft[] {
       title: score === 3 ? "Established the count before theorising" : score === 2 ? "Went to the records before knowing the size of the gap" : "Never established what was physically there",
       claim: "Establishes physical count before conclusions.",
       simTime: k.openedAt,
-      stateBefore: `System said ${hv.system}. Nobody had looked at the shelf.`,
+      stateBefore: `System said ${hv.system}. Nobody had looked in the cage.`,
       candidateAction: k.firstMove === "count" ? "First action was the physical count." : k.firstMove === "records" ? "Opened the records first, and counted afterwards." : "Did not count.",
       timingContext: "First move on the case",
       stateAfter: k.countOwner !== null ? "Every later conclusion was against a known physical number." : "No physical number to reason from.",
@@ -593,10 +605,10 @@ function inventoryEvents(state: HiringState): Draft[] {
       title: i6 === 3 ? "Found the stock before giving up on the line" : n.searchedBefore ? "Looked, then authorised the nil pick anyway" : "Authorised a nil pick without looking",
       claim: "Investigates Nil Picks before de-listing.",
       simTime: when(state, "nilpick"),
-      stateBefore: `${form.nilPick.item}: system ${form.nilPick.system}, shelf 0. Order ${form.nilPick.order} waiting.`,
+      stateBefore: `${form.nilPick.item}: system ${form.nilPick.system}, bin empty. Order ${form.nilPick.order} waiting.`,
       candidateAction: n.searchOwner ? `${n.searchOwner === "me" ? "Searched personally" : `Had ${nameOf(n.searchOwner)} search`}, then ${NIL[n.outcome]}.` : n.viewed.length ? `Checked ${n.viewed.join(", ")}, then ${NIL[n.outcome]}.` : `Without checking any other location, ${NIL[n.outcome]}.`,
       timingContext: "While an order waited",
-      stateAfter: n.outcome === "replenished" ? "Two crates were in inbound, never put away. Shelf restocked; order shipped complete." : "Seventeen units stayed in inbound. The order went short or the line went off sale.",
+      stateAfter: n.outcome === "replenished" ? "The crate had come in at 04:30 and was never put away. Bin filled; order shipped complete." : `${form.nilPick.system} units stayed in a crate on the dock. The order went short or the line went off sale.`,
       score: i6 as 0 | 1 | 3,
       behaviourTags: i6 === 3 ? ["nil_pick_investigated"] : ["nil_pick_unverified"],
       counter: !n.searchedBefore && n.outcome !== "replenished",
@@ -618,10 +630,10 @@ function inventoryEvents(state: HiringState): Draft[] {
       title: i7 === 3 ? "Gave the count to the person trained for it" : selfCount ? "Did the recount personally" : countFit > 0 ? "Gave the count to somebody not trained for it" : "Did not use the team on the case",
       claim: "Uses team members appropriately for counts and follow-up.",
       simTime: k.openedAt,
-      stateBefore: `Farhan is count-trained and cleared for high-value. He was on ${STATION_LABEL[state.assign.farhan ?? "picking"].split(" /")[0]!.toLowerCase()}.`,
+      stateBefore: `Farhan is count-trained and cleared for high-value. He was on ${STATION_LABEL[state.assign.farhan ?? "picking"].toLowerCase()}.`,
       candidateAction: `Count: ${k.countOwner ? nameOf(k.countOwner) : "nobody"}. Records: ${k.recordsOwner ? nameOf(k.recordsOwner) : k.viewed.length ? "the manager" : "nobody"}.`,
       timingContext: "During the investigation",
-      stateAfter: selfCount ? "The manager was off the floor for five minutes while the surge landed." : countFit >= 0.9 ? "Counted in four minutes while the manager stayed available." : "The count took longer and pulled somebody off a station that needed them.",
+      stateAfter: selfCount ? "The manager was off the floor for five minutes while the surge landed." : countFit >= 0.9 ? "Counted in four minutes while the manager stayed available." : "The count took longer and pulled somebody off work that needed them.",
       score: i7 as 0 | 1 | 2 | 3,
       behaviourTags: i7 === 3 ? ["count_delegated_well"] : selfCount ? ["count_personal"] : ["count_misdelegated"],
     });
@@ -638,7 +650,7 @@ const UNIT_CALL = {
   theft: "put down to theft",
 };
 
-const NIL = { replenished: "had the shelf restocked", authorised: "authorised the nil pick", delisted: "took the line off sale", ignored: "left it" };
+const NIL = { replenished: "had the crate put away", authorised: "authorised the nil pick", delisted: "took the line off sale", ignored: "left it" };
 
 /* ── Time and priority ────────────────────────────────────────────────── */
 
@@ -648,7 +660,8 @@ function timeEvents(state: HiringState): Draft[] {
   const constraint = form.constraint;
   const C: CompetencyId = "timePrioritisation";
   const first = state.constraintActs[0] ?? null;
-  const where: Record<string, string> = { case: "during the investigation, as the queue first rose", triage: "when the three problems landed", bottleneck: "once the store was visibly stuck", final: "in the final plan", floor: "in the floor build", absence: "in the floor build" };
+  const where: Record<string, string> = { case: "during the investigation, as orders first backed up", triage: "when the three problems landed", bottleneck: "once the store was visibly stuck", final: "in the final plan", floor: "in the floor build", absence: "in the floor build" };
+  const stage = STAGE_WORD[constraint];
 
   /* P1 · recognises risk before failure */
   const built = (state.floor?.projected[constraint] ?? 0) >= 0.95;
@@ -660,13 +673,13 @@ function timeEvents(state: HiringState): Draft[] {
   else out.push({
     behaviourId: "P1",
     competencyId: C,
-    title: p1 === 3 ? `Strengthened ${STATION_LABEL[constraint].toLowerCase()} before it failed` : p1 === 2 ? `Strengthened ${STATION_LABEL[constraint].toLowerCase()} once the pressure was visible` : p1 === 1 ? `Reinforced ${STATION_LABEL[constraint].toLowerCase()} late` : `Never reinforced ${STATION_LABEL[constraint].toLowerCase()}`,
+    title: p1 === 3 ? `Strengthened ${stage} before it failed` : p1 === 2 ? `Strengthened ${stage} once the pressure was visible` : p1 === 1 ? `Reinforced ${stage} late` : `Never reinforced ${stage}`,
     claim: "Recognises risk before failure.",
     simTime: first?.at ?? state.floor?.lockedAt ?? null,
-    stateBefore: `Inherited ${STATION_LABEL[constraint].toLowerCase()} at ${pct(inheritedFloor(state)[constraint])} of the 18:00 forecast.`,
+    stateBefore: `Inherited ${stage} at ${pct(inheritedFloor(state)[constraint])} of the 06:30 forecast.`,
     candidateAction: built ? `Built it to ${pct(state.floor!.projected[constraint])} in the floor build.` : first ? `Added capacity ${where[first.where] ?? "later"}.` : "Did not add capacity there at any point.",
     timingContext: built ? "Before any queue formed" : first ? at(first.at) : "Never",
-    stateAfter: first || built ? "Capacity was in place for part or all of the surge." : "The station ran short through the surge.",
+    stateAfter: first || built ? "Capacity was in place for part or all of the surge." : "It ran short through the surge.",
     score: p1 as 0 | 1 | 2 | 3,
     behaviourTags: p1 === 3 ? ["anticipatory"] : p1 ? ["reactive"] : ["no_response"],
   });
@@ -688,7 +701,7 @@ function timeEvents(state: HiringState): Draft[] {
     claim: "Acts before avoidable SLA breach.",
     simTime: first?.at ?? breach,
     stateBefore: `Click-to-dispatch target: ${CTD_TARGET} seconds.`,
-    candidateAction: first ? `First reinforced the constrained station at ${at(first.at)}, with CTD at ${first.ctd}s.` : built ? "Had the capacity in place from the floor build." : "Did not reinforce the constrained station.",
+    candidateAction: first ? `First reinforced ${stage} at ${at(first.at)}, with CTD at ${first.ctd}s.` : built ? "Had the capacity in place from the floor build." : `Did not reinforce ${stage}.`,
     timingContext: breach === null ? "No breach occurred" : `Target first breached at ${at(breach)}`,
     stateAfter: `CTD peaked at ${peaked}s${state.expiry ? " while the candidate was running the store" : ""}.`,
     score: p2 as 0 | 1 | 2 | 3,
@@ -712,11 +725,11 @@ function timeEvents(state: HiringState): Draft[] {
       behaviourId: "P3",
       competencyId: C,
       title: !real
-        ? aisleNow ? "Had the aisle cleared; the surge station was already covered" : "Left the blocked aisle for later"
+        ? aisleNow ? "Had the aisle cleared; the surge was already covered" : "Left the blocked aisle for later"
         : p3 === 3 ? "Dealt with the two things costing orders, now" : constraintNow ? "Dealt with the main constraint and left the aisle" : "Left the biggest problem for later",
       claim: "Handles higher-impact problems first.",
       simTime: when(state, "triage"),
-      stateBefore: `${form.surgeHeadline}: ${STATION_LABEL[constraint].toLowerCase()} at ${pct(cover)} of what it was being asked for; Aisle C blocked (routes a third longer); the variance follow-up still open.`,
+      stateBefore: `${form.surgeHeadline}: ${stage} at ${pct(cover)} of what it was being asked for; Aisle C blocked by inward crates (routes a third longer); the variance follow-up still open.`,
       candidateAction: `${form.surgeHeadline}: ${word[tri.constraint.mode]}${tri.constraint.owner ? ` to ${nameOf(tri.constraint.owner)}` : ""}. Aisle C: ${word[tri.aisle.mode]}${tri.aisle.owner ? ` to ${nameOf(tri.aisle.owner)}` : ""}. Follow-up: ${word[tri.followUp.mode]}${tri.followUp.owner ? ` to ${nameOf(tri.followUp.owner)}` : ""}.`,
       timingContext: "One personal attention slot available",
       stateAfter: constraintNow ? "The constraint had capacity added within the minute." : "The constraint kept growing through to the next decision.",
@@ -737,8 +750,8 @@ function timeEvents(state: HiringState): Draft[] {
       title: p6 === 3 ? "Kept the manager's attention for manager's work" : "Spent the manager's attention on hands-on work",
       claim: "Preserves manager attention for manager-level judgement.",
       simTime: when(state, "triage"),
-      stateBefore: "One personal slot at 17:44, and up to three in the final plan.",
-      candidateAction: `${tri.constraint.mode === "handle" ? "Worked the bench personally. " : tri.aisle.mode === "handle" ? "Cleared the aisle personally. " : tri.followUp.mode === "handle" ? "Used the slot on the escalation, which only a manager can sign. " : "Kept the slot free. "}${planHands ? `Took ${planHands} hands-on task${planHands === 1 ? "" : "s"} personally in the final plan.` : "Took no hands-on task personally in the final plan."}`,
+      stateBefore: "One personal slot at 06:14, and up to three in the final plan.",
+      candidateAction: `${tri.constraint.mode === "handle" ? `Worked the ${STATION_PLACE[constraint]} personally. ` : tri.aisle.mode === "handle" ? "Cleared the aisle personally. " : tri.followUp.mode === "handle" ? "Used the slot on the escalation, which only a manager can sign. " : "Kept the slot free. "}${planHands ? `Took ${planHands} hands-on task${planHands === 1 ? "" : "s"} personally in the final plan.` : "Took no hands-on task personally in the final plan."}`,
       timingContext: "Under peak pressure",
       stateAfter: misuse ? "While doing them, the manager was not available to decide anything else." : "The manager stayed available to decide.",
       score: p6 as 0 | 1 | 2 | 3,
@@ -763,7 +776,7 @@ function timeEvents(state: HiringState): Draft[] {
       title: p4 === 3 ? "Kept the peak for what the peak needed" : "Spent the peak on work that could have waited",
       claim: "Distinguishes urgent from merely important.",
       simTime: when(state, "final"),
-      stateBefore: `${tasks.length} open tasks at 17:57. ${tasks.filter((t) => t.urgent).length} could not wait for the peak to pass.`,
+      stateBefore: `${tasks.length} open tasks at 06:27. ${tasks.filter((t) => t.urgent).length} could not wait for the peak to pass.`,
       candidateAction: peakWork.length ? `Scheduled into the peak: ${peakWork.map((t) => t.title).join("; ")}.` : "Left everything that could wait until after the peak.",
       timingContext: "Three minutes before the peak",
       stateAfter: `${rightly} of ${tasks.length} tasks were timed according to whether they could wait.`,
@@ -794,18 +807,56 @@ function timeEvents(state: HiringState): Draft[] {
 
 /* ── Critical thinking ────────────────────────────────────────────────── */
 
-const PANEL_OF: Record<Station, string> = { picking: "bnPicking", packing: "bnPacking", dispatch: "bnDispatch", replenishment: "bnShelf" };
+/**
+ * The panels that show where the store is stuck. When pickers or bins are the
+ * problem, the device list shows the cause as plainly as the stage's own
+ * numbers do: who the app can send orders to, and who it is taking them from.
+ */
+const PANELS_OF: Record<Stage, string[]> = {
+  picking: ["bnPicking", "bnDevices"],
+  putaway: ["bnShelf", "bnDevices"],
+  auditing: ["bnDevices"],
+  riders: ["bnRiders"],
+};
 
-function helps(move: Intervention, constraint: Station, aisle: boolean): 1 | 0 | -1 {
+/**
+ * Did taking this hand off putaway leave the bins unfilled? A picker gained
+ * that way is lost again, and more, to pickers arriving at empty bins.
+ */
+function starvedBins(state: HiringState, emp: string): boolean {
+  const from = state.bn.origins[emp] ?? state.assign[emp];
+  if (from !== "putaway") return false;
+  const left = state.bn.after?.coverage.putaway ?? (state.bn.coverageAtStart?.putaway ?? 1) - 0.45;
+  return left < 0.8;
+}
+
+function helps(state: HiringState, move: Intervention, constraint: Stage, aisle: boolean): 1 | 0 | -1 {
   switch (move.kind) {
-    case "move":
-      if (move.to === constraint) return (BY_ID[move.emp]?.skills[constraint] ?? 0) >= 0.6 ? 1 : 0;
-      // Feeding the stage before a blocked one makes the block worse.
-      if (constraint === "packing" && move.to === "picking") return -1;
-      if (constraint === "dispatch" && (move.to === "packing" || move.to === "picking")) return -1;
+    case "move": {
+      if (move.to === constraint) {
+        if (constraint === "picking" && starvedBins(state, move.emp)) return -1;
+        return (BY_ID[move.emp]?.skills[move.to] ?? 0) >= 0.6 ? 1 : 0;
+      }
+      // Taking a hand off the stage that is stuck makes it worse.
+      if (state.bn.origins[move.emp] === constraint) return -1;
+      // More pickers when the riders are the limit only stacks more bags on the shelf.
+      if (constraint === "riders" && move.to === "picking") return -1;
       return 0;
+    }
+    case "lock": {
+      const station = state.assign[move.emp];
+      // Opening a device adds a picker in a rush; closing one takes a picker away.
+      if (constraint === "picking") return move.locked || starvedBins(state, move.emp) ? -1 : 1;
+      // Closing a putaway device keeps a hand on the bins; opening one hands it to the app.
+      if (constraint === "putaway") return station === "putaway" ? (move.locked ? 1 : -1) : 0;
+      if (constraint === "riders") return move.locked ? 0 : -1;
+      return 0;
+    }
     case "addSlot":
       return move.station === constraint ? 1 : 0;
+    case "riderDesk":
+    case "standby":
+      return constraint === "riders" ? 1 : 0;
     case "clearAisle":
       return constraint === "picking" && aisle ? 1 : 0;
     case "slowRelease":
@@ -831,27 +882,27 @@ function criticalEvents(state: HiringState): Draft[] {
   } else {
     const constraint = b.constraintAtStart;
     const cover = b.coverageAtStart;
-    const said = FLOOR_LEAD_SAYS[b.blamed === "packing" ? "packing" : "picking"];
-    const panel = PANEL_OF[constraint];
-    const sawFirst = b.viewedBeforeAct.includes(panel);
+    const said = FLOOR_LEAD_SAYS[b.blamed === "putaway" ? "putaway" : "picking"];
+    const stage = STAGE_WORD[constraint];
+    const sawFirst = PANELS_OF[constraint].some((panel) => b.viewedBeforeAct.includes(panel));
     const acted = b.moves.length > 0;
     const c1 = sawFirst ? 3 : b.viewedBeforeAct.length > 0 ? 2 : b.viewed.length > 0 ? 1 : 0;
-    const coverLine = `picking ${pct(cover.picking)}, packing ${pct(cover.packing)}, dispatch ${pct(cover.dispatch)}, shelf ${pct(cover.replenishment)}`;
+    const coverLine = `picking ${pct(cover.picking)}, putaway ${pct(cover.putaway)}, riders ${pct(cover.riders)}`;
     out.push({
       behaviourId: "C1",
       competencyId: C,
-      title: c1 === 3 ? "Looked at the stations before accepting the diagnosis" : c1 === 0 ? "Acted on the Floor Lead's word without looking" : "Looked, but not at the station that was stuck",
+      title: c1 === 3 ? "Looked at the floor before accepting the diagnosis" : c1 === 0 ? "Acted on the Floor Lead's word without looking" : "Looked, but not at where the store was stuck",
       claim: "Inspects relevant evidence.",
       simTime: when(state, "bottleneck"),
       stateBefore: `Floor Lead: "${said}" Actual coverage: ${coverLine}.`,
-      candidateAction: b.viewedBeforeAct.length ? `Opened ${b.viewedBeforeAct.length} panel${b.viewedBeforeAct.length === 1 ? "" : "s"} before acting${sawFirst ? `, including ${STATION_LABEL[constraint].toLowerCase()}` : ""}.` : "Opened nothing before acting.",
+      candidateAction: b.viewedBeforeAct.length ? `Opened ${b.viewedBeforeAct.length} panel${b.viewedBeforeAct.length === 1 ? "" : "s"} before acting${sawFirst ? `, including the one showing ${stage}` : ""}.` : "Opened nothing before acting.",
       timingContext: "Before intervening",
       stateAfter: sawFirst ? "The real constraint was on screen before the decision." : "The decision was made without the constraint's numbers.",
       score: c1 as 0 | 1 | 2 | 3,
       behaviourTags: c1 === 3 ? ["evidence_before_action"] : ["acted_on_assertion"],
     });
 
-    const marks = b.moves.map((m) => helps(m, constraint, state.shocks.aisleClearedAt === null));
+    const marks = b.moves.map((m) => helps(state, m, constraint, state.shocks.aisleClearedAt === null));
     const helped = marks.includes(1);
     const hurt = marks.includes(-1);
     const fine = floorHolding(cover);
@@ -859,13 +910,13 @@ function criticalEvents(state: HiringState): Draft[] {
     out.push({
       behaviourId: "C2",
       competencyId: C,
-      title: fine && !hurt ? (acted ? "Reinforced a floor that was already holding" : "Left a floor that was holding alone") : c2 === 3 ? "Fixed the constraint, not the symptom" : hurt ? "Fed the stage before the blockage" : acted ? "Changed something that was not the constraint" : "Made no intervention",
+      title: fine && !hurt ? (acted ? "Reinforced a floor that was already holding" : "Left a floor that was holding alone") : c2 === 3 ? "Fixed the constraint, not the symptom" : hurt ? "Made a change that cost more than it gave" : acted ? "Changed something that was not the constraint" : "Made no intervention",
       claim: "Separates symptom from constraint.",
       simTime: when(state, "bottleneck"),
-      stateBefore: fine ? `Floor Lead: "${said}" Every stage was keeping up: ${coverLine}.` : `Orders waiting were climbing. The constraint was ${STATION_LABEL[constraint].toLowerCase()} at ${pct(cover[constraint])}.`,
+      stateBefore: fine ? `Floor Lead: "${said}" Every stage was keeping up: ${coverLine}.` : `Orders waiting were climbing. The constraint was ${stage} at ${pct(cover[constraint])}.`,
       candidateAction: acted ? `Candidate ${b.moves.map(describeMove).join("; ")}.` : "Made no change.",
       timingContext: at(when(state, "bottleneck")),
-      stateAfter: b.after ? `After three minutes: ${STATION_LABEL[constraint].toLowerCase()} at ${pct(b.after.coverage[constraint])}, packing queue ${b.after.packingQueue}, CTD ${b.after.ctd}s.` : "The system was not run after the change.",
+      stateAfter: b.after ? `After three minutes: ${stage} at ${pct(b.after.coverage[constraint])}, ${b.after.ordersWaiting} orders waiting, CTD ${b.after.ctd}s.` : "The system was not run after the change.",
       laterConsequence: helped && b.after ? resilienceOf(state)?.text : undefined,
       score: c2 as 0 | 1 | 2 | 3,
       behaviourTags: fine && !hurt ? ["floor_held"] : c2 === 3 ? ["constraint_targeted"] : hurt ? ["symptom_fed"] : ["constraint_missed"],
@@ -880,7 +931,7 @@ function criticalEvents(state: HiringState): Draft[] {
       b.reply === "holding" ? "the floor was holding and to leave it"
         : b.reply === "unsure" ? "they were not sure yet"
           : b.reply === "aisle" ? "the store was stuck at Aisle C"
-            : b.reply ? `the store was stuck at ${STATION_LABEL[b.reply as Station].toLowerCase()}` : "";
+            : b.reply ? `the store was stuck at ${STAGE_WORD[b.reply as Stage]}` : "";
     out.push({
       behaviourId: "C3",
       competencyId: C,
@@ -890,7 +941,7 @@ function criticalEvents(state: HiringState): Draft[] {
       stateBefore: `Floor Lead: "${said}"`,
       candidateAction: b.reply ? `Told him ${told}.` : "Did not answer him.",
       timingContext: "Before or alongside the intervention",
-      stateAfter: fine ? `Nothing was stuck. The tightest stage was ${STATION_LABEL[constraint].toLowerCase()} at ${pct(cover[constraint])}.` : `The store was actually stuck at ${STATION_LABEL[constraint].toLowerCase()}.`,
+      stateAfter: fine ? `Nothing was stuck. The tightest stage was ${stage} at ${pct(cover[constraint])}.` : `The store was actually stuck at ${stage}.`,
       score: c3 as 0 | 1 | 2 | 3,
       behaviourTags: c3 === 3 ? ["hypothesis_correct"] : ["hypothesis_wrong"],
     });
@@ -922,7 +973,7 @@ function criticalEvents(state: HiringState): Draft[] {
       stateBefore: "The floor's numbers after the run were available.",
       candidateAction: b.effectChecked ? "Opened the floor's numbers after the run." : "Moved on without looking.",
       timingContext: "After the run",
-      stateAfter: b.before && b.after ? `CTD ${b.before.ctd}s → ${b.after.ctd}s; packing queue ${b.before.packingQueue} → ${b.after.packingQueue}.` : "—",
+      stateAfter: b.before && b.after ? `CTD ${b.before.ctd}s → ${b.after.ctd}s; orders waiting ${b.before.ordersWaiting} → ${b.after.ordersWaiting}.` : "—",
       score: c5 as 0 | 1 | 3,
       behaviourTags: c5 === 3 ? ["verified_effect"] : ["effect_unverified"],
     });
@@ -963,8 +1014,14 @@ function describeMove(move: Intervention): string {
   switch (move.kind) {
     case "move":
       return `moved ${nameOf(move.emp)} to ${STATION_LABEL[move.to].toLowerCase()}`;
+    case "lock":
+      return `${move.locked ? "locked" : "unlocked"} ${nameOf(move.emp)}'s device`;
     case "addSlot":
-      return PROCESS_FIX[move.station].label.replace(/^./, (c) => c.toLowerCase()).replace(/^open /, "opened ").replace(/^fast lines first$/, "put fast lines away first");
+      return PROCESS_DONE[move.station];
+    case "riderDesk":
+      return `put ${nameOf(move.emp)} on the rider handover`;
+    case "standby":
+      return "called in the standby riders";
     case "clearAisle":
       return `had Aisle C cleared${move.owner === "me" ? " personally" : ` by ${nameOf(move.owner)}`}`;
     case "slowRelease":
@@ -972,22 +1029,29 @@ function describeMove(move: Intervention): string {
   }
 }
 
+const PROCESS_DONE: Record<Stage, string> = {
+  picking: "had Aisle C cleared",
+  putaway: "put fast lines away first",
+  auditing: "paused the cycle count",
+  riders: "batched riders by lane",
+};
+
 /** The cross-scenario story: did the team built earlier absorb the move made later? */
 function resilienceOf(state: HiringState): { text: string; held: boolean } | undefined {
   const moved = state.bn.moves.find((m): m is Extract<Intervention, { kind: "move" }> => m.kind === "move");
   const after = state.bn.after;
   if (!moved || !after) return undefined;
-  // The station that gave somebody up is the one that has to absorb it.
+  // The work that gave somebody up is the work that has to absorb it.
   const from = state.bn.origins[moved.emp];
   if (!from || from === moved.to) return undefined;
 
   const left = after.coverage[from];
   const held = left >= 0.9;
   const name = nameOf(moved.emp);
-  const place = STATION_LABEL[from].split(" /")[0]!.toLowerCase();
-  const destination = STATION_LABEL[moved.to].split(" /")[0]!.toLowerCase();
+  const place = STATION_LABEL[from].toLowerCase();
+  const destination = STATION_LABEL[moved.to].toLowerCase();
 
-  if (from !== "picking") {
+  if (from !== "putaway") {
     return {
       held,
       text: held
@@ -996,20 +1060,21 @@ function resilienceOf(state: HiringState): { text: string; held: boolean } | und
     };
   }
 
-  const developed = (state.riya.choices ?? []).some((c) => c === "moveAB" || c === "pair");
+  // Putaway absorbs a lost hand as well as its newest member was looked after.
+  const developed = (state.riya.choices ?? []).some((c) => c === "lockPutaway" || c === "pair");
   if (held) {
     return {
       held,
       text: developed
-        ? `Moving ${name} to ${destination} cost picking a hand; with Riya developed earlier, picking still held at ${pct(left)}.`
-        : `Picking held at ${pct(left)} after ${name} moved to ${destination}.`,
+        ? `Moving ${name} to ${destination} cost putaway a hand; with Riya kept on putaway earlier, it still held at ${pct(left)}.`
+        : `Putaway held at ${pct(left)} after ${name} moved to ${destination}.`,
     };
   }
   return {
     held,
     text: developed
-      ? `Picking fell to ${pct(left)} after ${name} moved to ${destination}, even with Riya's improvement.`
-      : `Picking fell to ${pct(left)} after ${name} moved to ${destination}. Riya, undeveloped, could not absorb it.`,
+      ? `Putaway fell to ${pct(left)} after ${name} moved to ${destination}, even with Riya on it.`
+      : `Putaway fell to ${pct(left)} after ${name} moved to ${destination}. Riya, with her device still open to orders, could not absorb it.`,
   };
 }
 
@@ -1030,10 +1095,10 @@ function customerEvents(state: HiringState): Draft[] {
     out.push({
       behaviourId: "U1",
       competencyId: C,
-      title: u1 === 3 ? "Separated a chemical from open food before dispatch" : u1 === 2 ? "Lined the chemical but left it in the food bag" : "Let a chemical go out in a bag with open food",
+      title: u1 === 3 ? "Separated a chemical from open food before it left" : u1 === 2 ? "Lined the chemical but left it in the food bag" : "Let a chemical go out in a bag with open food",
       claim: "Protects product safety and quality.",
       simTime: bag.at,
-      stateBefore: `Bench P2: toilet cleaner, loose coriander and apples in one bag. CTD ${bag.ctdBefore}s against a ${CTD_TARGET}s target.`,
+      stateBefore: `Staging shelf: toilet cleaner, loose coriander and apples packed in one bag. CTD ${bag.ctdBefore}s against a ${CTD_TARGET}s target.`,
       candidateAction: untouched ? "Dispatched it unchanged." : `${bag.by === "me" ? "Repacked it personally" : `Had ${nameOf(bag.by)} repack it`}: cleaner ${bag.cleanerBag === 2 ? "in its own bag" : bag.cleanerLiner ? "lined, same bag" : "left in the same bag"}.`,
       timingContext: "With the order at the edge of target",
       stateAfter: untouched ? `Dispatched at ${bag.ctdBefore}s, unsegregated.` : `Dispatched at ${bag.ctdAfter}s, ${bag.cleanerBag === 2 ? "segregated" : "partly protected"}.`,
@@ -1147,11 +1212,15 @@ function controlFlags(state: HiringState): ControlFlag[] {
     flags.push({ id: "accusation", title: "Unsupported theft accusation", detail: "An associate was named as responsible. Nothing in the records identified a person." });
   }
   if ((state.nil.outcome === "authorised" || state.nil.outcome === "delisted") && !state.nil.searchedBefore) {
-    flags.push({ id: "nilpick", title: "Nil Pick without reasonable verification", detail: `${form.nilPick.item} was ${state.nil.outcome === "delisted" ? "taken off sale" : "nil-picked"} with no other location checked. The stock was in inbound.` });
+    flags.push({ id: "nilpick", title: "Nil Pick without reasonable verification", detail: `${form.nilPick.item} was ${state.nil.outcome === "delisted" ? "taken off sale" : "nil-picked"} with no other location checked. The stock was in a crate on the inward dock.` });
   }
-  const bare = (state.floor?.uncovered ?? []).filter((s) => s !== "replenishment");
+  const bare = (state.floor?.uncovered ?? []).filter((s) => s !== "auditing");
   if (bare.length) {
-    flags.push({ id: "uncovered", title: "Critical station left uncovered", detail: `Nobody was assigned to ${bare.map((s) => STATION_LABEL[s]).join(", ")} when the floor was set.` });
+    flags.push({ id: "uncovered", title: "Critical workflow left uncovered", detail: `Nobody was assigned to ${bare.map((s) => STATION_LABEL[s]).join(", ")} when the floor was set.` });
+  }
+  // Fresh lines went into the breakfast rush unchecked on a floor this candidate set.
+  if (state.floor && state.outcome && !(state.audit.doneAt !== null && state.audit.doneAt <= PEAK_AT)) {
+    flags.push({ id: "perishables", title: "Perishables check not completed before the rush", detail: "Milk, bread, eggs and produce went on sale for the breakfast peak before the morning date and quality check was finished." });
   }
   const controlled = d?.steps.includes("controlAccess") ?? false;
   if (state.plan && state.plan.variance?.bucket === "later" && !controlled) {
@@ -1260,7 +1329,7 @@ function reached(event: EvidenceEvent): boolean {
 export const DECISIONS: { id: string; competencyId: CompetencyId; label: string; behaviours: string[] }[] = [
   { id: "floor", competencyId: "teamManagement", label: "Building the floor", behaviours: ["T1", "T2"] },
   { id: "gap", competencyId: "teamManagement", label: "Covering the absence", behaviours: ["T3", "T4"] },
-  { id: "riya", competencyId: "teamManagement", label: "A slow new starter", behaviours: ["T5", "T6"] },
+  { id: "riya", competencyId: "teamManagement", label: "A new joiner on orders", behaviours: ["T5", "T6"] },
   { id: "arjun", competencyId: "teamManagement", label: "An unhappy expert", behaviours: ["T7", "T8"] },
   { id: "delegation", competencyId: "teamManagement", label: "Who did the work", behaviours: ["T9", "T10"] },
 
@@ -1279,7 +1348,7 @@ export const DECISIONS: { id: string; competencyId: CompetencyId; label: string;
   { id: "verification", competencyId: "criticalThinking", label: "Testing the change", behaviours: ["C4", "C5"] },
   { id: "focus", competencyId: "criticalThinking", label: "How much was looked at", behaviours: ["C6"] },
 
-  { id: "bag", competencyId: "customerFirst", label: "The bag at P2", behaviours: ["U1"] },
+  { id: "bag", competencyId: "customerFirst", label: "The bag at staging", behaviours: ["U1"] },
   { id: "complete", competencyId: "customerFirst", label: "A complete order", behaviours: ["U2"] },
   { id: "trades", competencyId: "customerFirst", label: "Numbers versus the customer", behaviours: ["U3"] },
   { id: "recovery", competencyId: "customerFirst", label: "A late order", behaviours: ["U4"] },
@@ -1321,7 +1390,7 @@ const PROBES: Record<string, { area: string; probe: string }> = {
   T8: { area: "Conflict & trust", probe: "Have you ever promised a team member something that turned out not to be yours to promise? What happened next?" },
   T9: { area: "Delegation", probe: "Tell me about a situation where you had to decide which problems to handle yourself and which to hand to somebody. How did you choose the person?" },
   T10: { area: "Delegation", probe: "When the store is under pressure, what do you personally stop doing? Give me an example." },
-  I2: { area: "Inventory investigation", probe: "A system count and a shelf disagree. What is the first thing you do, and why that before anything else?" },
+  I2: { area: "Inventory investigation", probe: "The system count and what is in the bin disagree. What is the first thing you do, and why that before anything else?" },
   I3: { area: "Inventory investigation", probe: "Walk me through how you would trace a missing high-value unit. Which records, in what order?" },
   I5: { area: "Loss control", probe: "You have one unit you cannot explain and no evidence about who. What do you do, and what do you not do?" },
   I6: { area: "Nil picks", probe: "A picker reports a nil pick on a fast line the system says is in stock. What happens in the next two minutes?" },
@@ -1342,11 +1411,11 @@ const PROBES: Record<string, { area: string; probe: string }> = {
 };
 
 const RECOMMENDATIONS: Record<string, string> = {
-  T1: "Before a peak, read the forecast against every station, not only picking. The station nobody is watching is the one that fails.",
-  T3: "Decide the staffing gap in the first five minutes. On-demand cover, a reallocation and an extension are all cheaper at 17:30 than at 17:55.",
-  T4: "Keep one cross-trained person where they can be released. Slack you never use costs less than a station you cannot reinforce.",
-  T5: "When someone is slow, open their numbers before deciding. Where they are slow usually tells you why.",
-  T6: "Fix the cause and book the coaching. Removing a new starter solves tonight and guarantees the same problem next month.",
+  T1: "Before a peak, read the forecast against picking, putaway and riders, not only picking. The one nobody is watching is the one that fails.",
+  T3: "Decide the staffing gap in the first five minutes. Agency cover, a reallocation and an extension are all cheaper at 06:00 than at 06:25.",
+  T4: "Leave a device or two unlocked where the work can spare them. A reserve you never use costs less than a rush you cannot staff.",
+  T5: "When someone is slow, open their record before deciding. Where the seconds go usually tells you why.",
+  T6: "Fix the cause and plan the next step. Removing a new joiner solves this morning and guarantees the same problem with the next one.",
   T7: "Take grievances off the floor. Two minutes away from the line costs less than the line listening.",
   T8: "Say only what you have verified, and say what you will check. A promise you cannot keep costs more than an honest \"I don't know yet\".",
   T9: "Before you do a task, ask who on the floor is trained for it. Hand it to that person, not the nearest one.",
@@ -1355,15 +1424,15 @@ const RECOMMENDATIONS: Record<string, string> = {
   I3: "Follow the unit: orders, then the scan log, then the exception area. Most missing stock is a missed scan or an unreturned pick.",
   I4: "Keep explained, recovered and unresolved apart. They need three different actions and one number hides all of them.",
   I5: "With an unexplained unit: preserve the evidence, control access, escalate, keep trading. Never name a person without proof.",
-  I6: "Check overstock and inbound before authorising a nil pick. The system is usually right that the stock is in the building.",
+  I6: "Check overstock and the inward dock before authorising a nil pick. The system is usually right that the stock is in the building.",
   I8: "Close the case by closing the gap that caused it. Name the specific control, not a general reminder.",
   P1: "Act on the forecast, not the queue. By the time the queue shows it, the cheap fix has gone.",
   P3: "Rank simultaneous problems by orders affected per minute, then give your own attention to the one only you can decide.",
   P4: "In a peak, do only what cannot wait. Audits and coaching are important and belong after it.",
   P5: "Check each thing you defer: does it get worse while it waits? If yes, it is not deferrable.",
   P6: "Use your own attention for judgement, people and escalation. Hands-on work belongs to somebody trained for it.",
-  C1: "Check the station numbers before accepting a diagnosis, including from someone you trust.",
-  C2: "Find the stage with the least capacity against its demand. Adding people before it makes it worse.",
+  C1: "Check the floor's own numbers — pickers, bins, riders, devices — before accepting a diagnosis, including from someone you trust.",
+  C2: "Find the stage with the least capacity against its demand: pickers, bins or riders. More hands anywhere else only moves the pile.",
   C4: "Change one thing, run it, read the result. Several changes at once teach you nothing.",
   C5: "Go back and look. An intervention you did not check is a hope, not a fix.",
   C6: "Look until you can decide, then decide. More checking after that point is a cost with no return.",
@@ -1488,10 +1557,12 @@ export function scoreAssessment(state: HiringState): AssessmentResult {
 
   const hoarded = state.personal.filter((p) => p.delegable && p.fitAvailable).length;
   const well = state.delegations.filter((d) => d.appropriate).length;
-  const developed = (state.riya.choices ?? []).some((c) => c === "moveAB" || c === "pair");
+  const developed = (state.riya.choices ?? []).some((c) => c === "lockPutaway" || c === "pair");
   const peopleOpen = [
     state.riya.choices?.includes("warn") ? "Riya (warned)" : null,
-    state.assign.riya !== "picking" ? "Riya (moved off picking)" : null,
+    state.riya.choices?.includes("returnAgency") ? "Riya (sent back to the agency)" : null,
+    state.riya.choices?.includes("target") ? "Riya (on orders with a target)" : null,
+    state.riya.choices && state.assign.riya === "putaway" && !isLocked(state, "riya") ? "Riya (device still open to orders)" : null,
     state.arjun.outcome === "resentful" ? "Arjun (resentful)" : null,
     state.arjun.unsupportedPromise ? "Arjun (promised a payment date)" : null,
   ].filter((v): v is string => v !== null);
@@ -1509,12 +1580,12 @@ export function scoreAssessment(state: HiringState): AssessmentResult {
   ];
 
   const teamEffect = [
-    { label: "Peak station coverage", value: state.outcome ? pct(state.outcome.peakCoverage) : "—" },
+    { label: "Peak coverage · picking and riders", value: state.outcome ? pct(state.outcome.peakCoverage) : "—" },
     { label: "Delegation", value: `${well} / ${state.delegations.length + hoarded} appropriate` },
     { label: "Flexible capacity preserved", value: (state.floor?.reserve.length ?? 0) > 0 ? "Yes" : "No" },
     { label: "Manager dependency", value: hoarded <= 1 ? "Low" : hoarded <= 3 ? "Moderate" : "High" },
     { label: "Team trust", value: state.trust >= 68 ? "Rose" : state.trust <= 54 ? "Fell" : "Held" },
-    { label: "Employee improvement", value: developed && (state.outcome?.riyaOutput ?? 0) >= 0.84 ? "Riya: 62% → " + pct(state.outcome!.riyaOutput) : "None" },
+    { label: "Employee improvement", value: developed && (state.outcome?.riyaOutput ?? 0) >= 0.8 ? "Riya: 55% → " + pct(state.outcome!.riyaOutput) : "None" },
     { label: "People issues unresolved at peak", value: String(peopleOpen.length) },
   ];
 
@@ -1527,14 +1598,18 @@ export function scoreAssessment(state: HiringState): AssessmentResult {
     const out = state.outcome.riyaOutput;
     const picking = state.outcome.pickingAtPeak;
     crossScenario.push({
-      title: "A new starter, by the peak",
-      rating: out >= 0.84 ? "Strong" : out > 0 ? "Mixed" : "Exposed",
+      title: "A new joiner, by the peak",
+      rating: out >= 0.8 ? "Strong" : out > 0 ? "Mixed" : "Exposed",
       text:
-        out >= 0.84
-          ? `Riya was developed at 17:32 rather than removed. By 18:10 she was picking at ${pct(out)} of a trained picker, and picking stood at ${pct(picking)} at the peak.`
+        out >= 0.8
+          ? `Riya was kept on putaway at 06:02 and shown the bins, rather than pressed or removed. By 06:40 she was putting away at ${pct(out)} of a trained hand, with picking at ${pct(picking)} at the peak.`
           : out > 0
-            ? `Riya was left as she was at 17:32. By 18:10 she was still at ${pct(out)} of a trained picker, with picking at ${pct(picking)} at the peak.`
-            : `Riya was taken off picking at 17:32. Picking went into the peak without her, at ${pct(picking)}.`,
+            ? `Riya's device was locked to putaway at 06:02. By 06:40 she was at ${pct(out)} of a trained hand, with picking at ${pct(picking)} at the peak.`
+            : state.assign.riya === undefined
+              ? "Riya was sent back to the agency at 06:02. Putaway went into the peak a hand short."
+              : state.riya.leftAt !== null
+                ? "Riya was held to the pick target on her second day. She did not come back from her break, and the agency says she is not returning."
+                : `Riya's device was left open to orders at 06:02. Through the peak the app kept sending her orders at 32 seconds an item, while the crates she was on waited. Picking stood at ${pct(picking)}.`,
     });
   }
   if (state.arjun.response) {
@@ -1544,24 +1619,28 @@ export function scoreAssessment(state: HiringState): AssessmentResult {
       rating: state.arjun.outcome === "willing" ? "Strong" : state.arjun.outcome === "reluctant" ? "Mixed" : "Weak",
       text:
         state.arjun.outcome === "willing"
-          ? `The conversation at 17:34 was honest and respectful. Arjun stayed through the peak${used ? " and covered a second station at full pace when the surge came" : ""}.`
+          ? `The conversation at 06:04 was honest and respectful. Arjun stayed through the peak${used ? " and covered other work at full pace when the surge came" : ""}.`
           : state.arjun.outcome === "leaving"
-            ? "Arjun was not asked, or not persuaded, to stay. The store's fastest picker left at 18:00 as the peak began."
-            : `The conversation at 17:34 left Arjun ${state.arjun.outcome}. He stayed${used ? ", and worked the second station noticeably below his usual pace" : ""}.`,
+            ? "Arjun was not asked, or not persuaded, to stay. The store's fastest picker left at 06:30 as the peak began."
+            : `The conversation at 06:04 left Arjun ${state.arjun.outcome}. He stayed${used ? ", and worked noticeably below his usual pace off his own job" : ""}.`,
     });
   }
   if (state.kase.firstMove) {
     const farhanCount = state.kase.countOwner === "farhan";
+    const counter = state.kase.countOwner;
+    const countsTrained = counter !== null && counter !== "me" && taskFit(counter, "count").fit >= 0.8;
     crossScenario.push({
       title: "Using the team on inventory",
-      rating: farhanCount ? "Strong" : state.kase.countOwner === "me" ? "Manager-dependent" : "Mixed",
+      rating: farhanCount ? "Strong" : counter === "me" ? "Manager-dependent" : "Mixed",
       text: farhanCount
-        ? "Farhan — count-trained, placed where he could be released — did the recount in four minutes while the manager stayed on the floor through the start of the surge."
-        : state.kase.countOwner === "me"
+        ? "Farhan — count-trained and cleared for the cage — did the recount in four minutes while the manager stayed on the floor through the start of the surge."
+        : counter === "me"
           ? "The manager recounted the cage personally with a count-trained associate free. The surge landed during those five minutes."
-          : state.kase.countOwner
-            ? `${nameOf(state.kase.countOwner)} was sent to count, which is not what they are trained for, and their own station ran short while they did.`
-            : "The variance was never counted, so nobody on the team was used for it.",
+          : countsTrained
+            ? `${nameOf(counter!)} did the recount: trained for cycle counts, though not the associate cleared for the high-value cage. It took a minute longer, and the manager stayed on the floor.`
+            : counter
+              ? `${nameOf(counter)} was sent to count, which is not what they are trained for, and their own work ran short while they did.`
+              : "The variance was never counted, so nobody on the team was used for it.",
     });
   }
   if (state.floor && state.triageAt) {
@@ -1569,13 +1648,13 @@ export function scoreAssessment(state: HiringState): AssessmentResult {
     const then = state.floor.projected[c];
     const now = state.triageAt.coverage[c];
     crossScenario.push({
-      title: "The floor built at 17:26 met the surge at 17:39",
-      // The station the surge hit can be fine while the store is behind somewhere else.
+      title: "The floor built at 05:56 met the surge at 06:09",
+      // The stage the surge hit can be fine while the store is behind somewhere else.
       rating: now >= 0.95 ? (state.triageAt.ctd <= CTD_TARGET ? "Strong" : "Mixed") : now >= 0.85 ? "Mixed" : "Exposed",
       text:
-        `${STATION_LABEL[c]} was set at ${pct(then)} of the forecast in the floor build. When the surge landed it stood at ${pct(now)}, with ${state.triageAt.ordersWaiting} orders waiting and CTD at ${state.triageAt.ctd}s.` +
+        `${STATION_LABEL[c]} ${c === "riders" ? "were" : "was"} set at ${pct(then)} of the forecast in the floor build. When the surge landed ${c === "riders" ? "they" : "it"} stood at ${pct(now)}, with ${state.triageAt.ordersWaiting} orders waiting and CTD at ${state.triageAt.ctd}s.` +
         (now >= 0.95 && state.triageAt.ctd > CTD_TARGET
-          ? ` The station the surge hit was covered; the store was behind elsewhere (picking ${pct(state.triageAt.coverage.picking)}, packing ${pct(state.triageAt.coverage.packing)}, dispatch ${pct(state.triageAt.coverage.dispatch)}).`
+          ? ` Where the surge hit was covered; the store was behind elsewhere (picking ${pct(state.triageAt.coverage.picking)}, putaway ${pct(state.triageAt.coverage.putaway)}, riders ${pct(state.triageAt.coverage.riders)}).`
           : ""),
     });
   }

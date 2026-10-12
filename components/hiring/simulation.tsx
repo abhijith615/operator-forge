@@ -7,7 +7,7 @@ import { logAssessment, syncAssessment } from "@/lib/hiring/actions";
 import { PHASES, PHASE_OF, RIYA_OPTIONS, paceOf } from "@/lib/hiring/content";
 import { formFor } from "@/lib/hiring/forms";
 import { CTD_TARGET, EXTEND_AT, clockLabel, metricsOf } from "@/lib/hiring/model";
-import { nameOf } from "@/lib/hiring/roster";
+import { PPI_TARGET, nameOf } from "@/lib/hiring/roster";
 import type { HiringState, SceneId } from "@/lib/hiring/types";
 import { ASSESSMENT_SECONDS } from "@/lib/hiring/weights";
 import { cn, formatDuration } from "@/lib/utils";
@@ -31,20 +31,20 @@ interface Beat {
 }
 
 const RIYA_REPLY: Record<string, string> = {
-  moveAB: "Okay. Zones A and B for her tonight.",
-  pair: "I’ll put her alongside one of the experts.",
-  coachLater: "I’ll book the Zone C time for after the peak.",
-  keep: "Leaving her where she is, then.",
-  removePicking: "Pulling her off picking now.",
-  moveToPacking: "Sending her across to packing.",
+  lockPutaway: "Okay. I’ll lock her handheld to putaway.",
+  pair: "I’ll put her alongside one of the putaway hands.",
+  phaseLater: "First picking shift after the rush, then. I’ll tell her.",
+  keep: "Leaving it as it is, then.",
+  target: "On orders, sixteen seconds. I’ll tell her.",
+  returnAgency: "I’ll call the agency and send her home.",
   warn: "I’ll tell her it’s a formal warning.",
 };
 
 const ARJUN_REPLY: Record<string, string[]> = {
-  willing: ["Okay.", "I’ll stay till eight."],
+  willing: ["Okay.", "I’ll stay till half eight."],
   reluctant: ["Fine. I’ll stay."],
   resentful: ["Understood."],
-  leaving: ["Then I’m off at six."],
+  leaving: ["Then I’m off at half six."],
 };
 
 /**
@@ -74,9 +74,9 @@ function beatFor(from: SceneId, state: HiringState): Beat | null {
   if (from === "customer" && state.bag) {
     const { by, ctdAfter } = state.bag;
     return {
-      who: by === "unchanged" || by === "me" ? "Bench P2" : nameOf(by),
-      role: by === "unchanged" || by === "me" ? undefined : "Bench P2",
-      lines: [by === "unchanged" ? `Sent as it was. Dispatched at ${ctdAfter} sec.` : `Repacked. Dispatched at ${ctdAfter} sec.`],
+      who: by === "unchanged" || by === "me" ? "Staging" : nameOf(by),
+      role: by === "unchanged" || by === "me" ? undefined : "Staging",
+      lines: [by === "unchanged" ? `Sent as it was. With the rider at ${ctdAfter} sec.` : `Repacked. With the rider at ${ctdAfter} sec.`],
     };
   }
   return null;
@@ -161,7 +161,7 @@ function useSync(attempt: Attempt): void {
 /* ── The shift ────────────────────────────────────────────────────────── */
 
 /**
- * One store, from 17:25 to the plan being locked.
+ * One store, from 05:55 to the plan being locked.
  *
  * The header never leaves: store time, the thirty minutes, where in the shift
  * this is, and the three numbers the store is run on. Below it there is one
@@ -299,8 +299,8 @@ export function Simulation({ attempt, onFinished }: { attempt: Attempt; onFinish
                 <dd className={cn("font-semibold", now.ctd > EXTEND_AT ? "text-alert-500" : now.ctd > CTD_TARGET ? "text-warn-500" : "text-hi")}>{now.ctd}s</dd>
               </div>
               <div className="flex items-baseline gap-1.5">
-                <dt className="text-lo">Pack queue</dt>
-                <dd className="font-semibold text-hi">{now.packingQueue}</dd>
+                <dt className="text-lo">Pick speed</dt>
+                <dd className={cn("font-semibold", now.ppi > PPI_TARGET + 2 ? "text-warn-500" : "text-hi")}>{now.ppi.toFixed(1)}s</dd>
               </div>
             </dl>
           </div>

@@ -5,7 +5,7 @@ import ExcelJS from "exceljs";
 import { expire, replay } from "./engine";
 import { sampleResult } from "./sample";
 import { DECISIONS, scoreAssessment, type AssessmentResult } from "./scoring";
-import type { AdminAttemptRow } from "./server";
+import { isCurrentVersion, type AdminAttemptRow } from "./server";
 import type { HiringState, SceneId } from "./types";
 import { ASSESSMENT_SECONDS, COMPETENCIES, COMPETENCY_LABEL } from "./weights";
 
@@ -63,7 +63,9 @@ function header(sheet: ExcelJS.Worksheet): void {
 }
 
 export function buildItemWorkbook(attempts: AdminAttemptRow[]): ExcelJS.Workbook {
-  const finished = attempts.filter((attempt) => attempt.status !== "in_progress").map(score);
+  // Only attempts sat on this simulation: an earlier one cannot be replayed on it,
+  // and its scores would not be comparable if it could.
+  const finished = attempts.filter((attempt) => attempt.status !== "in_progress" && isCurrentVersion(attempt)).map(score);
   const reference = sampleResult();
   const behaviours = reference.evidence.map((event) => event.behaviourId);
 
@@ -218,6 +220,7 @@ export function buildItemWorkbook(attempts: AdminAttemptRow[]): ExcelJS.Workbook
     ["Competency score", "The plain average of that competency's observed decision scores. Overall is each competency weighted by its weight times the share of its decisions observed."],
     ["incomplete", "1 = the plan was never locked (time ran out or the candidate left). ended_in_scene says where."],
     ["form", "A, B or C. Compare score distributions by form before treating the forms as equivalent."],
+    ["version", "Every row is the current simulation version. Attempts sat on an earlier version are left out: they were played in a different store and cannot be pooled with these."],
     ["device", "mobile, tablet or desktop at the start. Use for differential-functioning and time-limit checks."],
     ["extra_time_s", "Extra time arranged as an accommodation. Sensitive: use for fairness analysis only, and never share with an employer."],
     ["seconds_*", "Real seconds spent in each scene. Not scored. Available for speed–accuracy modelling."],

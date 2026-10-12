@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { CandidateEntry, HiringAssessment } from "@/components/hiring/assessment";
 import { getOperator } from "@/lib/auth/session";
 import type { StartedAttempt } from "@/lib/hiring/actions";
+import { HIRING_CONTACT } from "@/lib/hiring/content";
 import { candidateProfileFrom, readCurrentAttempt, readTimeLimit, resultFrom } from "@/lib/hiring/server";
 import { ASSESSMENT_SECONDS } from "@/lib/hiring/weights";
 
@@ -30,6 +31,27 @@ export default async function HiringAssessmentPage({
   if (!operator) return <CandidateEntry error={(await searchParams).error} />;
 
   const attempt = await readCurrentAttempt();
+
+  // Sat on a simulation that has since been replaced. It cannot be replayed on
+  // this one, so it is neither resumed nor scored here.
+  if (attempt?.retired) {
+    return (
+      <div className="min-h-dvh bg-void text-hi">
+        <main id="main" className="mx-auto max-w-xl px-4 pt-16 pb-20 sm:px-6">
+          <p className="font-mono text-[11.5px] tracking-[0.2em] text-ember-500 uppercase">Operator Forge · Hiring Test</p>
+          <h1 className="mt-2 text-[26px] leading-tight font-bold tracking-[-0.03em] text-hi">The test you sat has been replaced.</h1>
+          <p className="mt-3 text-[15px] leading-relaxed text-mid">
+            You sat an earlier version of this simulation. It has since been rebuilt, and an earlier attempt is not
+            scored against the new one. To sit the current version, write to{" "}
+            <a href={`mailto:${HIRING_CONTACT}`} className="underline underline-offset-4 hover:text-hi">
+              {HIRING_CONTACT}
+            </a>{" "}
+            from {operator.email}.
+          </p>
+        </main>
+      </div>
+    );
+  }
 
   if (attempt && attempt.status !== "in_progress") {
     const { result, incomplete } = resultFrom(attempt.scenario_variant, attempt.actions);

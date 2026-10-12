@@ -11,8 +11,19 @@ import type { CompetencyId } from "./weights";
  */
 
 export type FormId = "A" | "B" | "C";
-export type Station = "picking" | "packing" | "dispatch" | "replenishment";
-export const STATIONS: Station[] = ["picking", "packing", "dispatch", "replenishment"];
+/**
+ * The three things people do on the floor. Picking includes packing the order
+ * and staging it for a rider: there is no separate packing bench.
+ */
+export type Station = "picking" | "putaway" | "auditing";
+export const STATIONS: Station[] = ["picking", "putaway", "auditing"];
+
+/**
+ * A place the store can get stuck. The three workflows, and the riders — who
+ * are not the manager's to stand anywhere, only to count, call in and sequence.
+ */
+export type Stage = Station | "riders";
+export const STAGES: Stage[] = ["picking", "putaway", "auditing", "riders"];
 
 export type SceneId =
   | "handover"
@@ -39,7 +50,7 @@ export interface Employee {
   title: string;
   /** Productivity at each station, where 1.0 is a competent full-time hand. */
   skills: Record<Station, number>;
-  auth: { highValue: boolean; inventoryCount: boolean; riders: boolean; inwarding: boolean };
+  auth: { highValue: boolean; audit: boolean; riders: boolean; inwarding: boolean };
   tenure: string;
   /** 0–1. Reduces output. */
   fatigue: number;
@@ -51,12 +62,12 @@ export interface Employee {
 /* ── Actions ──────────────────────────────────────────────────────────── */
 
 export type RiyaChoice =
-  | "moveAB"
+  | "lockPutaway"
   | "pair"
-  | "coachLater"
+  | "phaseLater"
   | "keep"
-  | "removePicking"
-  | "moveToPacking"
+  | "target"
+  | "returnAgency"
   | "warn";
 
 export type AbsenceChoice = "onDemand" | "reallocate" | "extend" | "short";
@@ -73,8 +84,14 @@ export interface TriageCall {
 
 export type Intervention =
   | { kind: "move"; emp: string; to: Station }
-  /** A process change at one station: a third bench, a second handover lane, fast lines first. */
-  | { kind: "addSlot"; station: Station }
+  /** Lock a device to its role, or unlock it so the app can send it orders in a spike. */
+  | { kind: "lock"; emp: string; locked: boolean }
+  /** A process change at one stage: fast lines first, batching riders by lane, pausing the count. */
+  | { kind: "addSlot"; station: Stage }
+  /** Put somebody on the handover point to sequence riders. */
+  | { kind: "riderDesk"; emp: string }
+  /** Call the standby riders in. */
+  | { kind: "standby" }
   | { kind: "clearAisle"; owner: Owner }
   | { kind: "slowRelease" };
 
@@ -109,6 +126,10 @@ export type Action =
   | { t: "inspect"; item: string }
   | { t: "takeShift" }
   | { t: "assign"; emp: string; to: Station }
+  /** The device lock: locked to the role, or unlocked and open to orders in a spike. */
+  | { t: "lock"; emp: string; locked: boolean }
+  /** Ask the rider partner for the two standby riders, or stand them down. */
+  | { t: "standby"; on: boolean }
   | { t: "lockFloor" }
   | { t: "absence"; choices: AbsenceChoice[] }
   | { t: "riya"; choices: RiyaChoice[] }
@@ -124,7 +145,7 @@ export type Action =
   | { t: "nilResolve"; how: "replenish" | "authorise" | "delist" | "ignore"; owner?: string }
   | TriageAction
   /** "holding" is the answer that nothing is stuck. */
-  | { t: "floorLeadReply"; call: Station | "aisle" | "unsure" | "holding" }
+  | { t: "floorLeadReply"; call: Stage | "aisle" | "unsure" | "holding" }
   | { t: "intervene"; moves: Intervention[] }
   | { t: "runSystem" }
   | { t: "bag"; cleanerBag: 1 | 2; cleanerLiner: boolean; by: Owner | "unchanged" }
@@ -142,9 +163,14 @@ export interface Stamped {
 
 export interface Metrics {
   ordersWaiting: number;
-  packingQueue: number;
+  /** Packed bags on the staging shelf, waiting for a rider. */
+  staged: number;
   ctd: number;
-  coverage: Record<Station, number>;
+  /** Seconds an item is taking to pick across the floor right now. Target 16. */
+  ppi: number;
+  /** Share of their time the unlocked devices are spending on orders, 0–1. */
+  pull: number;
+  coverage: Record<Stage, number>;
 }
 
 export interface Delegation {
@@ -193,6 +219,7 @@ export type TaskKind =
   | "lateOrder"
   | "inbound"
   | "audit"
+  | "perishables"
   | "coaching";
 
 export interface LogEntry {
@@ -213,7 +240,7 @@ export interface LogEntry {
 export interface HiringState {
   form: FormId;
   scene: SceneId;
-  /** Simulated seconds since 17:25:00. */
+  /** Simulated seconds since 05:55:00. */
   clock: number;
   /**
    * Set when the thirty minutes ended before the plan was locked: where the
@@ -225,9 +252,21 @@ export interface HiringState {
   arrivals: Partial<Record<SceneId, number>>;
 
   assign: Record<string, Station>;
+  /** Devices locked to their role. Anybody on putaway or auditing who is not here is unlocked. */
+  locks: Record<string, boolean>;
   busy: Record<string, { until: number; task: string }>;
-  flow: { pickQ: number; packQ: number; dispQ: number };
-  trace: { t: number; ctd: number; packingQueue: number; ordersWaiting: number }[];
+  riders: {
+    /** Logged in at the start of the shift, of nine rostered. */
+    on: number;
+    standby: boolean;
+    standbyAt: number | null;
+    /** Whoever is sequencing riders at the handover point. */
+    desk: string | null;
+  };
+  /** The morning perishables check: work done so far, and when it finished. */
+  audit: { progress: number; doneAt: number | null };
+  flow: { pickQ: number; stageQ: number };
+  trace: { t: number; ctd: number; staged: number; ordersWaiting: number }[];
   maxCtd: number;
   firstBreachAt: number | null;
 
@@ -235,8 +274,8 @@ export interface HiringState {
     /** Null while Aisle C is still blocked. */
     aisleClearedAt: number | null;
     slowReleaseUntil: number;
-    /** Stations where a process change has taken some of the load off. */
-    lanes: Station[];
+    /** Stages where a process change has taken some of the load off. */
+    lanes: Stage[];
     managerOnBenchUntil: number;
     inboundCleared: boolean;
     riders: "normal" | "sequenced" | "gap";
@@ -253,7 +292,7 @@ export interface HiringState {
 
   floor: {
     lockedAt: number;
-    projected: Record<Station, number>;
+    projected: Record<Stage, number>;
     fit: number;
     reserve: string[];
     uncovered: Station[];
@@ -271,6 +310,8 @@ export interface HiringState {
     choices: RiyaChoice[] | null;
     pairUntil: number;
     pairPartner: string | null;
+    /** When she walked out, if she did. */
+    leftAt: number | null;
   };
   arjun: {
     place: "here" | "aside" | null;
@@ -288,7 +329,7 @@ export interface HiringState {
     viewed: string[];
     recordsOwner: string | null;
     recordsDoneAt: number | null;
-    interrupt: { choice: string; at: number; packingQueue: number; ctd: number } | null;
+    interrupt: { choice: string; at: number; ordersWaiting: number; ctd: number } | null;
     disposition: DispositionAction | null;
     openedAt: number;
   };
@@ -306,9 +347,9 @@ export interface HiringState {
   triageAt: Metrics | null;
 
   bn: {
-    coverageAtStart: Record<Station, number> | null;
-    constraintAtStart: Station | null;
-    /** The stage the Floor Lead blames. It is never the one that is stuck. */
+    coverageAtStart: Record<Stage, number> | null;
+    constraintAtStart: Stage | null;
+    /** The workflow the Floor Lead blames. It is never the one that is stuck. */
     blamed: Station | null;
     /** Where each person moved at the bottleneck was standing beforehand. */
     origins: Record<string, Station>;
@@ -340,6 +381,7 @@ export interface HiringState {
     events: { clock: number; text: string; tone: "good" | "warn" | "bad" | "neutral" }[];
     finalCtd: number;
     peakCoverage: number;
+    /** Her putaway rate against a trained hand, ten minutes into the peak. Zero if she was not on it. */
     riyaOutput: number;
     pickingAtPeak: number;
   } | null;

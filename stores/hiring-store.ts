@@ -137,7 +137,7 @@ export const useHiringStore = create<HiringStore>()(
       reset: () => set({ attempt: null, actions: [], state: null, queue: [], saved: 0 }),
     }),
     {
-      name: "of.hiring",
+      name: "of.hiring.v2",
       version: 1,
       partialize: ({ attempt, actions, queue, saved }) => ({ attempt, actions, queue, saved }),
       onRehydrateStorage: () => (held) => {

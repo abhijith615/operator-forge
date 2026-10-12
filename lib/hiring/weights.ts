@@ -33,6 +33,20 @@ export const COMPETENCY_LABEL: Record<CompetencyId, string> = {
   customerFirst: "Customer-First",
 };
 
-export const ASSESSMENT_VERSION = "1.0";
+/**
+ * The simulation's version. It changes whenever the store itself does —
+ * the people, the workflows, the rules that turn decisions into numbers —
+ * because an attempt can only be replayed by the engine it was played on.
+ *
+ * 1.0  Evening shift; picking, packing, dispatch and replenishment stations.
+ * 2.0  Morning shift; picking (with packing), putaway and auditing, device
+ *      locks, riders, the sixteen-second item and the morning round.
+ */
+export const ASSESSMENT_VERSION = "2.0";
+/**
+ * When this version went live. Only used where the database cannot say which
+ * version an attempt was sat on: anything started before this was not this one.
+ */
+export const CURRENT_SINCE = Date.parse("2026-10-12T10:00:00Z");
 /** Wall-clock cap. The store itself runs on actions, not on this. */
 export const ASSESSMENT_SECONDS = 30 * 60;

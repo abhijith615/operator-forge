@@ -42,15 +42,15 @@ if (traceAt > -1) {
   const { state, result } = run(form, PERSONAS[id]);
   console.log(`\n${PERSONAS[id].label} · form ${form} · ${result.overall}\n`);
   console.log("arrivals  " + Object.entries(state.arrivals).map(([scene, at]) => `${scene} ${clockLabel(at!)}`).join(" · "));
-  console.log("floor     " + Object.entries(state.assign).map(([emp, station]) => `${emp}:${station.slice(0, 4)}`).join(" "));
+  console.log("floor     " + Object.entries(state.assign).map(([emp, station]) => `${emp}:${station.slice(0, 4)}${state.locks[emp] ? "*" : ""}`).join(" ") + `  (* locked) riders ${state.riders.on}${state.riders.standby ? "+2" : ""}${state.riders.desk ? ` desk ${state.riders.desk}` : ""} · perishables ${state.audit.doneAt === null ? "not done" : clockLabel(state.audit.doneAt)}`);
   console.log("projected " + JSON.stringify(state.floor?.projected, (_, v) => (typeof v === "number" ? Math.round(v * 100) : v)) + ` reserve ${state.floor?.reserve.join(",")}`);
   console.log("\nactions");
   for (const entry of state.log) {
     const c = entry.after.coverage;
     console.log(
       `  ${clockLabel(entry.simTime)}→${clockLabel(entry.simAfter)} ${pad(entry.scene, 11)} ${pad(entry.eventType + (entry.entityId ? `:${entry.entityId}` : ""), 26)}` +
-        ` ctd ${pad(entry.after.ctd, 4)} wait ${pad(entry.after.ordersWaiting, 3)} packQ ${pad(entry.after.packingQueue, 3)}` +
-        ` pick ${pad(Math.round(c.picking * 100), 4)} pack ${pad(Math.round(c.packing * 100), 4)} disp ${pad(Math.round(c.dispatch * 100), 4)} shelf ${Math.round(c.replenishment * 100)}`,
+        ` ctd ${pad(entry.after.ctd, 4)} wait ${pad(entry.after.ordersWaiting, 3)} staged ${pad(entry.after.staged, 3)} ppi ${pad(entry.after.ppi, 5)} pull ${pad(Math.round(entry.after.pull * 100), 4)}` +
+        ` pick ${pad(Math.round(c.picking * 100), 4)} put ${pad(Math.round(c.putaway * 100), 4)} aud ${pad(Math.round(c.auditing * 100), 4)} riders ${Math.round(c.riders * 100)}`,
     );
   }
   console.log("\ntrace     " + state.trace.filter((_, i) => i % 3 === 2).map((p) => `${clockLabel(p.t)} ${p.ctd}`).join(" · "));
@@ -169,7 +169,10 @@ for (const form of FORMS) {
   check(tag("hero: signature names it"), hero.signature.name === "STRONG OPERATOR · WEAK DELEGATOR", hero.signature.name);
   check(tag("hero scores below the balanced leader by a clear margin"), hero.overall <= balanced.overall - 12, `${hero.overall} vs ${balanced.overall}`);
 
-  check(tag("command-and-control: weak Team Management"), comp(command, "teamManagement") < 50, `${comp(command, "teamManagement")}`);
+  // Both people decisions failed and the planning ones sound: two decisions in five, and no more.
+  check(tag("command-and-control: weak Team Management, and not waved through"),
+    comp(command, "teamManagement") <= 60 && !command.indication.startsWith("STRONG") && command.signature.name === "HARD DRIVER · TRUST RISK",
+    `${comp(command, "teamManagement")} · ${command.indication} · ${command.signature.name}`);
   check(tag("command-and-control: Team is the lowest competency"), command.competencies.every((c) => c.score >= comp(command, "teamManagement")));
   check(tag("command-and-control: trust fell"), command.stats.trust < 50, `${command.stats.trust}`);
 
@@ -200,14 +203,23 @@ for (const form of FORMS) {
   const tag = (name: string) => `[${form}] ${name}`;
   const good = run(form, base);
 
-  const riyaRemoved = run(form, { ...base, riya: { inspect: false, choices: ["removePicking"] } });
-  check(tag("Riya removed → picking is weaker when the three problems land"),
-    riyaRemoved.state.triageAt!.coverage.picking < good.state.triageAt!.coverage.picking - 0.05 && riyaRemoved.state.outcome!.riyaOutput === 0,
-    `${riyaRemoved.state.triageAt!.coverage.picking.toFixed(2)} vs ${good.state.triageAt!.coverage.picking.toFixed(2)}`);
+  const riyaRemoved = run(form, { ...base, riya: { inspect: false, choices: ["returnAgency"] } });
+  check(tag("Riya sent back → putaway is weaker when the three problems land"),
+    riyaRemoved.state.triageAt!.coverage.putaway < good.state.triageAt!.coverage.putaway - 0.05 && riyaRemoved.state.outcome!.riyaOutput === 0,
+    `${riyaRemoved.state.triageAt!.coverage.putaway.toFixed(2)} vs ${good.state.triageAt!.coverage.putaway.toFixed(2)}`);
+
+  const riyaPressed = run(form, { ...base, riya: { inspect: false, choices: ["target"] } });
+  check(tag("Riya held to the pick target → she walks out at her break"),
+    riyaPressed.state.riya.leftAt !== null && riyaPressed.state.outcome!.events.some((e) => e.text.includes("did not come back")));
+
+  const riyaOpen = run(form, { ...base, riya: { inspect: true, choices: ["keep"] } });
+  check(tag("Riya's device left open → the app keeps sending her orders"),
+    riyaOpen.state.outcome!.riyaOutput === 0 && good.state.outcome!.riyaOutput > 0,
+    `${riyaOpen.state.outcome!.riyaOutput} vs ${good.state.outcome!.riyaOutput}`);
 
   const arjunThreat = run(form, { ...base, arjun: { check: [], place: "here", ack: "dismiss", clarify: "deflect", request: "threat" } });
   const arjunNone = run(form, { ...base, arjun: { ...base.arjun, request: "none" } });
-  check(tag("Arjun not asked → he leaves at 18:00 and the peak is harder"),
+  check(tag("Arjun not asked → he leaves at 06:30 and the peak is harder"),
     arjunNone.state.arjun.outcome === "leaving" && arjunNone.result.stats.finalCtd! >= good.result.stats.finalCtd! &&
       arjunNone.state.outcome!.pickingAtPeak < good.state.outcome!.pickingAtPeak,
     `${arjunNone.state.arjun.outcome} end ${arjunNone.result.stats.finalCtd} vs ${good.result.stats.finalCtd}`);
@@ -220,8 +232,10 @@ for (const form of FORMS) {
   check(tag("count by Farhan finishes sooner than by the wrong person"),
     good.state.kase.countDoneAt! < farhanWrong.state.kase.countDoneAt!,
     `${clockLabel(good.state.kase.countDoneAt!)} vs ${clockLabel(farhanWrong.state.kase.countDoneAt!)}`);
-  check(tag("count done personally raises manager dependency"),
-    farhanSelf.result.stats.personalDelegable > good.result.stats.personalDelegable);
+  check(tag("count done personally is the manager's own work, with a trained associate free"),
+    farhanSelf.state.personal.some((p) => p.task === "count" && p.fitAvailable) && !good.state.personal.some((p) => p.task === "count") &&
+      score(farhanSelf.result, "I7") < score(good.result, "I7"),
+    `I7 ${score(farhanSelf.result, "I7")} vs ${score(good.result, "I7")}`);
 
   const keepFloor = run(form, { ...base, floor: "keep", absence: ["short"] });
   check(tag("an unbalanced floor meets a worse surge"),
@@ -246,14 +260,29 @@ for (const form of FORMS) {
   check(tag("a neglected floor ends the evening under pressure"), neglected.result.outcomeTitle === "STORE UNDER PRESSURE", neglected.result.outcomeTitle);
 
   // The same move, made with a different team behind it.
-  check(tag("Arjun covers a second station as well as he was treated"),
-    outputOf(arjunThreat.state, "arjun", "packing") < outputOf(good.state, "arjun", "packing") - 0.2,
-    `${outputOf(arjunThreat.state, "arjun", "packing").toFixed(2)} vs ${outputOf(good.state, "arjun", "packing").toFixed(2)}`);
+  check(tag("Arjun covers other work as well as he was treated"),
+    outputOf(arjunThreat.state, "arjun", "putaway") < outputOf(good.state, "arjun", "putaway") - 0.15,
+    `${outputOf(arjunThreat.state, "arjun", "putaway").toFixed(2)} vs ${outputOf(good.state, "arjun", "putaway").toFixed(2)}`);
 
   const noCover = run(form, { ...base, absence: ["short"] });
-  check(tag("no cover booked → no reserve, and a harder evening"),
-    noCover.state.floor!.reserve.length < good.state.floor!.reserve.length && noCover.result.stats.maxCtd > good.result.stats.maxCtd,
-    `reserve ${noCover.state.floor!.reserve.length} vs ${good.state.floor!.reserve.length}; max ${noCover.result.stats.maxCtd} vs ${good.result.stats.maxCtd}`);
+  check(tag("no cover booked → thinner at the forecast, and scored as such"),
+    noCover.state.absence!.projectedMin < good.state.absence!.projectedMin - 0.05 && score(noCover.result, "T3") < score(good.result, "T3"),
+    `forecast ${noCover.state.absence!.projectedMin.toFixed(2)} vs ${good.state.absence!.projectedMin.toFixed(2)}; T3 ${score(noCover.result, "T3")} vs ${score(good.result, "T3")}`);
+
+  // Unlocking the wrong device: a picker gained, and the bins that feed every picker lost.
+  {
+    const s = good.state;
+    check(tag("the three forms ask for three different fixes"),
+      s.bn.constraintAtStart !== null && ["picking", "putaway", "riders"].includes(s.bn.constraintAtStart), String(s.bn.constraintAtStart));
+  }
+
+  // The device lock is the lever the whole floor turns on.
+  const built = good.state.floor!.projected;
+  check(tag("the balanced floor covers picking, putaway and riders, with devices left open"),
+    Math.min(built.picking, built.putaway, built.riders) >= 0.95 && good.state.floor!.reserve.length >= 2 && good.state.floor!.uncovered.length === 0,
+    `${built.picking.toFixed(2)} ${built.putaway.toFixed(2)} ${built.riders.toFixed(2)} reserve ${good.state.floor!.reserve.join(",")}`);
+  check(tag("the morning perishables check is finished before the rush"),
+    good.state.audit.doneAt !== null && good.state.audit.doneAt <= 2100 && !good.result.flags.some((f) => f.id === "perishables"));
 
   check(tag("cross-scenario evidence is produced"), good.result.crossScenario.length >= 3 && riyaRemoved.result.crossScenario.length >= 3,
     `${good.result.crossScenario.length}`);
@@ -320,7 +349,14 @@ const TERMS: [string, string][] = [
   ["what is flexible reserve", "reserve"],
   ["how do i move someone", "move_people"],
   ["what is variance", "variance"],
-  ["what is the exception tote", "tote"],
+  ["what is the exception tote", "exception"],
+  ["what does unlocked mean", "device_lock"],
+  ["how do I lock a device", "device_lock"],
+  ["what is putaway", "putaway"],
+  ["what is the perishables check", "auditing"],
+  ["what are standby riders", "riders"],
+  ["what is pick speed", "ppi"],
+  ["what are the three kinds of work", "stations"],
   ["what is PPI", "ppi"],
   ["what does de-list mean", "delist"],
   ["how much time do i have", "time"],
@@ -334,7 +370,7 @@ check("terms on the screen are explained", wrong.length === 0, wrong.join(" | ")
 const FISHING = [
   "what should I do about the nil pick?",
   "which option is best for Riya",
-  "should I move Arjun to packing",
+  "should I move Arjun to putaway",
   "what is the right answer",
   "is it better to count first or check records",
   "give me a hint",

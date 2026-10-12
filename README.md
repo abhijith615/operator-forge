@@ -173,9 +173,20 @@ from one product into the other.
 How it is put together, in `lib/hiring/`:
 
 - **`engine.ts` + `model.ts`** — one store, as a pure function from the
-  candidate's actions to its state. Twelve named people, four stations, a
-  demand curve and a surge. Store time moves when the manager spends
-  attention, not when a tap lands, so nothing rewards clicking quickly.
+  candidate's actions to its state. A morning shift, 05:55 to 06:50: twelve
+  named people on three kinds of work (picking, which includes packing and
+  staging; putaway; auditing), riders who may or may not have logged in, a
+  demand curve and a surge. Every handheld on putaway or auditing is either
+  locked to its role or unlocked, and the app sends orders to the unlocked
+  ones when volume spikes — which is the lever most of the shift turns on.
+  Store time moves when the manager spends attention, not when a tap lands,
+  so nothing rewards clicking quickly.
+- **Versions** — `ASSESSMENT_VERSION` (in `weights.ts`) changes whenever the
+  store does. Only actions are stored, so an attempt can only be replayed by
+  the engine it was played on: attempts from an earlier version are kept,
+  listed as such, left out of the export and never scored by the current one.
+  Version 2.0 rebuilt the store on real dark-store operations (three
+  workflows, device locks, the sixteen-second item, the 06:00 morning round).
 - **`scoring.ts`** — thirty-four behaviours across five competencies, each
   scored 0–3 by a fixed rule from what the engine recorded. No model assigns,
   adjusts or flags anything. Weights live in `weights.ts` and nowhere else.
@@ -193,7 +204,9 @@ How it is put together, in `lib/hiring/`:
   where a moment was not reached, plus a codebook. It is the file reliability,
   factor and fairness analysis are run on.
 - **`forms.ts`** — three parallel forms. Same people and decisions; a different
-  high-value line, nil-pick line, and station the surge lands on.
+  high-value line, nil-pick line, and place the surge lands. On one every
+  device was left locked and the fix is to unlock; on one the putaway devices
+  were left open and the fix is to lock; on one two riders never logged in.
 - **Unfinished shifts** — if the thirty minutes end first, moments that were
   never reached are left out rather than scored as zero, each competency
   counts in proportion to how much of it was seen, and the indication is

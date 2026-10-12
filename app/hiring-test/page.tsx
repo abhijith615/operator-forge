@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 const MEASURES: Record<(typeof COMPETENCIES)[number], string> = {
-  teamManagement: "Covers the floor, matches people to work, coaches, handles conflict honestly, delegates — and does not run the shift on their own hands.",
+  teamManagement: "Covers picking, putaway and riders, decides which devices to lock, looks after a new joiner, handles conflict honestly, delegates — and does not run the shift on their own hands.",
   inventoryManagement: "Counts before concluding, follows the records, separates explained from recovered from unresolved, and closes the gap that caused it.",
   timePrioritisation: "Acts on the forecast before the queue, puts the high-impact problem first, and defers only what is safe to defer.",
   criticalThinking: "Looks at the evidence before accepting a diagnosis, fixes the constraint rather than the symptom, tests the fix and checks it.",
@@ -20,18 +20,18 @@ const MEASURES: Record<(typeof COMPETENCIES)[number], string> = {
 };
 
 const JOURNEY = [
-  ["17:25", "Shift handover", "Twelve of fourteen present. Peak in thirty-five minutes."],
-  ["17:26", "Build and lead the team", "Set the floor, cover the absence, decide about a slow new starter, answer an unhappy expert."],
-  ["17:36", "Control inventory and loss", "A high-value variance and a nil pick on a line the system says is in stock."],
-  ["17:44", "Three problems, one manager", "One personal attention slot. Handle, delegate, or leave until after the peak."],
-  ["17:48", "Find the real bottleneck", "Orders back up. The Floor Lead has a theory."],
-  ["17:53", "Protect the customer", "A bag that is ready to go and should not."],
-  ["17:57", "The manager’s final call", "Lock the plan. Then watch the peak run on it."],
+  ["05:55", "Morning handover", "The 06:00 round: rider attendance, the floor walk, the fresh lines, the counts. Twelve of fourteen present."],
+  ["05:56", "Build and lead the team", "Picking, putaway and auditing, and which devices to lock. Cover the absence, decide about a second-day joiner, answer an unhappy expert."],
+  ["06:06", "Control inventory and loss", "A high-value variance and a nil pick on a line the system says is in stock."],
+  ["06:14", "Three problems, one manager", "One personal attention slot. Handle, delegate, or leave until after the peak."],
+  ["06:18", "Find the real bottleneck", "Orders back up. The Floor Lead has a theory, and the pick speed on the wall seems to agree."],
+  ["06:23", "Protect the customer", "A bag that is ready to go and should not."],
+  ["06:27", "The manager’s final call", "Lock the plan. Then watch the breakfast peak run on it."],
 ] as const;
 
 const GETS = [
   ["A readiness score you can open", "Overall and five competencies, each opening into the moments it was scored from: time, state, action, result."],
-  ["Cross-scenario evidence", "What an early decision did to a later one — whether the team built at 17:26 held when the surge arrived at 17:39."],
+  ["Cross-scenario evidence", "What an early decision did to a later one — whether the floor built at 05:56 held when the surge arrived at 06:09."],
   ["Team effect", "Peak coverage, delegation quality, flexible reserve, trust, and how much of the shift depended on the manager personally."],
   ["Interview probes", "Questions written from what this candidate did, not from a competency framework."],
   ["Manual review flags", "Control breaches are flagged for a person to look at. Nothing is rejected automatically."],
@@ -128,8 +128,10 @@ export default function HiringTestPage() {
             ))}
           </ol>
           <p className="mt-3 text-[13px] leading-relaxed text-lo">
-            One store, not seven exercises. Who was put on packing at 17:26 is who is on packing when the queue rises;
-            how an associate was spoken to at 17:34 is how willingly they move stations at 17:48.
+            One store, not seven exercises. A device left unlocked at 05:56 is a device the app sends orders to when
+            the rush comes; how an associate was spoken to at 06:04 is how willingly they cover other work at 06:18.
+            The store runs the way a quick-commerce dark store does: three kinds of work, a sixteen-second item, crates
+            from the mother warehouse, and riders who have to turn up.
           </p>
         </section>
 

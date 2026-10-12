@@ -1,112 +1,111 @@
-import type { Employee, Station } from "./types";
+import type { Employee, Stage, Station } from "./types";
 
 /**
- * Store 114's evening floor.
+ * Store 114's morning floor.
  *
- * Twelve people present out of fourteen scheduled, and they stay the same
+ * Twelve people present out of fourteen rostered, and they stay the same
  * twelve for the whole thirty minutes. Nobody here is a hero and nobody is a
  * problem: each is good at something, limited at something else, and the
- * shift goes well or badly depending on where they are put and how they are
- * spoken to.
+ * shift goes well or badly depending on where they are put, whether their
+ * device is locked to that job, and how they are spoken to.
  *
- * Skill is output at a station against a competent full-time hand at 1.0.
- * The cross-training is the interesting part — who can cover a second station
- * properly is what a manager finds out the hard way at ten to six.
+ * Skill is output at a workflow against a competent full-time hand at 1.0.
+ * For picking that is the sixteen-second item: somebody at 1.0 picks an item
+ * every 16 seconds, somebody at 1.25 every 12.8, and a second-day joiner at
+ * 0.5 every 32.
  */
 
-const skills = (
-  picking: number,
-  packing: number,
-  dispatch: number,
-  replenishment: number,
-): Record<Station, number> => ({ picking, packing, dispatch, replenishment });
+const skills = (picking: number, putaway: number, auditing: number): Record<Station, number> => ({
+  picking,
+  putaway,
+  auditing,
+});
 
-const none = { highValue: false, inventoryCount: false, riders: false, inwarding: false };
+const none = { highValue: false, audit: false, riders: false, inwarding: false };
+
+/** The store's picking standard, in seconds an item. */
+export const PPI_TARGET = 16;
 
 export const ROSTER: Employee[] = [
   {
     id: "arjun",
     name: "Arjun",
     title: "Expert picker",
-    skills: skills(1.25, 0.95, 0.3, 0.6),
+    skills: skills(1.25, 0.7, 0.5),
     auth: { ...none, highValue: true },
     tenure: "14 months",
     fatigue: 0,
-    note: "Day shift, off at 18:00. Packing trained. Has been asked about staying on.",
+    note: "Overnight shift, off at 06:30. Has been asked about staying on for the breakfast peak.",
     stats: [
-      { label: "PPI", value: "9.8 sec" },
+      { label: "PPI", value: "12.8 sec" },
       { label: "Accuracy", value: "99.3%" },
     ],
   },
   {
     id: "manu",
     name: "Manu",
-    title: "Packing expert",
-    skills: skills(0.6, 1.25, 0.9, 0.5),
-    auth: none,
+    title: "Putaway lead",
+    skills: skills(0.8, 1.25, 0.6),
+    auth: { ...none, inwarding: true },
     tenure: "2 years",
     fatigue: 0,
-    note: "Runs bench P1. Dispatch trained.",
+    note: "Runs the inward dock. Knows every bin code in the store.",
   },
   {
     id: "rahul",
     name: "Rahul",
-    title: "Dispatch lead",
-    skills: skills(0.75, 0.5, 1.25, 0.5),
+    title: "Senior picker",
+    skills: skills(1.05, 0.6, 0.5),
     auth: { ...none, riders: true },
     tenure: "19 months",
     fatigue: 0,
-    note: "Rider coordination. The riders answer to him.",
+    note: "Sequences riders at the handover point when it backs up. The riders answer to him.",
   },
   {
     id: "riya",
     name: "Riya",
-    title: "New picker",
-    skills: skills(0.62, 0.4, 0.25, 0.5),
+    title: "New joiner",
+    skills: skills(0.5, 0.55, 0.2),
     auth: none,
-    tenure: "11 days",
+    tenure: "Day 2",
     fatigue: 0,
-    note: "Currently on Zone C.",
-    stats: [
-      { label: "PPI", value: "21.4 sec" },
-      { label: "Accuracy", value: "99.7%" },
-    ],
+    note: "Joined through the agency yesterday. Induction: putaway only.",
   },
   {
     id: "sneha",
     name: "Sneha",
     title: "Picker",
-    skills: skills(1.0, 0.4, 0.3, 1.0),
+    skills: skills(1.0, 1.0, 0.5),
     auth: { ...none, inwarding: true },
     tenure: "9 months",
     fatigue: 0,
-    note: "Replenishment trained.",
+    note: "Putaway trained.",
   },
   {
     id: "farhan",
     name: "Farhan",
-    title: "Picker",
-    skills: skills(1.0, 0.5, 0.3, 0.7),
-    auth: { ...none, inventoryCount: true, highValue: true },
+    title: "Picker · cycle counts",
+    skills: skills(1.0, 0.7, 1.1),
+    auth: { ...none, audit: true, highValue: true },
     tenure: "11 months",
     fatigue: 0,
-    note: "Inventory count trained. Cleared for high-value counts.",
+    note: "Cycle-count trained. Cleared for the high-value cage.",
   },
   {
     id: "deepa",
     name: "Deepa",
-    title: "Packer",
-    skills: skills(0.7, 1.05, 0.5, 0.5),
+    title: "Picker",
+    skills: skills(0.95, 0.7, 0.9),
     auth: none,
     tenure: "8 months",
     fatigue: 0,
-    note: "Bench P2. Steady, rarely repacks.",
+    note: "Does the perishables check most mornings. Steady, rarely mis-picks.",
   },
   {
     id: "kiran",
     name: "Kiran",
     title: "Picker",
-    skills: skills(0.9, 0.6, 0.3, 0.9),
+    skills: skills(0.9, 0.9, 0.4),
     auth: { ...none, inwarding: true },
     tenure: "6 months",
     fatigue: 0.2,
@@ -115,55 +114,55 @@ export const ROSTER: Employee[] = [
   {
     id: "lakshmi",
     name: "Lakshmi",
-    title: "Packer",
-    skills: skills(0.6, 0.9, 0.95, 0.5),
-    auth: { ...none, riders: true },
+    title: "Auditor",
+    skills: skills(0.85, 0.6, 1.0),
+    auth: { ...none, audit: true, riders: true },
     tenure: "13 months",
     fatigue: 0,
-    note: "Dispatch trained. Has run the rider desk on Rahul's days off.",
+    note: "Runs the cycle counts. Has covered the rider handover on Rahul's days off.",
   },
   {
     id: "vishnu",
     name: "Vishnu",
     title: "Picker",
-    skills: skills(1.05, 0.4, 0.4, 0.8),
+    skills: skills(1.05, 0.8, 0.4),
     auth: none,
     tenure: "16 months",
     fatigue: 0.5,
-    note: "On since 09:00 covering a swap. Quick, and tired.",
+    note: "Closed the store at midnight and is back for 06:00. Quick, and tired.",
   },
   {
     id: "anjali",
     name: "Anjali",
-    title: "Floor & putaway",
-    skills: skills(0.7, 0.55, 0.3, 1.1),
+    title: "Putaway",
+    skills: skills(0.7, 1.1, 0.55),
     auth: { ...none, inwarding: true },
     tenure: "10 months",
     fatigue: 0,
-    note: "Knows where everything in inbound is.",
+    note: "Knows where everything on the inward dock is.",
   },
   {
     id: "joseph",
     name: "Joseph",
-    title: "Dispatch desk",
-    skills: skills(0.6, 0.8, 0.85, 0.5),
+    title: "Picker",
+    skills: skills(0.9, 0.8, 0.5),
     auth: { ...none, riders: true },
     tenure: "5 months",
     fatigue: 0,
-    note: "Second on the rider desk. Packing trained.",
+    note: "Picking and putaway. Second on the rider handover.",
   },
 ];
 
-/** The on-demand picker, if one is booked. Picking only, and not quick. */
+/** The agency's replacement picker, if one is booked. Picking only, and not quick. */
 export const TEMP: Employee = {
   id: "temp",
-  name: "On-demand picker",
+  name: "Agency picker",
   title: "4-hour booking",
-  skills: skills(0.7, 0, 0, 0),
+  skills: skills(0.7, 0, 0),
   auth: none,
   tenure: "First shift here",
   fatigue: 0,
-  note: "Booked through the on-demand app. Does not know the store.",
+  note: "Sent by the staffing agency. Does not know the racks.",
 };
 
 export const BY_ID: Record<string, Employee> = Object.fromEntries(
@@ -171,36 +170,41 @@ export const BY_ID: Record<string, Employee> = Object.fromEntries(
 );
 
 /**
- * Where the outgoing shift left the nine people who are in the same place on
- * every form. The other three — Lakshmi, Joseph and Anjali — are placed by the
- * form, and one of them is always somewhere the afternoon needed and the
- * evening does not.
+ * Where the night shift left the eight people who are in the same place on
+ * every form. The other four — Deepa, Lakshmi, Anjali and Joseph — are placed
+ * by the form, and one of them is always somewhere the night needed and the
+ * morning does not.
  */
 export const HANDOVER_FLOOR: Record<string, Station> = {
   arjun: "picking",
+  rahul: "picking",
   sneha: "picking",
-  farhan: "picking",
   vishnu: "picking",
-  riya: "picking",
-  manu: "packing",
-  deepa: "packing",
-  rahul: "dispatch",
-  kiran: "replenishment",
+  kiran: "picking",
+  manu: "putaway",
+  riya: "putaway",
+  farhan: "auditing",
 };
 
-export const STATION_LABEL: Record<Station, string> = {
+export const STATION_LABEL: Record<Stage, string> = {
   picking: "Picking",
-  packing: "Packing",
-  dispatch: "Dispatch",
-  replenishment: "Replenishment / floor",
+  putaway: "Putaway",
+  auditing: "Auditing",
+  riders: "Riders",
 };
 
-/** The place a person stands to do the work, for sentences. */
-export const STATION_PLACE: Record<Station, string> = {
-  picking: "picking line",
-  packing: "packing bench",
-  dispatch: "rider desk",
-  replenishment: "putaway",
+/** The place the work happens, for sentences. */
+export const STATION_PLACE: Record<Stage, string> = {
+  picking: "picking floor",
+  putaway: "inward dock",
+  auditing: "audit round",
+  riders: "rider handover",
 };
+
+/** What one line of the device list says. */
+export const LOCK_LABEL = {
+  locked: "Locked to this role",
+  unlocked: "Unlocked · takes orders in a spike",
+} as const;
 
 export const nameOf = (id: string): string => BY_ID[id]?.name ?? (id === "me" ? "You" : id);

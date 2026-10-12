@@ -1,25 +1,32 @@
-import { formFor, handoverFloor } from "./forms";
+import { formFor, handoverFloor, handoverLocks } from "./forms";
 import {
+  CTD_TARGET,
   END_AT,
   PEAK_AT,
   SCHEDULE,
+  STANDBY_AT,
+  TEMP_AT,
   advanceTo,
   aisleBlocked,
   capacityOf,
   coverageOf,
   flexibleReserve,
   isFree,
+  isLocked,
+  isPresent,
   metricsOf,
   outputOf,
+  perishablesDone,
   projectedPeak,
   roleFit,
   staffAt,
   suitedAndFree,
   taskFit,
-  weakestStation,
+  weakestStage,
 } from "./model";
 import { BY_ID, ROSTER, STATION_LABEL, STATION_PLACE, nameOf } from "./roster";
 import {
+  STAGES,
   STATIONS,
   type Action,
   type FinalTask,
@@ -28,6 +35,7 @@ import {
   type Intervention,
   type Owner,
   type SceneId,
+  type Stage,
   type Stamped,
   type Station,
   type TaskKind,
@@ -38,16 +46,16 @@ import {
  *
  * A pure function from what the candidate did to what the store became. There
  * is one store, and every decision changes it: the floor built in the first
- * four minutes is the floor that meets the surge at 17:39, the person sent to
- * recount the cage is not picking while they do it, and the associate who was
- * threatened at 17:34 moves to the packing bench at 17:48 at three-quarters
- * speed.
+ * four minutes — and the devices locked or left open in it — is the floor that
+ * meets the surge at 06:09, the person sent to recount the cage is not picking
+ * while they do it, and the associate who was threatened at 06:04 covers a
+ * second workflow at 06:18 at three-quarters speed.
  *
  * Nothing in here knows what a good answer is. That is the scorer's job, and
  * it only ever reads what this file recorded.
  */
 
-/** Riya's induction keeps her on picking this week; the board will not move her. */
+/** Riya's induction keeps her on putaway; the board will not move her. Her device is her own scene. */
 export const FIXED_ON_FLOOR = new Set(["riya"]);
 
 export function initialState(form: FormId): HiringState {
@@ -58,8 +66,11 @@ export function initialState(form: FormId): HiringState {
     expiry: null,
     arrivals: { handover: 0 },
     assign: handoverFloor(form),
+    locks: handoverLocks(form),
     busy: {},
-    flow: { pickQ: 3.5, packQ: 0.4, dispQ: 0 },
+    riders: { on: formFor(form).ridersOn, standby: false, standbyAt: null, desk: null },
+    audit: { progress: 0, doneAt: null },
+    flow: { pickQ: 3.5, stageQ: 0.4 },
     trace: [],
     maxCtd: 0,
     firstBreachAt: null,
@@ -80,7 +91,7 @@ export function initialState(form: FormId): HiringState {
     floor: null,
     absence: null,
     tempArrivesAt: null,
-    riya: { inspected: false, choices: null, pairUntil: 0, pairPartner: null },
+    riya: { inspected: false, choices: null, pairUntil: 0, pairPartner: null, leftAt: null },
     arjun: { place: null, checked: [], response: null, outcome: "pending", unsupportedPromise: false },
     kase: {
       stage: "alert",
@@ -127,8 +138,9 @@ export function initialState(form: FormId): HiringState {
 /* ── Derived views the screens need ───────────────────────────────────── */
 
 export const CASE_TOOLS = ["movement", "orders", "scan", "access", "exception"] as const;
+export const HANDOVER_CHECKS = ["team", "riders", "floorwalk", "perishables", "audits", "demand"] as const;
 export const NIL_SOURCES = ["overstock", "replenArea", "adjacentBin", "transactions"] as const;
-export const BN_PANELS = ["bnPicking", "bnPacking", "bnDispatch", "bnShelf", "bnAisle", "bnQueue"] as const;
+export const BN_PANELS = ["bnPicking", "bnShelf", "bnRiders", "bnDevices", "bnAisle", "bnQueue"] as const;
 
 export function countKnown(state: HiringState): boolean {
   return state.kase.countDoneAt !== null && state.kase.countDoneAt <= state.clock;
@@ -175,14 +187,14 @@ export function pendingUntil(state: HiringState): number | null {
 }
 
 /**
- * The order on bench P2. It has been waiting on a bag, so it is at the edge of
- * target on the calmest evening and well past it on a bad one; and repacking
- * takes longer where the bench is already stretched.
+ * The bag on the staging shelf. It has been waiting on a rider, so it is at
+ * the edge of target on the calmest morning and well past it on a bad one; and
+ * repacking takes longer where the pickers are already stretched.
  */
 export function bagClock(state: HiringState): { now: number; penalty: number } {
   return {
     now: Math.max(metricsOf(state).ctd, 172) + 6,
-    penalty: coverageOf(state, "packing") < 0.95 ? 17 : 12,
+    penalty: coverageOf(state, "picking") < 0.95 ? 17 : 12,
   };
 }
 
@@ -201,10 +213,10 @@ function enter(state: HiringState, scene: SceneId): void {
   if (scene === "triage") state.triageAt = metricsOf(state);
   if (scene === "bottleneck") {
     state.bn.coverageAtStart = Object.fromEntries(
-      STATIONS.map((station) => [station, coverageOf(state, station)]),
-    ) as Record<Station, number>;
-    state.bn.constraintAtStart = weakestStation(state);
-    state.bn.blamed = state.bn.constraintAtStart === "picking" ? "packing" : "picking";
+      STAGES.map((stage) => [stage, coverageOf(state, stage)]),
+    ) as Record<Stage, number>;
+    state.bn.constraintAtStart = weakestStage(state);
+    state.bn.blamed = state.bn.constraintAtStart === "picking" ? "putaway" : "picking";
     state.bn.before = metricsOf(state);
   }
   if (scene === "final") {
@@ -231,13 +243,13 @@ function personal(
 }
 
 /**
- * Work that belongs to a station. Somebody already standing there does it as
- * part of the job; anybody else has to leave their own station to do it.
+ * Work that belongs to a workflow. Somebody already on it does it as part of
+ * the job; anybody else has to leave their own work to do it.
  */
 const OWN_WORK: Partial<Record<Station, TaskKind[]>> = {
-  replenishment: ["search", "replenish", "inbound", "aisle"],
-  dispatch: ["riders", "lateOrder"],
-  packing: ["repack"],
+  putaway: ["search", "replenish", "inbound", "aisle"],
+  auditing: ["count", "records", "followUp", "audit", "perishables"],
+  picking: ["repack"],
 };
 
 /** Does this job take this person away from where they are standing? */
@@ -272,14 +284,24 @@ function delegate(
   return state.clock + duration;
 }
 
-/** Somebody was moved to stand somewhere else. */
-function move(state: HiringState, emp: string, to: Station, asDelegation: string | null): void {
-  if (!(emp in state.assign) || FIXED_ON_FLOOR.has(emp)) return;
-  const constraint = formFor(state.form).constraint;
-  state.assign[emp] = to;
-  if (to === constraint || to === state.bn.constraintAtStart) {
+/** Something was done about the stage that is stuck. */
+function actedOnConstraint(state: HiringState, stage: Stage): void {
+  if (stage === formFor(state.form).constraint || stage === state.bn.constraintAtStart) {
     state.constraintActs.push({ at: state.clock, ctd: metricsOf(state).ctd, where: state.scene });
   }
+}
+
+/**
+ * Somebody was moved to do something else. A device that changes role comes
+ * up unlocked, as the app leaves it; `lock` is for the manager who is sending
+ * somebody to a job and means them to stay on it.
+ */
+function move(state: HiringState, emp: string, to: Station, asDelegation: string | null, lock = false): void {
+  if (!(emp in state.assign) || FIXED_ON_FLOOR.has(emp)) return;
+  state.assign[emp] = to;
+  if (lock && to !== "picking") state.locks[emp] = true;
+  else delete state.locks[emp];
+  actedOnConstraint(state, to);
   if (asDelegation) {
     const skill = BY_ID[emp]?.skills[to] ?? 0;
     state.delegations.push({
@@ -292,6 +314,32 @@ function move(state: HiringState, emp: string, to: Station, asDelegation: string
       scene: state.scene,
     });
   }
+}
+
+/** Somebody was put on the handover point to sequence the riders. */
+function riderDesk(state: HiringState, emp: string, asDelegation: string | null): void {
+  if (!(emp in state.assign) || FIXED_ON_FLOOR.has(emp) || state.riders.desk) return;
+  const trained = BY_ID[emp]?.auth.riders ?? false;
+  state.riders.desk = emp;
+  state.busy[emp] = { until: END_AT, task: "riders" };
+  actedOnConstraint(state, "riders");
+  if (asDelegation) {
+    state.delegations.push({
+      task: asDelegation,
+      label: "Rider handover",
+      owner: emp,
+      fit: trained ? 1 : 0.4,
+      appropriate: trained,
+      at: state.clock,
+      scene: state.scene,
+    });
+  }
+}
+
+/** Put somebody on the stage that is stuck, and keep them there. */
+function reinforce(state: HiringState, emp: string, stage: Stage, asDelegation: string | null): void {
+  if (stage === "riders") riderDesk(state, emp, asDelegation);
+  else move(state, emp, stage, asDelegation, true);
 }
 
 function clearAisle(state: HiringState, owner: Owner): void {
@@ -330,7 +378,7 @@ function buildFinalTasks(state: HiringState): FinalTask[] {
     tasks.push({
       id: "constraint",
       title: form.surgeHeadline,
-      detail: `${STATION_LABEL[constraint]} is at ${Math.round(now.coverage[constraint] * 100)}% of what the peak needs.`,
+      detail: `${STATION_LABEL[constraint]} ${constraint === "riders" ? "are" : "is"} at ${Math.round(now.coverage[constraint] * 100)}% of what the peak needs.`,
       urgent: true,
       managerLevel: false,
       kind: null,
@@ -345,7 +393,7 @@ function buildFinalTasks(state: HiringState): FinalTask[] {
       title: `${form.highValue.item} variance`,
       detail:
         state.kase.stage === "deferred"
-          ? "Still uncounted. System and shelf have not been reconciled."
+          ? "Still uncounted. System and cage have not been reconciled."
           : controlled
             ? "One unit unresolved. Cage access is controlled; the evidence pack is not finished."
             : "One unit unresolved, and the cage is still open to normal access.",
@@ -355,13 +403,16 @@ function buildFinalTasks(state: HiringState): FinalTask[] {
     });
   }
 
-  const removed = state.assign.riya !== "picking";
+  const gone = state.assign.riya === undefined;
+  const onOrders = state.assign.riya === "picking";
   tasks.push({
     id: "riyaCoaching",
-    title: removed ? "Riya — conversation about being moved" : "Riya — Zone C coaching",
-    detail: removed
-      ? "She was taken off picking mid-induction and has asked why."
-      : "Lookalike SKUs in Zone C. Twenty minutes with an expert would fix most of it.",
+    title: gone ? "Agency — a replacement for Riya" : onOrders ? "Riya — conversation about the pick target" : "Riya — bin-code walk-through",
+    detail: gone
+      ? "She was sent back on her second day. The agency wants the reason in writing."
+      : onOrders
+        ? "She was put on orders with a target on day two, and has asked whether to come back tomorrow."
+        : "Twenty minutes on the racks with somebody who knows them, before her first picking shift.",
     urgent: false,
     managerLevel: false,
     kind: "coaching",
@@ -369,21 +420,32 @@ function buildFinalTasks(state: HiringState): FinalTask[] {
 
   tasks.push({
     id: "audit",
-    title: "Full inventory audit",
-    detail: "Cluster office wants a wall-to-wall count this week.",
+    title: "Wall-to-wall count",
+    detail: "Cluster office wants a full wall-to-wall count this week.",
     urgent: false,
     managerLevel: false,
     kind: "audit",
   });
 
-  const shelf = now.coverage.replenishment;
+  if (!perishablesDone(state)) {
+    tasks.push({
+      id: "perishables",
+      title: "Perishables check not finished",
+      detail: "Milk, bread, eggs and produce have not all been checked for date and quality, and they are selling now.",
+      urgent: true,
+      managerLevel: false,
+      kind: "perishables",
+    });
+  }
+
+  const shelf = now.coverage.putaway;
   tasks.push({
     id: "inbound",
-    title: "Inbound cartons",
+    title: "Inward crates",
     detail:
       shelf < 0.85
-        ? "Grocery inward is still on the floor and fast lines are running low on the shelf."
-        : "Grocery inward is still on the floor. Shelves are holding for now.",
+        ? "Crates from the mother warehouse are still on the dock, and fast lines are running low in the bins."
+        : "Crates from the mother warehouse are still on the dock. Bins are holding for now.",
     urgent: shelf < 0.85,
     managerLevel: false,
     kind: "inbound",
@@ -402,7 +464,7 @@ function buildFinalTasks(state: HiringState): FinalTask[] {
     tasks.push({
       id: "nilRecon",
       title: "Nil-pick reconciliation",
-      detail: `${form.nilPick.item}: system and shelf still disagree.`,
+      detail: `${form.nilPick.item}: system and bin still disagree.`,
       urgent: false,
       managerLevel: false,
       kind: "search",
@@ -423,7 +485,7 @@ function buildFinalTasks(state: HiringState): FinalTask[] {
     tasks.push({
       id: "aisle",
       title: "Aisle C still blocked",
-      detail: "Pickers are walking round it. Every route through C is a third longer.",
+      detail: "Pickers are walking round the crates. Every route through C is a third longer.",
       urgent: true,
       managerLevel: false,
       kind: "aisle",
@@ -495,9 +557,28 @@ function apply(state: HiringState, action: Action): string[] {
 
     case "assign":
       if (state.scene === "floor" || state.scene === "absence") {
-        if (action.emp in state.assign && !FIXED_ON_FLOOR.has(action.emp)) {
+        if (action.emp in state.assign && !FIXED_ON_FLOOR.has(action.emp) && state.assign[action.emp] !== action.to) {
           state.assign[action.emp] = action.to;
+          // A device that changes role comes up unlocked.
+          delete state.locks[action.emp];
         }
+      }
+      break;
+
+    case "lock":
+      if (state.scene === "floor" || state.scene === "absence") {
+        if (action.emp in state.assign && !FIXED_ON_FLOOR.has(action.emp) && state.assign[action.emp] !== "picking") {
+          if (action.locked) state.locks[action.emp] = true;
+          else delete state.locks[action.emp];
+        }
+      }
+      break;
+
+    case "standby":
+      if (state.scene === "floor" || state.scene === "absence") {
+        if (action.on !== state.riders.standby) state.cost += action.on ? 300 : -300;
+        state.riders.standby = action.on;
+        state.riders.standbyAt = action.on ? STANDBY_AT : null;
       }
       break;
 
@@ -517,17 +598,18 @@ function apply(state: HiringState, action: Action): string[] {
     case "absence": {
       if (state.scene !== "absence") break;
       if (action.choices.includes("onDemand")) {
-        state.tempArrivesAt = 1500; // 17:50
+        state.tempArrivesAt = TEMP_AT; // 06:20
         state.cost += 640;
       }
       const projected = projectedPeak(state, action.choices.includes("extend"));
       state.absence = {
         choices: action.choices,
-        projectedMin: Math.min(projected.picking, projected.packing, projected.dispatch, projected.replenishment),
+        // Auditing is meant to give way in a rush. The three that carry an order are not.
+        projectedMin: Math.min(projected.picking, projected.putaway, projected.riders),
         pickingProjected: projected.picking,
         at: state.clock,
       };
-      // The floor is re-read here: this is the team that goes into the evening.
+      // The floor is re-read here: this is the team that goes into the morning.
       if (state.floor) {
         state.floor.reserve = flexibleReserve(state);
         state.floor.fit = roleFit(state);
@@ -545,21 +627,32 @@ function apply(state: HiringState, action: Action): string[] {
       const choices = action.choices.slice(0, 2);
       state.riya.choices = choices;
 
-      if (choices.includes("pair")) {
-        const partner = staffAt(state, "picking")
-          .filter((id) => id !== "riya" && id !== "temp")
-          .sort((a, b) => (BY_ID[b]?.skills.picking ?? 0) - (BY_ID[a]?.skills.picking ?? 0))[0];
-        state.riya.pairPartner = partner ?? null;
-        state.riya.pairUntil = state.clock + 600;
-      }
-      if (choices.includes("removePicking")) {
-        state.assign.riya = "replenishment";
+      if (choices.includes("returnAgency")) {
+        // Gone, today. Putaway loses the hand it had.
+        delete state.assign.riya;
+        delete state.locks.riya;
         state.trust -= 6;
-      } else if (choices.includes("moveToPacking")) {
-        state.assign.riya = "packing";
+      } else if (choices.includes("target")) {
+        state.assign.riya = "picking";
+        delete state.locks.riya;
+        state.trust -= 3;
+      } else {
+        // Somebody being shown the bins is on putaway, and her device says so.
+        if (choices.includes("lockPutaway") || choices.includes("pair")) state.locks.riya = true;
+        if (choices.includes("pair")) {
+          const partner = staffAt(state, "putaway")
+            .filter((id) => id !== "riya")
+            .sort((a, b) => (BY_ID[b]?.skills.putaway ?? 0) - (BY_ID[a]?.skills.putaway ?? 0))[0];
+          state.riya.pairPartner = partner ?? null;
+          state.riya.pairUntil = state.clock + 600;
+        }
       }
       if (choices.includes("warn")) state.trust -= 8;
-      if (choices.includes("coachLater") || choices.includes("moveAB") || choices.includes("pair")) {
+      // A second-day joiner held to the sixteen-second item does not come back from her break.
+      if (state.assign.riya && (choices.includes("target") || (choices.includes("warn") && !state.locks.riya))) {
+        state.riya.leftAt = PEAK_AT + 300;
+      }
+      if (choices.includes("phaseLater") || choices.includes("lockPutaway") || choices.includes("pair")) {
         state.trust += 2;
       }
       spend(state, 60);
@@ -572,7 +665,7 @@ function apply(state: HiringState, action: Action): string[] {
       if (state.scene !== "arjun" || state.arjun.place) break;
       state.arjun.place = action.place;
       if (action.place === "aside") spend(state, 30);
-      // On the floor, the rest of picking hears every word of it.
+      // On the floor, the rest of the pickers hear every word of it.
       else state.trust -= 2;
       break;
 
@@ -651,7 +744,7 @@ function apply(state: HiringState, action: Action): string[] {
       state.kase.interrupt = {
         choice: action.choice,
         at: state.clock,
-        packingQueue: now.packingQueue,
+        ordersWaiting: now.ordersWaiting,
         ctd: now.ctd,
       };
       if (action.choice === "handOver" && action.owner && !state.kase.recordsOwner) {
@@ -660,7 +753,7 @@ function apply(state: HiringState, action: Action): string[] {
         spend(state, 20);
       }
       if (action.choice === "stepOut" && action.move) {
-        move(state, action.move, form.constraint, null);
+        reinforce(state, action.move, form.constraint, null);
         spend(state, 60);
       }
       break;
@@ -704,8 +797,8 @@ function apply(state: HiringState, action: Action): string[] {
         spend(state, 150);
         state.nil.searchDoneAt = state.clock;
       } else {
-        // With nobody covering the floor, there is nobody free to look.
-        const thin = coverageOf(state, "replenishment") < 0.8 ? 2 : 1;
+        // With putaway already behind, there is nobody free to look.
+        const thin = coverageOf(state, "putaway") < 0.8 ? 2 : 1;
         state.nil.searchDoneAt = delegate(
           state,
           "search",
@@ -727,10 +820,10 @@ function apply(state: HiringState, action: Action): string[] {
         }
         if (!nilFound(state)) break;
         if (!action.owner || action.owner === "me") {
-          personal(state, "replenish", "Restocked the shelf personally", "replenish");
+          personal(state, "replenish", "Put the crate away personally", "replenish");
           spend(state, 120);
         } else {
-          delegate(state, "replenish", `Restock the ${form.nilPick.item}`, action.owner, "replenish");
+          delegate(state, "replenish", `Put away the ${form.nilPick.item}`, action.owner, "replenish");
           spend(state, 20);
         }
         state.nil.outcome = "replenished";
@@ -764,7 +857,7 @@ function apply(state: HiringState, action: Action): string[] {
 
       // Delegations go out first: they cost a sentence each.
       if (constraint.mode === "delegate" && constraint.owner) {
-        move(state, constraint.owner, form.constraint, "constraintSupport");
+        reinforce(state, constraint.owner, form.constraint, "constraintSupport");
       }
       if (aisle.mode === "delegate" && aisle.owner) clearAisle(state, aisle.owner);
       if (followUp.mode === "delegate" && followUp.owner) {
@@ -775,7 +868,7 @@ function apply(state: HiringState, action: Action): string[] {
 
       if (constraint.mode === "handle") {
         const benchKind =
-          form.constraint === "replenishment" ? "inbound" : form.constraint === "dispatch" ? "riders" : "repack";
+          form.constraint === "putaway" ? "inbound" : form.constraint === "riders" ? "riders" : "repack";
         personal(state, "bench", `Worked the ${STATION_PLACE[form.constraint]} personally`, benchKind);
         state.shocks.managerOnBenchUntil = state.clock + 360;
         state.constraintActs.push({ at: state.clock, ctd: metricsOf(state).ctd, where: "triage" });
@@ -822,7 +915,7 @@ function apply(state: HiringState, action: Action): string[] {
         personal(state, "repack", "Repacked the bag personally", "repack");
         spend(state, 90);
       } else if (action.by !== "unchanged") {
-        delegate(state, "repack", "Repack the bag at P2", action.by, "repack");
+        delegate(state, "repack", "Repack the bag at staging", action.by, "repack");
         spend(state, 15);
       }
       state.bag = {
@@ -875,12 +968,31 @@ function applyIntervention(state: HiringState, step: Intervention): void {
       if (state.assign[step.emp] !== undefined) state.bn.origins[step.emp] ??= state.assign[step.emp]!;
       move(state, step.emp, step.to, "bottleneckMove");
       break;
+    case "lock": {
+      const station = state.assign[step.emp];
+      if (station === undefined || station === "picking" || FIXED_ON_FLOOR.has(step.emp)) break;
+      if (step.locked === isLocked(state, step.emp)) break;
+      if (step.locked) state.locks[step.emp] = true;
+      else delete state.locks[step.emp];
+      // Opening a device adds a picker in a rush; closing one keeps a hand on its own work.
+      actedOnConstraint(state, step.locked ? station : "picking");
+      break;
+    }
     case "addSlot":
       if (step.station === "picking" || state.shocks.lanes.includes(step.station)) break;
       state.shocks.lanes.push(step.station);
-      if (step.station === formFor(state.form).constraint || step.station === state.bn.constraintAtStart) {
-        state.constraintActs.push({ at: state.clock, ctd: metricsOf(state).ctd, where: state.scene });
-      }
+      actedOnConstraint(state, step.station);
+      break;
+    case "riderDesk":
+      riderDesk(state, step.emp, "bottleneckMove");
+      break;
+    case "standby":
+      if (state.riders.standby) break;
+      state.riders.standby = true;
+      // Called now, they are eight minutes away.
+      state.riders.standbyAt = state.clock + 480;
+      state.cost += 300;
+      actedOnConstraint(state, "riders");
       break;
     case "clearAisle":
       clearAisle(state, step.owner);
@@ -907,20 +1019,25 @@ function applyPlan(state: HiringState, plan: NonNullable<HiringState["plan"]>): 
     switch (task.id) {
       case "constraint":
         if (entry.bucket === "now") state.shocks.managerOnBenchUntil = END_AT;
-        if (entry.bucket === "delegate" && owner) move(state, owner, form.constraint, "plan:constraint");
+        if (entry.bucket === "delegate" && owner) reinforce(state, owner, form.constraint, "plan:constraint");
         break;
       case "variance":
         if (entry.bucket === "now") state.followUp = "done";
         if (entry.bucket === "delegate") state.followUp = "delegated";
         break;
       case "riyaCoaching":
-        // Coaching in the peak takes the learner off the floor as well.
+        // A walk-through in the peak takes the learner off the dock as well.
         if (entry.bucket !== "later" && state.assign.riya) {
           state.busy.riya = { until: state.clock + 420, task: "coaching" };
         }
         break;
       case "inbound":
         if (entry.bucket !== "later") state.shocks.inboundCleared = true;
+        break;
+      case "perishables":
+        if (entry.bucket !== "later" && state.audit.doneAt === null) {
+          state.audit.doneAt = state.clock + (owner ? taskFit(owner, "perishables").seconds : 360);
+        }
         break;
       case "riders":
         state.shocks.riders = entry.bucket === "later" ? "gap" : "sequenced";
@@ -947,7 +1064,7 @@ function runOutcome(state: HiringState): void {
   for (const mark of marks) {
     advanceTo(state, mark);
     const now = metricsOf(state);
-    const critical = Math.min(now.coverage.picking, now.coverage.packing, now.coverage.dispatch);
+    const critical = Math.min(now.coverage.picking, now.coverage.riders);
     coverages.push(Math.min(1, critical));
 
     if (mark === marks[0]) {
@@ -955,24 +1072,39 @@ function runOutcome(state: HiringState): void {
       const cover = now.coverage[form.constraint];
       events.push(
         cover >= 0.97
-          ? { clock: mark, text: `${form.surgeHeadline} stabilises.`, tone: "good" }
+          ? { clock: mark, text: form.surgeOutcome.good, tone: "good" }
           : cover >= 0.85
-            ? { clock: mark, text: `${form.surgeHeadline} is holding, just.`, tone: "warn" }
-            : { clock: mark, text: `${form.surgeHeadline} is still growing.`, tone: "bad" },
+            ? { clock: mark, text: form.surgeOutcome.warn, tone: "warn" }
+            : { clock: mark, text: form.surgeOutcome.bad, tone: "bad" },
+      );
+    }
+
+    if (mark === marks[0]) {
+      events.push(
+        state.audit.doneAt !== null && state.audit.doneAt <= PEAK_AT
+          ? { clock: mark, text: "The perishables check was finished before the rush. Two short-dated milk crates never reached an order.", tone: "good" }
+          : { clock: mark, text: "The perishables check was not finished before the rush. Short-dated milk has gone out in orders.", tone: "bad" },
       );
     }
 
     if (mark === marks[1]) {
-      riyaOutput = state.assign.riya === "picking" && isFree(state, "riya") ? outputOf(state, "riya", "picking") : 0;
-      if (state.assign.riya !== "picking") {
-        events.push({ clock: mark, text: "Picking is a person short. Riya is not on it.", tone: "warn" });
-      } else if (riyaOutput >= 0.84) {
-        events.push({ clock: mark, text: "Riya maintains improved throughput.", tone: "good" });
+      const onPutaway = state.assign.riya === "putaway" && isPresent(state, "riya");
+      riyaOutput = onPutaway && isLocked(state, "riya") && isFree(state, "riya") ? outputOf(state, "riya", "putaway") : 0;
+      if (state.assign.riya === undefined) {
+        events.push({ clock: mark, text: "Riya was sent back to the agency. Putaway is a hand short.", tone: "warn" });
+      } else if (!isPresent(state, "riya")) {
+        events.push({ clock: mark, text: "Riya did not come back from her break. The agency says she is not returning.", tone: "bad" });
+      } else if (state.assign.riya === "picking") {
+        events.push({ clock: mark, text: "Riya is picking at 32 seconds an item against a 16-second target.", tone: "warn" });
+      } else if (!isLocked(state, "riya")) {
+        events.push({ clock: mark, text: "Riya's device is still unlocked. The app is sending her orders for bins she cannot find.", tone: "warn" });
+      } else if (riyaOutput >= 0.8) {
+        events.push({ clock: mark, text: "Riya is putting away at close to a trained pace.", tone: "good" });
       } else {
-        events.push({ clock: mark, text: "Riya is still slow through Zone C.", tone: "warn" });
+        events.push({ clock: mark, text: "Riya is on putaway, learning the bins at her own speed.", tone: "neutral" });
       }
       if (state.arjun.outcome === "leaving") {
-        events.push({ clock: mark, text: "Arjun clocked out at 18:00. Picking feels it.", tone: "warn" });
+        events.push({ clock: mark, text: "Arjun clocked out at 06:30. Picking feels it.", tone: "warn" });
       } else if (state.arjun.outcome === "resentful") {
         events.push({ clock: mark, text: "Arjun is on the floor and doing exactly what was asked, no more.", tone: "warn" });
       }
@@ -997,7 +1129,9 @@ function runOutcome(state: HiringState): void {
           ? { clock: mark, text: "CTD returns below target.", tone: "good" }
           : now.ctd <= 200
             ? { clock: mark, text: `CTD is at ${now.ctd} seconds and falling.`, tone: "warn" }
-            : { clock: mark, text: `CTD is at ${now.ctd} seconds. The app has extended the promise.`, tone: "bad" },
+            : state.shocks.extended > 0
+              ? { clock: mark, text: `CTD is at ${now.ctd} seconds. The app lengthened the delivery promise while the store was behind.`, tone: "bad" }
+              : { clock: mark, text: `CTD is at ${now.ctd} seconds, above the ${CTD_TARGET}-second target.`, tone: "bad" },
       );
     }
   }
@@ -1026,20 +1160,20 @@ function runOutcome(state: HiringState): void {
 /* ── What is allowed in ───────────────────────────────────────────────── */
 
 const INSPECTABLE = new Set<string>([
-  "team", "metrics", "pending", "demand",
   "riyaNumbers", "incentiveStatus", "eligibility", "bnEffect",
-  ...CASE_TOOLS, ...NIL_SOURCES, ...BN_PANELS,
+  ...HANDOVER_CHECKS, ...CASE_TOOLS, ...NIL_SOURCES, ...BN_PANELS,
 ]);
-const RIYA_CHOICES = new Set(["moveAB", "pair", "coachLater", "keep", "removePicking", "moveToPacking", "warn"]);
+const RIYA_CHOICES = new Set(["lockPutaway", "pair", "phaseLater", "keep", "target", "returnAgency", "warn"]);
 const ABSENCE_CHOICES = new Set(["onDemand", "reallocate", "extend", "short"]);
 const UNIT_CALLS = new Set(["explained", "recovered", "unresolved", "writeoff", "theft"]);
 const CASE_STEPS = new Set(["preserve", "controlAccess", "escalate", "accuse", "writeOff", "closeStore"]);
 const CONTROL_FIXES = new Set(["scanAtIssue", "exceptionRestow", "remindTeam", "fullAudit"]);
 const MODES = new Set(["handle", "delegate", "later"]);
 const BUCKETS = new Set(["now", "delegate", "later"]);
-const REPLIES = new Set([...STATIONS, "aisle", "unsure", "holding"]);
+const REPLIES = new Set<string>([...STAGES, "aisle", "unsure", "holding"]);
 
 const isStation = (value: unknown): value is Station => STATIONS.includes(value as Station);
+const isStage = (value: unknown): value is Stage => STAGES.includes(value as Stage);
 const within = (set: Set<string>, values: unknown): values is string[] =>
   Array.isArray(values) && values.length <= 8 && values.every((value) => typeof value === "string" && set.has(value));
 
@@ -1068,6 +1202,10 @@ function admissible(state: HiringState, action: Action): boolean {
       return true;
     case "assign":
       return person(action.emp) && isStation(action.to);
+    case "lock":
+      return person(action.emp) && typeof action.locked === "boolean";
+    case "standby":
+      return typeof action.on === "boolean";
     case "absence":
       return within(ABSENCE_CHOICES, action.choices);
     case "riya":
@@ -1107,9 +1245,11 @@ function admissible(state: HiringState, action: Action): boolean {
         Array.isArray(action.moves) && action.moves.length <= 6 &&
         action.moves.every((step) =>
           step.kind === "move" ? person(step.emp) && isStation(step.to)
-            : step.kind === "addSlot" ? isStation(step.station)
-              : step.kind === "clearAisle" ? owner(step.owner)
-                : step.kind === "slowRelease")
+            : step.kind === "lock" ? person(step.emp) && typeof step.locked === "boolean"
+              : step.kind === "addSlot" ? isStage(step.station)
+                : step.kind === "riderDesk" ? person(step.emp)
+                  : step.kind === "clearAisle" ? owner(step.owner)
+                    : step.kind === "standby" || step.kind === "slowRelease")
       );
     case "bag":
       return (action.cleanerBag === 1 || action.cleanerBag === 2) && typeof action.cleanerLiner === "boolean" &&
@@ -1173,7 +1313,7 @@ export function replay(form: FormId, actions: Stamped[]): HiringState {
 
 /**
  * The clock ran out. Whatever was decided stands, whatever was not is left
- * undecided, and the store runs on to 18:20 with the team as it is.
+ * undecided, and the store runs on to 06:50 with the team as it is.
  */
 export function expire(previous: HiringState): HiringState {
   if (previous.scene === "done" || previous.outcome) return { ...previous, scene: "done" };

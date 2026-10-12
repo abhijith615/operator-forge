@@ -1,5 +1,5 @@
 import { candidatesFor, leavesStation } from "./engine";
-import { coverageOf, isFree } from "./model";
+import { coverageOf, isFree, isLocked, pullOf } from "./model";
 import { BY_ID, STATION_LABEL } from "./roster";
 import type { HiringState, Station, TaskKind } from "./types";
 
@@ -7,9 +7,9 @@ import type { HiringState, Station, TaskKind } from "./types";
  * What the screens show about people.
  *
  * Skills are words, not decimals. A manager knows that Lakshmi is trained on
- * dispatch and that Vishnu can cover the floor at a push; nobody knows that
- * one of them is a 0.95. Showing the numbers would turn building a team into
- * an arithmetic exercise, which is a different test.
+ * counts and that Vishnu can cover putaway at a push; nobody knows that one
+ * of them is a 0.95. Showing the numbers would turn building a team into an
+ * arithmetic exercise, which is a different test.
  */
 
 export type SkillWord = "Strong" | "Trained" | "Can cover" | "Not trained";
@@ -38,22 +38,36 @@ const TASK_LABEL: Partial<Record<string, string>> = {
   count: "counting",
   records: "pulling records",
   search: "searching",
-  replenish: "restocking",
+  replenish: "putting a crate away",
   aisle: "clearing Aisle C",
   repack: "repacking",
+  riders: "the rider handover",
   followUp: "the evidence pack",
-  coaching: "coaching",
-  "plan:audit": "the audit",
+  coaching: "a walk-through",
+  "plan:audit": "the wall-to-wall count",
 };
 
-/** What a station drops to while one person is away from it. */
+/** What somebody's own work drops to while they are away from it. */
 function without(state: HiringState, id: string): string {
   const station = state.assign[id];
   if (!station) return "";
   const before = coverageOf(state, station);
   const away: HiringState = { ...state, busy: { ...state.busy, [id]: { until: Infinity, task: "away" } } };
   const after = coverageOf(away, station);
-  return `${STATION_LABEL[station].split(" ")[0]} ${pct(before)} → ${pct(after)} while away`;
+
+  // An unlocked device the app has already taken for orders is not doing its own work to begin with.
+  const pull = pullOf(state);
+  if (station !== "picking" && !isLocked(state, id) && pull >= 0.9) {
+    return `Unlocked · already on orders ${pct(pull)} of the time`;
+  }
+  // A picker's gap is filled by the app from unlocked devices, for as long as there are any.
+  if (station === "picking" && Math.abs(after - before) < 0.005) {
+    const later = pullOf(away);
+    return later > pull + 0.005
+      ? `Unlocked devices cover it: on orders ${pct(pull)} → ${pct(later)} while away`
+      : `${STATION_LABEL[station]} holds at ${pct(after)} while away`;
+  }
+  return `${STATION_LABEL[station]} ${pct(before)} → ${pct(after)} while away`;
 }
 
 /** Who could be given a job, best suited first, and what it costs to give it to them. */
@@ -112,7 +126,7 @@ export const PERSONAL_COST: Partial<Record<TaskKind, string>> = {
   search: "About 2½ minutes off the floor",
   replenish: "About 2 minutes off the floor",
   aisle: "About 4 minutes off the floor",
-  repack: "About 1½ minutes at the bench",
+  repack: "About 1½ minutes at the staging shelf",
 };
 
 export function deviceType(): "mobile" | "tablet" | "desktop" {

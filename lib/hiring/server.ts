@@ -5,7 +5,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { expire, replay } from "./engine";
 import { scoreAssessment, type AssessmentResult } from "./scoring";
 import type { FormId, Stamped } from "./types";
-import { ASSESSMENT_SECONDS } from "./weights";
+import { ASSESSMENT_SECONDS, ASSESSMENT_VERSION, CURRENT_SINCE } from "./weights";
 
 /**
  * The server's side of the Hiring Test.
@@ -26,6 +26,23 @@ export interface AttemptRow {
   server_now?: string;
   /** How long this attempt was given. Absent on a database that predates extra time. */
   time_limit_seconds?: number;
+  /** Which simulation it was sat on. Absent from the first release's functions. */
+  assessment_version?: string;
+  /** Sat on a simulation that has since been replaced, and cannot be replayed on this one. */
+  retired?: boolean;
+}
+
+/**
+ * Was this attempt sat on the simulation this code runs?
+ *
+ * Only the ordered actions are stored, and a result is those actions replayed
+ * through the engine — so an attempt can only be read by the engine it was
+ * played on. One from an earlier simulation is kept, shown as such, and never
+ * scored by this one.
+ */
+export function isCurrentVersion(row: { assessment_version?: string; started_at: string }): boolean {
+  if (row.assessment_version) return row.assessment_version === ASSESSMENT_VERSION;
+  return Date.parse(row.started_at) >= CURRENT_SINCE;
 }
 
 export interface AdminAttemptRow extends AttemptRow {
@@ -82,7 +99,7 @@ export function isMissing(error: { code?: string; message?: string } | null): bo
   return error.code === "PGRST202" || error.code === "42883" || /could not find the function|does not exist/i.test(error.message ?? "");
 }
 
-/** Replay what was done. A shift that was never finished is run out to 18:20 as it stood. */
+/** Replay what was done. A shift that was never finished is run out to 06:50 as it stood. */
 export function resultFrom(form: FormId, actions: Stamped[]): { result: AssessmentResult; incomplete: boolean } {
   const state = replay(form, asActions(actions));
   const incomplete = !state.outcome;
@@ -104,15 +121,22 @@ export function candidateProfileFrom(result: AssessmentResult, timedOut: boolean
   };
 }
 
-/** The signed-in candidate's latest attempt, or null if they have not started. */
+/**
+ * The signed-in candidate's latest attempt at this simulation, or null if they
+ * have not started it. Somebody who only ever sat an earlier one has not.
+ */
 export async function readCurrentAttempt(): Promise<AttemptRow | null> {
   const supabase = await getSupabaseServerClient();
   if (!supabase) return null;
-  let { data, error } = await supabase.rpc("hiring_attempt", { p_campaign: null });
+  let { data, error } = await supabase.rpc("hiring_sitting", { p_version: ASSESSMENT_VERSION, p_campaign: null });
+  // A database that has not had the latest update cannot tell versions apart.
+  const unversioned = isMissing(error);
+  if (unversioned) ({ data, error } = await supabase.rpc("hiring_attempt", { p_campaign: null }));
   if (isMissing(error)) ({ data, error } = await supabase.rpc("hiring_current", { p_campaign: null }));
   if (error) return null;
   const row = first<AttemptRow>(data);
-  return row ? { ...row, actions: asActions(row.actions) } : null;
+  if (!row) return null;
+  return { ...row, actions: asActions(row.actions), retired: unversioned && !isCurrentVersion(row) };
 }
 
 /** How long the signed-in candidate will be given, including any extra time arranged for them. */

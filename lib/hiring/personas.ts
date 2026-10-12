@@ -1,7 +1,19 @@
 import { candidatesFor, initialState, interruptDue, reduce } from "./engine";
 import { formFor } from "./forms";
-import { PEAK_AT, aisleBlocked, coverageOf, floorHolding, isFree, metricsOf, projectedPeak } from "./model";
-import { BY_ID } from "./roster";
+import {
+  PEAK_AT,
+  TEMP_AT,
+  aisleBlocked,
+  coverageOf,
+  flexibleReserve,
+  floorHolding,
+  isFree,
+  isLocked,
+  metricsOf,
+  perishablesEta,
+  projectedPeak,
+} from "./model";
+import { BY_ID, ROSTER } from "./roster";
 import {
   STATIONS,
   type AbsenceChoice,
@@ -14,6 +26,7 @@ import {
   type Intervention,
   type PlanEntry,
   type RiyaChoice,
+  type Stage,
   type Stamped,
   type Station,
   type TaskKind,
@@ -30,7 +43,7 @@ import {
  *
  * They exist to check the instrument, not the candidate: if the manager who
  * does everything personally does not come out as manager-dependent, or the
- * one who dispatches a chemical with open food comes out clean, the scoring is
+ * one who sends a chemical out with open food comes out clean, the scoring is
  * wrong and the build is not finished.
  */
 
@@ -46,7 +59,7 @@ export type PersonaId =
 export interface Style {
   label: string;
   handover: string[];
-  /** "balance" reads the board and fixes the thinnest station; "keep" changes nothing. */
+  /** "balance" reads the board and fixes what is thin — people, devices, riders; "keep" changes nothing. */
   floor: "balance" | "keep";
   absence: AbsenceChoice[];
   riya: { inspect: boolean; choices: RiyaChoice[] };
@@ -116,7 +129,7 @@ class Shift {
     if (interruptDue(this.state)) this.interrupt();
   }
 
-  /** The queue starts rising in the middle of the investigation. */
+  /** Orders start backing up in the middle of the investigation. */
   private interrupt(): void {
     const constraint = formFor(this.state.form).constraint;
     if (this.style.kase.interrupt === "auto" && coverageOf(this.state, constraint) < 1) {
@@ -132,18 +145,45 @@ class Shift {
 
 /* ── How a careful manager reads the board ────────────────────────────── */
 
-const FLOW: Station[] = ["picking", "packing", "dispatch"];
-
-/** Coverage, worst first: what a manager's eye goes to. */
-function liveView(state: HiringState): number[] {
-  return FLOW.map((station) => coverageOf(state, station)).sort((a, b) => a - b);
+/** The three an order depends on, worst first: what a manager's eye goes to. Enough is enough. */
+function three(cover: Record<Stage, number>, enough = 1): number[] {
+  return [cover.picking, cover.putaway, cover.riders].map((value) => Math.min(enough, value)).sort((a, b) => a - b);
 }
 
+function liveView(state: HiringState): number[] {
+  return three(metricsOf(state).coverage);
+}
+
+/** Workflows with nobody on them. */
+function empty(state: HiringState): number {
+  return STATIONS.filter((station) => !Object.values(state.assign).includes(station)).length;
+}
+
+/** Nobody on work they are not trained for. */
+function misplaced(state: HiringState): number {
+  return ROSTER.filter((e) => {
+    const station = state.assign[e.id];
+    return station !== undefined && e.id !== "riya" && e.skills[station] < 0.75;
+  }).length;
+}
+
+/**
+ * The board as a careful manager weighs it. Nothing left with nobody on it,
+ * and the morning check done before the rush: those are not traded for
+ * anything. Then picking, putaway and riders covered for the forecast, to
+ * within a few points. Then nobody on work they are not trained for. Then a
+ * couple of devices left open for a rush bigger than forecast.
+ */
 function projectedView(state: HiringState, withTemp: boolean): number[] {
-  const view = withTemp && state.tempArrivesAt === null ? { ...state, tempArrivesAt: 1500 } : state;
-  const p = projectedPeak(view);
-  // The floor station is support: it can run a little under without hurting.
-  return [p.picking, p.packing, p.dispatch, p.replenishment / 0.9].sort((a, b) => a - b);
+  const view = withTemp && state.tempArrivesAt === null ? { ...state, tempArrivesAt: TEMP_AT } : state;
+  const eta = perishablesEta(view);
+  return [
+    -empty(view),
+    eta !== null && eta <= PEAK_AT - 600 ? 1 : 0,
+    ...three(projectedPeak(view), 0.95),
+    -misplaced(view),
+    Math.min(2, flexibleReserve(view).length),
+  ];
 }
 
 function better(a: number[], b: number[]): boolean {
@@ -153,51 +193,104 @@ function better(a: number[], b: number[]): boolean {
   return false;
 }
 
-function withMove(state: HiringState, emp: string, to: Station): HiringState {
-  return { ...state, assign: { ...state.assign, [emp]: to } };
+function withMove(state: HiringState, emp: string, to: Station, lock = false): HiringState {
+  const locks = { ...state.locks };
+  if (lock && to !== "picking") locks[emp] = true;
+  else delete locks[emp];
+  return { ...state, assign: { ...state.assign, [emp]: to }, locks };
 }
 
-/** The single move that most improves the board, if any does. */
-function bestSwap(
-  state: HiringState,
-  view: (s: HiringState) => number[],
-  only?: Station,
-): { emp: string; to: Station } | null {
-  let best: { emp: string; to: Station } | null = null;
+function withLock(state: HiringState, emp: string, locked: boolean): HiringState {
+  const locks = { ...state.locks };
+  if (locked) locks[emp] = true;
+  else delete locks[emp];
+  return { ...state, locks };
+}
+
+function withDesk(state: HiringState, emp: string): HiringState {
+  return {
+    ...state,
+    riders: { ...state.riders, desk: emp },
+    busy: { ...state.busy, [emp]: { until: Infinity, task: "riders" } },
+  };
+}
+
+function movable(state: HiringState, id: string): boolean {
+  return id !== "riya" && id !== "temp" && isFree(state, id);
+}
+
+/** One thing a manager can change on the floor board. */
+type BoardStep =
+  | { kind: "assign"; emp: string; to: Station }
+  | { kind: "lock"; emp: string; locked: boolean }
+  | { kind: "standby" };
+
+function applyStep(state: HiringState, step: BoardStep): HiringState {
+  if (step.kind === "assign") return withMove(state, step.emp, step.to);
+  if (step.kind === "lock") return withLock(state, step.emp, step.locked);
+  return { ...state, riders: { ...state.riders, standby: true } };
+}
+
+/** The single change that most improves the board, if any does. */
+function bestStep(state: HiringState, view: (s: HiringState) => number[]): BoardStep | null {
+  let best: BoardStep | null = null;
   let bestView = view(state);
+  const consider = (step: BoardStep) => {
+    const after = view(applyStep(state, step));
+    if (better(after, bestView)) {
+      best = step;
+      bestView = after;
+    }
+  };
+
   for (const emp of Object.keys(state.assign)) {
-    if (emp === "riya" || emp === "temp" || !isFree(state, emp)) continue;
+    if (!movable(state, emp)) continue;
     for (const to of STATIONS) {
-      if (only && to !== only) continue;
-      if (to === state.assign[emp] || (BY_ID[emp]?.skills[to] ?? 0) < 0.8) continue;
-      const after = view(withMove(state, emp, to));
-      if (better(after, bestView)) {
-        best = { emp, to };
-        bestView = after;
-      }
+      if (to !== state.assign[emp] && (BY_ID[emp]?.skills[to] ?? 0) >= 0.8) consider({ kind: "assign", emp, to });
+    }
+    if (state.assign[emp] !== "picking") consider({ kind: "lock", emp, locked: !isLocked(state, emp) });
+  }
+  if (!state.riders.standby) consider({ kind: "standby" });
+  return best;
+}
+
+/** Who to send to the stage that is stuck, live, if sending anybody helps. */
+function bestMover(state: HiringState, to: Stage): string | null {
+  if (to === "auditing") return null;
+  let best: string | null = null;
+  let bestView = liveView(state);
+  for (const emp of Object.keys(state.assign)) {
+    if (!movable(state, emp)) continue;
+    let after: HiringState;
+    if (to === "riders") {
+      if (state.riders.desk || !BY_ID[emp]?.auth.riders) continue;
+      after = withDesk(state, emp);
+    } else {
+      if (state.assign[emp] === to || (BY_ID[emp]?.skills[to] ?? 0) < 0.8) continue;
+      after = withMove(state, emp, to, true);
+    }
+    const view = liveView(after);
+    if (better(view, bestView)) {
+      best = emp;
+      bestView = view;
     }
   }
   return best;
 }
 
-function bestMover(state: HiringState, to: Station): string | null {
-  const view = (s: HiringState) =>
-    to === "replenishment"
-      ? [coverageOf(s, "replenishment"), ...liveView(s)].sort((a, b) => a - b)
-      : liveView(s);
-  return bestSwap(state, view, to)?.emp ?? null;
-}
-
-/** Whoever suits a job and is free, preferring somebody whose station it belongs to. */
+/** Whoever suits a job and is free, preferring somebody whose own work it is. */
 function suited(state: HiringState, kind: TaskKind): string | null {
   const home: Partial<Record<TaskKind, Station>> = {
-    search: "replenishment",
-    replenish: "replenishment",
-    inbound: "replenishment",
-    aisle: "replenishment",
-    riders: "dispatch",
-    lateOrder: "dispatch",
-    repack: "packing",
+    search: "putaway",
+    replenish: "putaway",
+    inbound: "putaway",
+    aisle: "putaway",
+    count: "auditing",
+    records: "auditing",
+    followUp: "auditing",
+    audit: "auditing",
+    perishables: "auditing",
+    repack: "picking",
   };
   const pool = candidatesFor(state, kind).filter((c) => c.free && c.fit >= 0.8);
   const atHome = pool.find((c) => state.assign[c.id] === home[kind]);
@@ -216,40 +309,14 @@ function handover(shift: Shift, style: Style): void {
   shift.act({ t: "takeShift" });
 }
 
-/** Two people changing places, when no single move helps. */
-function bestExchange(state: HiringState, view: (s: HiringState) => number[]): [string, string] | null {
-  let best: [string, string] | null = null;
-  let bestView = view(state);
-  const people = Object.keys(state.assign).filter((id) => id !== "riya" && id !== "temp" && isFree(state, id));
-  for (const a of people) {
-    for (const b of people) {
-      const [at, bt] = [state.assign[a]!, state.assign[b]!];
-      if (a >= b || at === bt) continue;
-      if ((BY_ID[a]?.skills[bt] ?? 0) < 0.8 || (BY_ID[b]?.skills[at] ?? 0) < 0.8) continue;
-      const after = view(withMove(withMove(state, a, bt), b, at));
-      if (better(after, bestView)) {
-        best = [a, b];
-        bestView = after;
-      }
-    }
-  }
-  return best;
-}
-
 function rebalance(shift: Shift, withTemp: boolean): void {
   const view = (s: HiringState) => projectedView(s, withTemp);
-  for (let i = 0; i < 6; i += 1) {
-    const move = bestSwap(shift.state, view);
-    if (move) {
-      shift.act({ t: "assign", emp: move.emp, to: move.to }, 15000);
-      continue;
-    }
-    const exchange = bestExchange(shift.state, view);
-    if (!exchange) return;
-    const [a, b] = exchange;
-    const [at, bt] = [shift.state.assign[a]!, shift.state.assign[b]!];
-    shift.act({ t: "assign", emp: a, to: bt }, 15000);
-    shift.act({ t: "assign", emp: b, to: at }, 15000);
+  for (let i = 0; i < 8; i += 1) {
+    const step = bestStep(shift.state, view);
+    if (!step) return;
+    if (step.kind === "assign") shift.act({ t: "assign", emp: step.emp, to: step.to }, 15000);
+    else if (step.kind === "lock") shift.act({ t: "lock", emp: step.emp, locked: step.locked }, 8000);
+    else shift.act({ t: "standby", on: true }, 10000);
   }
 }
 
@@ -323,17 +390,15 @@ function nilPick(shift: Shift, style: Style): void {
 
 function triage(shift: Shift, style: Style): void {
   const state = shift.state;
-  const constraintStation = formFor(state.form).constraint;
+  const constraint = formFor(state.form).constraint;
   const t = style.triage;
   const call = (mode: "handle" | "delegate" | "later", owner: string | null): TriageCall =>
     mode === "delegate" && owner ? { mode, owner } : { mode: mode === "delegate" ? "later" : mode };
 
-  const needs = coverageOf(state, constraintStation) < 1;
+  const needs = coverageOf(state, constraint) < 1;
   const constraintMode = t.constraint === "auto" ? (needs ? "delegate" : "later") : t.constraint;
   const mover =
-    t.constraint === "delegate" && style.plan === "fast"
-      ? nearest(state)
-      : bestMover(state, constraintStation);
+    t.constraint === "delegate" && style.plan === "fast" ? nearest(state) : bestMover(state, constraint);
 
   const followMode = t.followUp === "auto" ? (state.followUp === "done" ? "later" : "handle") : t.followUp;
 
@@ -348,12 +413,68 @@ function triage(shift: Shift, style: Style): void {
   );
 }
 
-const PANEL: Record<Station, string> = {
+const PANEL: Record<Stage, string> = {
   picking: "bnPicking",
-  packing: "bnPacking",
-  dispatch: "bnDispatch",
-  replenishment: "bnShelf",
+  putaway: "bnShelf",
+  auditing: "bnDevices",
+  riders: "bnRiders",
 };
+
+/** The device whose lock, changed, does the most for the store right now. */
+function bestLock(state: HiringState, locked: boolean, on?: Station): string | null {
+  let best: string | null = null;
+  let bestView = liveView(state);
+  for (const emp of Object.keys(state.assign)) {
+    const station = state.assign[emp]!;
+    if (!movable(state, emp) || station === "picking" || isLocked(state, emp) === locked) continue;
+    if (on && station !== on) continue;
+    const view = liveView(withLock(state, emp, locked));
+    if (better(view, bestView)) {
+      best = emp;
+      bestView = view;
+    }
+  }
+  return best;
+}
+
+/** What a manager who has found the constraint does about it: one change, two at most. */
+function fixFor(state: HiringState, constraint: Stage, aisleBy: "best" | "me"): Intervention[] {
+  const moves: Intervention[] = [];
+
+  if (constraint === "picking") {
+    if (aisleBlocked(state)) {
+      moves.push({ kind: "clearAisle", owner: aisleBy === "me" ? "me" : (suited(state, "aisle") ?? "me") });
+      return moves;
+    }
+    // A locked device that can pick is the cheapest picker in the building.
+    const open = bestLock(state, false);
+    if (open) moves.push({ kind: "lock", emp: open, locked: false });
+    else {
+      const mover = bestMover(state, "picking");
+      if (mover) moves.push({ kind: "move", emp: mover, to: "picking" });
+    }
+    return moves;
+  }
+
+  moves.push({ kind: "addSlot", station: constraint });
+  const eased: HiringState = { ...state, shocks: { ...state.shocks, lanes: [...state.shocks.lanes, constraint] } };
+  if (coverageOf(eased, constraint) >= 0.97) return moves;
+
+  if (constraint === "putaway") {
+    // The app is taking the putaway hands for orders: close a device before sending anybody new.
+    const close = bestLock(eased, true, "putaway");
+    if (close) moves.push({ kind: "lock", emp: close, locked: true });
+    else {
+      const mover = bestMover(eased, "putaway");
+      if (mover) moves.push({ kind: "move", emp: mover, to: "putaway" });
+    }
+  } else if (constraint === "riders") {
+    const desk = bestMover(eased, "riders");
+    if (desk) moves.push({ kind: "riderDesk", emp: desk });
+    else if (!state.riders.standby) moves.push({ kind: "standby" });
+  }
+  return moves;
+}
 
 function bottleneck(shift: Shift, style: Style): void {
   const b = style.bottleneck;
@@ -363,7 +484,7 @@ function bottleneck(shift: Shift, style: Style): void {
 
   const panels =
     b.panels === "all"
-      ? ["bnPicking", "bnPacking", "bnDispatch", "bnShelf", "bnAisle", "bnQueue"]
+      ? ["bnPicking", "bnShelf", "bnRiders", "bnDevices", "bnAisle", "bnQueue"]
       : b.panels === "constraint"
         ? ["bnQueue", PANEL[constraint]]
         : [];
@@ -374,35 +495,22 @@ function bottleneck(shift: Shift, style: Style): void {
   else if (b.reply === "misled") shift.act({ t: "floorLeadReply", call: misled });
   else if (b.reply === "unsure") shift.act({ t: "floorLeadReply", call: "unsure" });
 
-  const moves: Intervention[] = [];
+  let moves: Intervention[] = [];
   const state = shift.state;
   const stuck = !holding;
 
   if (b.fix === "auto" && stuck) {
-    if (constraint === "picking") {
-      if (aisleBlocked(state)) {
-        moves.push({ kind: "clearAisle", owner: b.aisleBy === "me" ? "me" : (suited(state, "aisle") ?? "me") });
-      } else {
-        const mover = bestMover(state, "picking");
-        if (mover) moves.push({ kind: "move", emp: mover, to: "picking" });
-      }
-    } else {
-      moves.push({ kind: "addSlot", station: constraint });
-      const after: HiringState = { ...state, shocks: { ...state.shocks, lanes: [...state.shocks.lanes, constraint] } };
-      if (coverageOf(after, constraint) < 0.97) {
-        const mover = bestMover(after, constraint);
-        if (mover) moves.push({ kind: "move", emp: mover, to: constraint });
-      }
-    }
+    moves = fixFor(state, constraint, b.aisleBy);
   } else if (b.fix === "misled") {
-    // Does what the Floor Lead said: more hands at the stage he named.
-    const from: Station = misled === "picking" ? "packing" : "picking";
-    const emp = Object.keys(state.assign).find((id) => state.assign[id] === from && id !== "riya" && isFree(state, id));
+    // Does what the Floor Lead said: more hands on the work he named, taken from the other.
+    const from: Station = misled === "picking" ? "putaway" : "picking";
+    const emp = Object.keys(state.assign).find((id) => state.assign[id] === from && movable(state, id));
     if (emp) moves.push({ kind: "move", emp, to: misled });
   } else if (b.fix === "everything") {
-    moves.push({ kind: "addSlot", station: constraint });
+    if (constraint !== "picking") moves.push({ kind: "addSlot", station: constraint });
     const mover = bestMover(state, constraint);
-    if (mover) moves.push({ kind: "move", emp: mover, to: constraint });
+    if (mover) moves.push(constraint === "riders" ? { kind: "riderDesk", emp: mover } : { kind: "move", emp: mover, to: constraint as Station });
+    if (!state.riders.standby) moves.push({ kind: "standby" });
     moves.push({ kind: "slowRelease" });
   }
 
@@ -445,12 +553,12 @@ function plan(shift: Shift, style: Style): void {
         if (who && handed < 3) entry = { bucket: "delegate", owner: who, ...fix };
         else if (now < 3) entry = { bucket: "now", ...fix };
       }
-      // The careful one cannot leave an audit unstarted.
+      // The careful one cannot leave a count unstarted.
       if (style.plan === "analyser" && task.id === "audit") {
         const who = owner("audit", "audit");
         if (who && handed < 3) entry = { bucket: "delegate", owner: who };
       }
-      // ...or a promised coaching conversation unhad.
+      // ...or a promised conversation unhad.
       if (style.plan === "analyser" && task.id === "riyaCoaching" && now < 3) entry = { bucket: "now" };
     } else if (style.plan === "hero") {
       if (task.urgent && now < 3) entry = { bucket: "now", ...fix };
@@ -483,10 +591,10 @@ function plan(shift: Shift, style: Style): void {
 
 const balancedLeader: Style = {
   label: "Balanced Floor Leader",
-  handover: ["team", "demand", "pending"],
+  handover: ["team", "riders", "perishables", "demand"],
   floor: "balance",
   absence: ["onDemand", "extend"],
-  riya: { inspect: true, choices: ["moveAB", "coachLater"] },
+  riya: { inspect: true, choices: ["lockPutaway", "phaseLater"] },
   arjun: { check: ["incentiveStatus"], place: "aside", ack: "recognise", clarify: "verified", request: "respectful" },
   kase: {
     first: "count",
@@ -509,8 +617,8 @@ const balancedLeader: Style = {
 const strongAsm: Style = {
   ...balancedLeader,
   label: "Strong ASM",
-  handover: ["team", "demand"],
-  riya: { inspect: true, choices: ["pair", "coachLater"] },
+  handover: ["team", "riders", "demand"],
+  riya: { inspect: true, choices: ["pair", "phaseLater"] },
   arjun: { check: ["incentiveStatus"], place: "here", ack: "recognise", clarify: "verified", request: "respectful" },
   kase: { ...balancedLeader.kase, tools: ["orders", "scan", "movement", "exception", "access"], controls: ["scanAtIssue", "remindTeam"] },
   bottleneck: { ...balancedLeader.bottleneck, check: false },
@@ -533,7 +641,7 @@ const commandControl: Style = {
   ...balancedLeader,
   label: "Command-and-Control",
   absence: ["reallocate", "extend"],
-  riya: { inspect: false, choices: ["removePicking", "warn"] },
+  riya: { inspect: false, choices: ["returnAgency", "warn"] },
   arjun: { check: [], place: "here", ack: "dismiss", clarify: "deflect", request: "threat" },
   kase: { ...balancedLeader.kase, controls: ["remindTeam"] },
 };
@@ -544,7 +652,7 @@ const fastReactor: Style = {
   handover: [],
   floor: "keep",
   absence: ["short"],
-  riya: { inspect: false, choices: ["moveToPacking"] },
+  riya: { inspect: false, choices: ["keep"] },
   arjun: { check: [], place: "here", ack: "neutral", clarify: "guess", request: "respectful" },
   kase: {
     first: "count",
@@ -566,10 +674,10 @@ const fastReactor: Style = {
 /** Looks at everything, concludes correctly, and gets there after the floor needed it. */
 const overAnalyser: Style = {
   label: "Over-Analyser",
-  handover: ["team", "metrics", "pending", "demand"],
+  handover: ["team", "riders", "floorwalk", "perishables", "audits", "demand"],
   floor: "keep",
   absence: ["extend"],
-  riya: { inspect: true, choices: ["coachLater"] },
+  riya: { inspect: true, choices: ["phaseLater"] },
   arjun: { check: ["incentiveStatus", "eligibility"], place: "aside", ack: "recognise", clarify: "verified", request: "respectful" },
   kase: {
     first: "records",
@@ -591,10 +699,10 @@ const overAnalyser: Style = {
 /** Protects click-to-dispatch, and pays for it with the customer and the controls. */
 const slaFirst: Style = {
   label: "SLA-First",
-  handover: ["metrics", "demand"],
+  handover: ["riders", "demand"],
   floor: "balance",
   absence: ["onDemand", "extend"],
-  riya: { inspect: false, choices: ["moveToPacking"] },
+  riya: { inspect: false, choices: ["target"] },
   arjun: { check: [], place: "here", ack: "neutral", clarify: "promise", request: "order" },
   kase: {
     first: "defer",

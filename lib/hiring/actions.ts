@@ -96,13 +96,10 @@ export async function startAssessment(device: string, consented: boolean): Promi
   if (!supabase) return null;
 
   const p_device = ["mobile", "tablet", "desktop"].includes(device) ? device : "unknown";
-  let { data, error } = await supabase.rpc("hiring_begin", {
-    p_version: ASSESSMENT_VERSION,
-    p_consent_version: CONSENT_VERSION,
-    p_device,
-    p_role: "asm",
-    p_campaign: null,
-  });
+  const begin = { p_version: ASSESSMENT_VERSION, p_consent_version: CONSENT_VERSION, p_device, p_role: "asm", p_campaign: null };
+  // `hiring_open` knows which simulation an earlier attempt was sat on; the older functions do not.
+  let { data, error } = await supabase.rpc("hiring_open", begin);
+  if (isMissing(error)) ({ data, error } = await supabase.rpc("hiring_begin", begin));
   if (isMissing(error)) {
     ({ data, error } = await supabase.rpc("hiring_start", { p_version: ASSESSMENT_VERSION, p_device, p_role: "asm", p_campaign: null }));
   }

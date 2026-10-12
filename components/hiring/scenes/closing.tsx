@@ -9,7 +9,7 @@ import { formFor } from "@/lib/hiring/forms";
 import { bagClock } from "@/lib/hiring/engine";
 import { CTD_TARGET, clockLabel } from "@/lib/hiring/model";
 import { BY_ID, STATION_LABEL, nameOf } from "@/lib/hiring/roster";
-import { STATIONS, type Bucket, type LateOrderFix, type PlanEntry } from "@/lib/hiring/types";
+import { STATIONS, type Bucket, type LateOrderFix, type PlanEntry, type Station } from "@/lib/hiring/types";
 import { PERSONAL_COST, moverOptions, ownerOptions } from "@/lib/hiring/view";
 import { cn } from "@/lib/utils";
 
@@ -32,8 +32,8 @@ import type { SceneProps } from "./handover";
 type BagItem = (typeof BAG_ITEMS)[number]["id"];
 
 /**
- * 17:53, bench P2. A sealed-and-ready order with a toilet cleaner sitting on
- * loose coriander, and a dispatch clock two seconds inside target.
+ * 06:23, the staging shelf. A packed-and-ready order with a toilet cleaner
+ * sitting on loose coriander, and a dispatch clock two seconds inside target.
  *
  * The bag is rearranged by hand. Nothing marks any arrangement as the safe
  * one, and sending it as it is costs nothing on the clock.
@@ -53,7 +53,7 @@ export function CustomerBag({ state, act }: SceneProps) {
 
   return (
     <>
-      <SceneHeading eyebrow={`${clockLabel(state.arrivals.customer ?? state.clock)} · Packing station P2`} title="This bag is next out." sub="Tap an item to move it between bags." />
+      <SceneHeading eyebrow={`${clockLabel(state.arrivals.customer ?? state.clock)} · Staging shelf`} title="This bag is next out." sub="Packed by the picker and waiting for its rider. Tap an item to move it between bags." />
 
       <div className="grid grid-cols-2 gap-2">
         <Stat label="This order" value={now} unit={`sec · target ${CTD_TARGET}`} />
@@ -105,7 +105,7 @@ export function CustomerBag({ state, act }: SceneProps) {
             <PrimaryButton onClick={() => setAsking(true)}>Repack</PrimaryButton>
           </>
         ) : (
-          <PrimaryButton onClick={() => send("unchanged")}>Dispatch unchanged</PrimaryButton>
+          <PrimaryButton onClick={() => send("unchanged")}>Hand over unchanged</PrimaryButton>
         )}
       </ActionBar>
 
@@ -134,15 +134,16 @@ const WHERE: Record<string, string> = {
   count: "High-value recount",
   records: "Record pull",
   search: "Stock search",
-  replenish: "Restocking",
+  replenish: "Putting a crate away",
   aisle: "Clearing Aisle C",
-  repack: "Repack at P2",
+  repack: "Repack at staging",
+  riders: "Rider handover",
   followUp: "Inventory follow-up",
   coaching: "Coaching",
 };
 
 /**
- * 17:57. The peak starts in three minutes and this is the team that exists.
+ * 06:27. The peak starts in three minutes and this is the team that exists.
  *
  * Every open task goes into one of three places, three at most in the first
  * two. The people on offer are the people the candidate put where they are.
@@ -181,7 +182,14 @@ export function FinalCall({ state, act }: SceneProps) {
   const taken = new Set(Object.entries(plan).filter(([id, entry]) => entry.bucket === "delegate" && id !== picking).map(([, entry]) => entry.owner));
   const options = !active
     ? []
-    : (active.id === "constraint" ? moverOptions(state, form.constraint) : active.kind ? ownerOptions(state, active.kind) : []).filter(
+    : (active.id === "constraint"
+        ? form.constraint === "riders"
+          ? ownerOptions(state, "riders")
+          : moverOptions(state, form.constraint as Station)
+        : active.kind
+          ? ownerOptions(state, active.kind)
+          : []
+      ).filter(
         (option) => !taken.has(option.id),
       );
 
@@ -199,25 +207,26 @@ export function FinalCall({ state, act }: SceneProps) {
               <li key={station} className="flex items-baseline gap-3 py-2.5">
                 <span className="w-24 shrink-0 text-[13.5px] font-semibold text-hi">{STATION_LABEL[station].split(" /")[0]}</span>
                 <span className="min-w-0 flex-1 text-[13.5px] leading-snug text-mid">
-                  {here.length ? here.map((member) => BY_ID[member.id]?.name ?? "On-demand").join(", ") : "Nobody"}
+                  {here.length ? here.map((member) => BY_ID[member.id]?.name ?? "Agency picker").join(", ") : "Nobody"}
                 </span>
-                {load !== undefined ? (
+                {/* Auditing gives way to orders in a rush by design; a load figure for it would only mislead. */}
+                {load !== undefined && station !== "auditing" ? (
                   <span className={cn("tabular shrink-0 text-[13.5px] font-semibold", load > 100 ? "text-warn-500" : "text-mid")}>{load}% load</span>
                 ) : null}
               </li>
             );
           })}
           {state.teamAtFinal
-            .filter((member) => !(member.where in STATION_LABEL))
+            .filter((member) => !STATIONS.includes(member.where as Station))
             .map((member) => (
               <li key={member.id} className="flex items-baseline gap-3 py-2.5">
-                <span className="w-24 shrink-0 text-[13.5px] font-semibold text-hi">{BY_ID[member.id]?.name ?? "On-demand"}</span>
+                <span className="w-24 shrink-0 text-[13.5px] font-semibold text-hi">{BY_ID[member.id]?.name ?? "Agency picker"}</span>
                 <span className="min-w-0 flex-1 text-[13.5px] text-mid">{WHERE[member.where.replace("plan:", "")] ?? "On a task"}</span>
                 <span className="shrink-0 text-[12.5px] text-lo">off station</span>
               </li>
             ))}
         </ul>
-        <p className="mt-2 text-[12px] text-lo">Load is how hard a station is being asked to work. Over 100% is falling behind.</p>
+        <p className="mt-2 text-[12px] text-lo">Load is how hard each kind of work is being asked to run. Over 100% is falling behind.</p>
       </Card>
 
       <Eyebrow className="mt-5 mb-2">Open tasks</Eyebrow>
@@ -295,7 +304,7 @@ const TONE: Record<string, string> = {
 };
 
 /**
- * 18:00 to 18:20, in a dozen seconds.
+ * 06:30 to 06:50, in a dozen seconds.
  *
  * The plan is locked and nothing more can be done. What plays is what the
  * store did with the team, the floor and the decisions it was given.
@@ -314,7 +323,7 @@ export function Outcome({ state, act }: SceneProps) {
 
   if (!outcome) return null;
   const finished = shown > events.length;
-  const clock = finished ? "18:20" : shown === 0 ? "18:00" : clockLabel(events[Math.min(shown, events.length) - 1]!.clock);
+  const clock = finished ? "06:50" : shown === 0 ? "06:30" : clockLabel(events[Math.min(shown, events.length) - 1]!.clock);
 
   return (
     <>
@@ -344,7 +353,7 @@ export function Outcome({ state, act }: SceneProps) {
         <motion.div initial={reduced ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mt-6 text-center">
           <p className="text-[clamp(1.9rem,8vw,2.9rem)] leading-[1.02] font-bold tracking-[-0.04em] text-hi">{outcome.title}</p>
           <div className="mx-auto mt-4 grid max-w-sm grid-cols-2 gap-2">
-            <Stat label="CTD at 18:20" value={outcome.finalCtd} unit="sec" />
+            <Stat label="CTD at 06:50" value={outcome.finalCtd} unit="sec" />
             <Stat label="Peak coverage" value={`${Math.round(outcome.peakCoverage * 100)}%`} />
           </div>
         </motion.div>
@@ -354,7 +363,7 @@ export function Outcome({ state, act }: SceneProps) {
         {finished ? (
           <PrimaryButton onClick={() => act({ t: "next" })}>End the shift</PrimaryButton>
         ) : (
-          <QuietButton onClick={() => setShown(events.length + 1)}>Skip to 18:20</QuietButton>
+          <QuietButton onClick={() => setShown(events.length + 1)}>Skip to 06:50</QuietButton>
         )}
       </ActionBar>
     </>

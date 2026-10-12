@@ -17,9 +17,9 @@ import { scoreAssessment, type AssessmentResult } from "./scoring";
 const SAMPLE_STYLE: Style = {
   ...PERSONAS.balancedLeader,
   label: "Sample candidate",
-  handover: ["team", "demand"],
+  handover: ["team", "riders", "demand"],
   absence: ["reallocate", "extend"],
-  riya: { inspect: true, choices: ["moveAB"] },
+  riya: { inspect: true, choices: ["lockPutaway"] },
   arjun: { check: [], place: "here", ack: "recognise", clarify: "willCheck", request: "respectful" },
   kase: {
     ...PERSONAS.balancedLeader.kase,

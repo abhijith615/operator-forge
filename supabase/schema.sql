@@ -2088,3 +2088,110 @@ grant execute on function public.admin_hiring_list() to authenticated;
 grant execute on function public.admin_hiring_one(uuid) to authenticated;
 grant execute on function public.admin_hiring_accommodations() to authenticated;
 grant execute on function public.admin_hiring_set_accommodation(text, integer, text) to authenticated;
+
+-- ── Hiring Test: simulation versions ─────────────────────────────────────
+-- Only a candidate's ordered actions are stored, and a result is those actions
+-- replayed through the simulation they were made in. When the simulation is
+-- rebuilt (version 2.0: the morning shift, three workflows, device locks), an
+-- attempt from the earlier one is kept and is not an attempt at the new one.
+-- These are the version-aware forms of hiring_attempt and hiring_begin.
+-- Additive: nothing is dropped or altered.
+
+create or replace function public.hiring_sitting(p_version text, p_campaign text default null)
+returns table (
+  id uuid, scenario_variant text, status text, started_at timestamptz,
+  completed_at timestamptz, actions jsonb, server_now timestamptz,
+  time_limit_seconds integer, assessment_version text
+)
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    return;
+  end if;
+
+  update public.hiring_assessments a
+     set status = 'expired', completed_at = a.started_at + make_interval(secs => a.time_limit_seconds)
+   where a.candidate_id = v_uid
+     and a.status = 'in_progress'
+     and now() > public.hiring_deadline(a.started_at, a.time_limit_seconds);
+
+  return query
+  select a.id, a.scenario_variant, a.status, a.started_at, a.completed_at, a.actions, now(),
+         a.time_limit_seconds, a.assessment_version
+    from public.hiring_assessments a
+   where a.candidate_id = v_uid
+     and coalesce(a.campaign_id, '') = coalesce(p_campaign, '')
+     and a.assessment_version = left(p_version, 16)
+   order by a.started_at desc
+   limit 1;
+end;
+$$;
+
+create or replace function public.hiring_open(
+  p_version text,
+  p_consent_version text,
+  p_device text default null,
+  p_role text default 'asm',
+  p_campaign text default null
+)
+returns table (
+  id uuid, scenario_variant text, status text, started_at timestamptz,
+  completed_at timestamptz, actions jsonb, server_now timestamptz, time_limit_seconds integer
+)
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_email text;
+  v_existing public.hiring_assessments;
+  v_previous integer;
+  v_variant text;
+  v_limit integer;
+begin
+  if v_uid is null then
+    raise exception 'not signed in' using errcode = '42501';
+  end if;
+
+  -- One attempt at each version of the simulation. An attempt at an earlier
+  -- version does not use up the candidate's attempt at this one.
+  select a.* into v_existing
+    from public.hiring_sitting(p_version, p_campaign) c
+    join public.hiring_assessments a on a.id = c.id;
+
+  if found and (v_existing.status = 'in_progress' or not public.is_admin()) then
+    return query
+    select v_existing.id, v_existing.scenario_variant, v_existing.status, v_existing.started_at,
+           v_existing.completed_at, v_existing.actions, now(), v_existing.time_limit_seconds;
+    return;
+  end if;
+
+  if coalesce(trim(p_consent_version), '') = '' then
+    raise exception 'consent is required to start' using errcode = '22023';
+  end if;
+
+  select lower(u.email) into v_email from auth.users u where u.id = v_uid;
+  select count(*) into v_previous from public.hiring_assessments a where a.candidate_id = v_uid;
+  v_variant := (array['A', 'B', 'C'])[1 + ((abs(hashtext(v_uid::text)) + v_previous) % 3)];
+  v_limit := public.hiring_time_limit();
+
+  return query
+  insert into public.hiring_assessments as a
+    (candidate_id, candidate_email, campaign_id, role_id, assessment_version, scenario_variant,
+     device_type, time_limit_seconds, consented_at, consent_version)
+  values (
+    v_uid, coalesce(v_email, ''), nullif(left(p_campaign, 80), ''),
+    case when p_role in ('asm', 'sm') then p_role else 'asm' end,
+    left(p_version, 16), v_variant, nullif(left(p_device, 16), ''),
+    v_limit, now(), left(p_consent_version, 24)
+  )
+  returning a.id, a.scenario_variant, a.status, a.started_at, a.completed_at, a.actions, now(), a.time_limit_seconds;
+end;
+$$;
+
+revoke all on function public.hiring_sitting(text, text) from public, anon;
+revoke all on function public.hiring_open(text, text, text, text, text) from public, anon;
+grant execute on function public.hiring_sitting(text, text) to authenticated;
+grant execute on function public.hiring_open(text, text, text, text, text) to authenticated;

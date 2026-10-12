@@ -80,75 +80,101 @@ export function paceOf(elapsed: number, phaseIndex: number, limit = 1800): { mar
 
 export const HANDOVER_LINES = [
   "Two associates haven’t reported.",
-  "Peak starts in about 35 minutes.",
-  "Grocery inwarding is still being cleared.",
+  "The mother warehouse truck came at 04:30. Putaway isn’t finished.",
+  "The breakfast rush builds from about half past six.",
   "I’m handing over.",
 ];
 
+/**
+ * The morning round: what an ASM walks before taking a 06:00 shift. Riders,
+ * the floor, the fresh lines, the counts — and the team and its devices.
+ */
 export const HANDOVER_PANELS = [
-  { id: "team", label: "Team" },
-  { id: "metrics", label: "Store metrics" },
-  { id: "pending", label: "Pending work" },
+  { id: "team", label: "Team & devices" },
+  { id: "riders", label: "Rider attendance" },
+  { id: "floorwalk", label: "Floor walk" },
+  { id: "perishables", label: "Perishables" },
+  { id: "audits", label: "Audits assigned" },
   { id: "demand", label: "Demand outlook" },
 ] as const;
 
-export const PENDING_WORK = [
-  { title: "Grocery inward", detail: "14 cartons received at 16:40. Putaway in progress." },
-  { title: "High-value cage", detail: "Last cycle count 06:10 today. Next due tonight." },
-  { title: "Last week’s incentives", detail: "Submitted by the store. Finance is processing." },
-  { title: "Cluster audit", detail: "Wall-to-wall inventory count requested for this week." },
+export const FLOOR_WALK = [
+  { title: "Inward dock", detail: "420 crates received from the mother warehouse at 04:30. 96 are still on the dock, waiting for putaway." },
+  { title: "Aisles", detail: "All clear. The crates for Zone C are stacked at the end of Aisle C." },
+  { title: "Carried over", detail: "No orders left from the night. Exception tote E-2 has not been emptied." },
+  { title: "Notice board", detail: "Last week’s incentives: submitted by the store. Finance is processing." },
+];
+
+export const PERISHABLES = [
+  { item: "Milk", detail: "Fresh crates in at 04:30. Two crates from yesterday are still in the chiller." },
+  { item: "Bread", detail: "In at 04:30. Yesterday’s loaves are on the same shelf." },
+  { item: "Eggs", detail: "In at 04:30. Trays not opened at receiving." },
+  { item: "Fruit & vegetables", detail: "In at 04:30. Not yet looked at for quality." },
+];
+
+export const AUDITS = [
+  { title: "Perishables check", detail: "Every morning before the rush: dates and quality on milk, bread, eggs, fruit and vegetables." },
+  { title: "Cycle count · Zone B", detail: "Forty bins due today. Any time this shift." },
+  { title: "High-value cage", detail: "Last counted yesterday at 06:10. Due again this morning." },
+  { title: "Wall-to-wall count", detail: "Cluster office wants a full count this week." },
 ];
 
 export const DEMAND_OUTLOOK = [
-  { hour: "17:00", index: 100 },
-  { hour: "17:30", index: 108 },
-  { hour: "18:00", index: 138 },
-  { hour: "18:30", index: 136 },
-  { hour: "19:00", index: 124 },
-  { hour: "20:00", index: 112 },
+  { hour: "06:00", index: 102 },
+  { hour: "06:15", index: 120 },
+  { hour: "06:30", index: 138 },
+  { hour: "07:00", index: 136 },
+  { hour: "07:30", index: 124 },
+  { hour: "08:30", index: 112 },
 ];
 
 /* ── Absence ──────────────────────────────────────────────────────────── */
 
 export const ABSENCE_OPTIONS: { id: AbsenceChoice; label: string; detail: string }[] = [
-  { id: "onDemand", label: "On-demand picker", detail: "4-hour booking, ₹640. Arrives 17:50. Picking only, first shift here." },
-  { id: "reallocate", label: "Internal reallocation", detail: "Move the people you have. Opens the floor board." },
-  { id: "extend", label: "Ask an associate to extend", detail: "Arjun’s shift ends at 18:00. Ask him to stay to 20:00." },
-  { id: "short", label: "Operate short", detail: "Run the evening with the twelve on the floor." },
+  { id: "onDemand", label: "Agency replacement", detail: "A picker from the staffing agency. 4-hour booking, ₹640. Arrives 06:20. Picking only, first shift here." },
+  { id: "reallocate", label: "Internal reallocation", detail: "Move the people you have, and set their devices. Opens the floor board." },
+  { id: "extend", label: "Ask an associate to extend", detail: "Arjun’s overnight shift ends at 06:30. Ask him to stay to 08:30." },
+  { id: "short", label: "Operate short", detail: "Run the morning with the twelve on the floor." },
 ];
 
 /* ── Riya ─────────────────────────────────────────────────────────────── */
 
 export const RIYA = {
-  floorLead: ["Riya is slow again.", "Should I pull her?"],
-  tenure: "11 days",
-  ppiTrend: [31.2, 28.0, 25.1, 23.3, 21.4],
-  accuracy: "99.7%",
-  scanCompliance: "100%",
-  zonePpi: [
-    { zone: "A", ppi: 15.9 },
-    { zone: "B", ppi: 17.4 },
-    { zone: "C", ppi: 29.2 },
-    { zone: "D", ppi: 18.1 },
+  floorLead: ["Riya did thirty-one seconds an item this morning.", "She’s no use to me in the rush. Should I send her back to the agency?"],
+  facts: [
+    { label: "Joined", value: "Yesterday · through the agency" },
+    { label: "Induction plan", value: "Days 1–2: putaway only, no pick target" },
+    { label: "Device", value: "Role lock removed 05:10 · unlocked" },
+    { label: "Orders sent to her", value: "14 since 05:12" },
+    { label: "Mis-picks", value: "0 of 14" },
   ],
-  zoneNote: "Zone C: high concentration of visually similar SKUs.",
-  quote: "I double-check there because I don’t want to pick the wrong item.",
+  /** Seconds an item across the fourteen orders, in the order she picked them. */
+  ppiTrend: [36.4, 33.8, 31.9, 29.6, 27.3],
+  /** Where the seconds went on an average item. */
+  breakdown: [
+    { part: "Finding the bin", seconds: 18.9 },
+    { part: "Walking", seconds: 7.2 },
+    { part: "Pick and scan", seconds: 5.1 },
+  ],
+  breakdownNote: "Store standard: 16 seconds an item. A trained picker spends about 3 of them finding the bin.",
+  putaway: "Putaway yesterday: 38 crates. Today so far: 11.",
+  quote: "Nobody told me I’d be picking. I don’t know where the racks are yet.",
 };
 
 export const RIYA_OPTIONS: { id: RiyaChoice; label: string }[] = [
-  { id: "moveAB", label: "Move to Zones A/B for peak" },
-  { id: "pair", label: "Pair with an expert" },
-  { id: "coachLater", label: "Coach Zone C after peak" },
-  { id: "keep", label: "Keep current assignment" },
-  { id: "removePicking", label: "Remove from picking" },
-  { id: "moveToPacking", label: "Move to packing" },
-  { id: "warn", label: "Issue performance warning" },
+  { id: "lockPutaway", label: "Lock her device to Putaway" },
+  { id: "pair", label: "Pair her with a putaway hand to learn the bins" },
+  { id: "phaseLater", label: "Plan her first picking shift for after the rush" },
+  { id: "keep", label: "Leave things as they are" },
+  { id: "target", label: "Keep her on orders, with the 16-second target" },
+  { id: "returnAgency", label: "Send her back to the agency" },
+  { id: "warn", label: "Issue a performance warning" },
 ];
 
 /* ── Arjun ────────────────────────────────────────────────────────────── */
 
 export const ARJUN = {
-  lines: ["Last week’s incentive still hasn’t come.", "Why should I extend tonight?"],
+  lines: ["Last week’s incentive still hasn’t come.", "Why should I stay on for your rush?"],
   incentiveStatus: [
     { label: "Target", value: "Achieved" },
     { label: "Submission", value: "Completed" },
@@ -157,9 +183,9 @@ export const ARJUN = {
     { label: "Expected", value: "Tomorrow" },
   ],
   eligibility: [
-    { label: "Hours today", value: "7h 30m" },
-    { label: "Daily limit", value: "10h" },
-    { label: "Extension", value: "Eligible to 20:00" },
+    { label: "Shift", value: "Overnight · 21:30 to 06:30" },
+    { label: "Daily limit", value: "11h with overtime" },
+    { label: "Extension", value: "Eligible to 08:30" },
     { label: "Rate", value: "Overtime applies" },
   ],
 };
@@ -180,10 +206,10 @@ export const ARJUN_CLARIFY: { id: ArjunResponse["clarify"]; label: string; needs
 ];
 
 export const ARJUN_REQUEST: { id: ArjunResponse["request"]; label: string }[] = [
-  { id: "respectful", label: "I need you till 20:00 tonight. Will you stay?" },
-  { id: "order", label: "You’re staying till 20:00." },
+  { id: "respectful", label: "I need you till 08:30 this morning. Will you stay?" },
+  { id: "order", label: "You’re staying till 08:30." },
   { id: "threat", label: "Leaving now goes on your record." },
-  { id: "none", label: "Go at 18:00. We’ll manage." },
+  { id: "none", label: "Go at 06:30. We’ll manage." },
 ];
 
 /* ── The high-value case ──────────────────────────────────────────────── */
@@ -216,7 +242,7 @@ export function caseRecords(form: FormId): Record<string, { note: string; rows: 
   const opening = system + 2;
   return {
     movement: {
-      note: `${item} · stock movements today`,
+      note: `${item} · stock movements since yesterday’s 06:10 count`,
       rows: [
         { time: "06:10", text: "Cycle count", value: `${opening}` },
         { time: "09:42", text: `Pick · order ${o.first}`, value: "−1" },
@@ -229,7 +255,7 @@ export function caseRecords(form: FormId): Record<string, { note: string; rows: 
       ],
     },
     orders: {
-      note: `Orders today containing ${item}`,
+      note: `Orders yesterday containing ${item}`,
       rows: [
         { time: "09:40", text: `${o.first} · 1 × ${item}`, value: "Delivered" },
         { time: "11:12", text: `${o.cancelled} · 1 × ${item}`, value: "Cancelled 11:22" },
@@ -238,19 +264,19 @@ export function caseRecords(form: FormId): Record<string, { note: string; rows: 
       ],
     },
     scan: {
-      note: "High-value scans at issue and pack",
+      note: "High-value scans at issue and pack · yesterday",
       rows: [
         { time: "09:43", text: `${o.first} · item scan`, value: "✓" },
         { time: "11:16", text: `${o.cancelled} · item scan`, value: "✓" },
         { time: "12:31", text: `${o.third} · item scan`, value: "✓" },
         { time: "14:44", text: `${o.scan} · bag scan`, value: "✓" },
         { time: "—", text: `${o.scan} · item scan`, value: "missing", gap: true },
-        { time: "14:46", text: `${o.scan} · packing confirmed`, value: "✓" },
-        { time: "14:49", text: `${o.scan} · dispatch confirmed`, value: "✓" },
+        { time: "14:46", text: `${o.scan} · packed and staged`, value: "✓" },
+        { time: "14:49", text: `${o.scan} · handed to rider`, value: "✓" },
       ],
     },
     access: {
-      note: "High-value cage · entries today. CCTV covers the cage door.",
+      note: "High-value cage · entries since yesterday’s count. CCTV covers the cage door.",
       rows: [
         { time: "06:08", text: "Farhan · cycle count", value: "authorised" },
         { time: "09:41", text: "Arjun · pick", value: "authorised" },
@@ -293,14 +319,14 @@ export const CONTROL_FIXES: { id: ControlFix; label: string }[] = [
   { id: "scanAtIssue", label: "Item scan before a high-value bag is sealed" },
   { id: "exceptionRestow", label: "Clear and restow the exception tote hourly" },
   { id: "remindTeam", label: "Remind the team in tomorrow’s briefing" },
-  { id: "fullAudit", label: "Full inventory audit, now" },
+  { id: "fullAudit", label: "Wall-to-wall count, now" },
 ];
 
 /* ── Nil pick ─────────────────────────────────────────────────────────── */
 
 export const NIL_SOURCE_LABEL: Record<string, string> = {
-  overstock: "Overstock",
-  replenArea: "Replenishment area",
+  overstock: "Overstock bay",
+  replenArea: "Inward dock",
   adjacentBin: "Adjacent bin",
   transactions: "Recent transactions",
 };
@@ -310,10 +336,10 @@ export function nilRecords(form: FormId): Record<string, RecordRow[]> {
   return {
     overstock: [
       { time: "O-4", text: `${item}`, value: "0 units" },
-      { time: "15:10", text: "Last moved to shelf", value: "12 units" },
+      { time: "22:10", text: "Last moved to the bin", value: "12 units" },
     ],
     replenArea: [
-      { time: "16:40", text: `${item} · received, on the inbound pallet`, value: `${system} units` },
+      { time: "04:30", text: `${item} · received from the mother warehouse, in a crate on the dock`, value: `${system} units` },
       { time: "—", text: "Putaway", value: "not done", gap: true },
     ],
     adjacentBin: [
@@ -321,10 +347,10 @@ export function nilRecords(form: FormId): Record<string, RecordRow[]> {
       { time: "bin", text: `${item} mis-slotted here`, value: "none" },
     ],
     transactions: [
-      { time: "15:10", text: "Shelf fill", value: "+12" },
-      { time: "15:10–17:20", text: "Sold", value: "−12" },
-      { time: "16:40", text: "Goods receipt", value: `+${system}` },
-      { time: "16:40", text: "Putaway task", value: "open, unassigned", gap: true },
+      { time: "22:10", text: "Bin fill", value: "+12" },
+      { time: "22:10–06:05", text: "Sold", value: "−12" },
+      { time: "04:30", text: "Goods receipt", value: `+${system}` },
+      { time: "05:48", text: "Putaway task raised · bin below threshold", value: "open, unassigned", gap: true },
     ],
   };
 }

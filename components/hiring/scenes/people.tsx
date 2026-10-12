@@ -20,9 +20,10 @@ import type { SceneProps } from "./handover";
 /* ── Riya ─────────────────────────────────────────────────────────────── */
 
 /**
- * The Floor Lead has already decided what the problem is. Her numbers are one
- * tap away and say something else, and whether the candidate takes that tap
- * before deciding about a person is the observation.
+ * The Floor Lead has already decided what the problem is. Her record is one
+ * tap away and says something else — a second-day joiner whose device was
+ * left open to orders — and whether the candidate takes that tap before
+ * deciding about a person is the observation.
  */
 export function Riya({ state, act }: SceneProps) {
   const [chosen, setChosen] = React.useState<RiyaChoice[]>([]);
@@ -33,28 +34,22 @@ export function Riya({ state, act }: SceneProps) {
       current.includes(id) ? current.filter((choice) => choice !== id) : current.length < 2 ? [...current, id] : current,
     );
 
-  const slowest = Math.max(...RIYA.zonePpi.map((zone) => zone.ppi));
+  const longest = Math.max(...RIYA.breakdown.map((row) => row.seconds));
   const first = RIYA.ppiTrend[0]!;
 
   return (
     <>
-      <SceneHeading eyebrow="17:32 · Picking line" title="Riya" sub="New picker, eleven days in." />
+      <SceneHeading eyebrow="06:02 · Inward dock" title="Riya" sub="New joiner, second day. Sent by the agency." />
       <Card>
         <Speech who="Floor Lead" lines={RIYA.floorLead} />
       </Card>
 
       {opened ? (
         <Card className="mt-3">
-          <Facts
-            rows={[
-              { label: "Tenure", value: RIYA.tenure },
-              { label: "Accuracy", value: RIYA.accuracy },
-              { label: "Scan compliance", value: RIYA.scanCompliance },
-            ]}
-          />
+          <Facts rows={RIYA.facts} />
 
-          <Eyebrow className="mt-5 mb-2">Seconds per item · last five shifts</Eyebrow>
-          <ol className="flex items-end gap-2" aria-label="Seconds per item, last five shifts">
+          <Eyebrow className="mt-5 mb-2">Seconds an item · her fourteen orders, in order</Eyebrow>
+          <ol className="flex items-end gap-2" aria-label="Seconds an item across her fourteen orders this morning">
             {RIYA.ppiTrend.map((ppi, index) => (
               <li key={index} className="flex flex-1 flex-col items-center gap-1">
                 <span className="tabular text-[13px] font-semibold text-hi">{ppi.toFixed(1)}</span>
@@ -63,22 +58,23 @@ export function Riya({ state, act }: SceneProps) {
             ))}
           </ol>
 
-          <Eyebrow className="mt-5 mb-2">Seconds per item · by zone</Eyebrow>
+          <Eyebrow className="mt-5 mb-2">Where the seconds went · an average item</Eyebrow>
           <ul className="space-y-1.5">
-            {RIYA.zonePpi.map((zone) => (
-              <li key={zone.zone} className="flex items-center gap-3">
-                <span className="w-14 shrink-0 text-[13px] text-mid">Zone {zone.zone}</span>
+            {RIYA.breakdown.map((row) => (
+              <li key={row.part} className="flex items-center gap-3">
+                <span className="w-28 shrink-0 text-[13px] text-mid">{row.part}</span>
                 <span className="h-2.5 flex-1 rounded-full bg-white/[0.06]">
                   <span
-                    className={cn("block h-full rounded-full", zone.ppi === slowest ? "bg-warn-500" : "bg-white/35")}
-                    style={{ width: `${(zone.ppi / slowest) * 100}%` }}
+                    className={cn("block h-full rounded-full", row.seconds === longest ? "bg-warn-500" : "bg-white/35")}
+                    style={{ width: `${(row.seconds / longest) * 100}%` }}
                   />
                 </span>
-                <span className="tabular w-10 shrink-0 text-right text-[13.5px] font-semibold text-hi">{zone.ppi.toFixed(1)}</span>
+                <span className="tabular w-10 shrink-0 text-right text-[13.5px] font-semibold text-hi">{row.seconds.toFixed(1)}</span>
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-[13px] leading-snug text-mid">{RIYA.zoneNote}</p>
+          <p className="mt-3 text-[13px] leading-snug text-mid">{RIYA.breakdownNote}</p>
+          <p className="mt-1 text-[13px] leading-snug text-mid">{RIYA.putaway}</p>
 
           <div className="mt-4 border-t border-line pt-4">
             <Speech who="Riya" lines={[RIYA.quote]} />
@@ -86,7 +82,7 @@ export function Riya({ state, act }: SceneProps) {
         </Card>
       ) : (
         <div className="mt-3">
-          <Tile label="Open Riya’s numbers" icon={<BarChart3 />} onClick={() => act({ t: "inspect", item: "riyaNumbers" })} />
+          <Tile label="Open Riya’s record" icon={<BarChart3 />} onClick={() => act({ t: "inspect", item: "riyaNumbers" })} />
         </div>
       )}
 
@@ -141,9 +137,10 @@ function Group<T extends string>({
 }
 
 /**
- * The store's fastest picker, with a real grievance, twenty-five minutes
- * before the peak. Where the conversation happens, what is checked first and
- * what is said are three separate decisions, and he remembers all of them.
+ * The store's fastest picker, at the end of an overnight shift, with a real
+ * grievance, twenty-five minutes before the peak. Where the conversation
+ * happens, what is checked first and what is said are three separate
+ * decisions, and he remembers all of them.
  */
 export function Arjun({ state, act }: SceneProps) {
   const { place, checked } = state.arjun;
@@ -157,7 +154,7 @@ export function Arjun({ state, act }: SceneProps) {
 
   return (
     <>
-      <SceneHeading eyebrow="17:34 · Picking line" title="Arjun" sub="Expert picker. Day shift, off at 18:00." />
+      <SceneHeading eyebrow="06:04 · Picking floor" title="Arjun" sub="Expert picker. Overnight shift, off at 06:30." />
       <Card>
         <Speech who="Arjun" lines={ARJUN.lines} />
       </Card>
@@ -166,17 +163,17 @@ export function Arjun({ state, act }: SceneProps) {
         <>
           <Eyebrow className="mt-5 mb-2">Where do you have this conversation?</Eyebrow>
           <div className="grid gap-2 sm:grid-cols-2">
-            <Choice go onClick={() => act({ t: "arjunPlace", place: "here" })} detail="On the line, in front of the other pickers.">
+            <Choice go onClick={() => act({ t: "arjunPlace", place: "here" })} detail="On the floor, in front of the other pickers.">
               Speak here
             </Choice>
-            <Choice go onClick={() => act({ t: "arjunPlace", place: "aside" })} detail="Step away from the line for a minute.">
+            <Choice go onClick={() => act({ t: "arjunPlace", place: "aside" })} detail="Step away from the floor for a minute.">
               Move aside
             </Choice>
           </div>
         </>
       ) : (
         <>
-          <p className="mt-3 text-[13px] text-lo">{place === "aside" ? "You have stepped away from the line." : "You are on the line. The other pickers can hear."}</p>
+          <p className="mt-3 text-[13px] text-lo">{place === "aside" ? "You have stepped away from the floor." : "You are on the floor. The other pickers can hear."}</p>
 
           {checked.includes("incentiveStatus") ? (
             <Card className="mt-3">

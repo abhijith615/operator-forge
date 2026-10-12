@@ -5,8 +5,8 @@ import { Download } from "lucide-react";
 
 import { isAdmin } from "@/lib/admin/queries";
 import { setAccommodation } from "@/lib/hiring/actions";
-import { readAccommodations, readAllAttempts, resultFrom } from "@/lib/hiring/server";
-import { ASSESSMENT_SECONDS } from "@/lib/hiring/weights";
+import { isCurrentVersion, readAccommodations, readAllAttempts, resultFrom } from "@/lib/hiring/server";
+import { ASSESSMENT_SECONDS, ASSESSMENT_VERSION } from "@/lib/hiring/weights";
 
 export const metadata: Metadata = {
   title: "Hiring Test — candidates",
@@ -38,11 +38,14 @@ export default async function HiringResultsPage() {
   const [attempts, accommodations] = await Promise.all([readAllAttempts(), readAccommodations()]);
 
   const rows = attempts.map((attempt) => {
+    // An attempt sat on an earlier simulation cannot be replayed on this one.
+    const current = isCurrentVersion(attempt);
     const finished = attempt.status !== "in_progress";
-    const result = finished ? resultFrom(attempt.scenario_variant, attempt.actions).result : null;
-    return { attempt, result };
+    const result = finished && current ? resultFrom(attempt.scenario_variant, attempt.actions).result : null;
+    return { attempt, result, current };
   });
   const finished = rows.filter((row) => row.result).length;
+  const earlier = rows.filter((row) => !row.current).length;
 
   return (
     <div className="min-h-dvh bg-void text-hi">
@@ -50,7 +53,8 @@ export default async function HiringResultsPage() {
         <p className="font-mono text-[11.5px] tracking-[0.2em] text-ember-500 uppercase">Operator Forge · Hiring Test</p>
         <h1 className="mt-2 text-[28px] leading-tight font-bold tracking-[-0.03em] text-hi">Candidates</h1>
         <p className="mt-1.5 text-[14px] text-mid">
-          {rows.length} attempt{rows.length === 1 ? "" : "s"}, {finished} finished.{" "}
+          {rows.length} attempt{rows.length === 1 ? "" : "s"}, {finished} finished on version {ASSESSMENT_VERSION}
+          {earlier ? `, ${earlier} on an earlier version` : ""}.{" "}
           <Link href="/hiring-test/results/sample" className="underline underline-offset-4 hover:text-hi">
             Sample profile
           </Link>
@@ -76,7 +80,7 @@ export default async function HiringResultsPage() {
           <p className="mt-6 rounded-[18px] border border-line bg-surface p-6 text-[14.5px] text-mid">Nobody has sat the Hiring Test yet.</p>
         ) : (
           <ul className="mt-6 space-y-2">
-            {rows.map(({ attempt, result }) => (
+            {rows.map(({ attempt, result, current }) => (
               <li key={attempt.id}>
                 <Link
                   href={`/hiring-test/results/${attempt.id}`}
@@ -92,7 +96,7 @@ export default async function HiringResultsPage() {
                     </p>
                   </div>
                   <p className="text-[13px] text-mid sm:text-right">
-                    {result ? result.indication : "In progress"}
+                    {!current ? "Earlier version · not scored" : result ? result.indication : "In progress"}
                     {result && result.flags.length ? (
                       <span className="ml-2 rounded-full border border-alert-500/45 px-2 py-0.5 font-mono text-[10.5px] tracking-[0.1em] text-alert-500">
                         {result.flags.length} FLAG{result.flags.length > 1 ? "S" : ""}
