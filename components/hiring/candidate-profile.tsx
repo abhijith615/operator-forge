@@ -43,7 +43,8 @@ export function CandidateProfile({
 
         {profile.timedOut ? (
           <p className="mt-4 rounded-[14px] border border-line-strong bg-white/[0.03] px-3.5 py-3 text-[13.5px] leading-snug text-mid">
-            The thirty minutes ran out before the shift did. This profile is built from the decisions you had made.
+            The thirty minutes ran out before the shift did. You reached {profile.observed} of {profile.opportunities}{" "}
+            assessed moments, and this profile is built only from those. Parts you did not reach are not scored against you.
           </p>
         ) : null}
 
@@ -71,11 +72,26 @@ export function CandidateProfile({
             {profile.competencies.map((competency) => (
               <li key={competency.id}>
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="text-[14.5px] font-medium text-hi">{competency.label}</span>
-                  <span className="tabular text-[15px] font-semibold text-hi">{competency.score}</span>
+                  <span className="text-[14.5px] font-medium text-hi">
+                    {competency.label}
+                    {competency.observed > 0 && competency.observed < competency.opportunities ? (
+                      <span className="ml-2 text-[12px] font-normal text-lo">
+                        from {competency.observed} of {competency.opportunities} moments
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className={cn("tabular text-[15px] font-semibold", competency.observed ? "text-hi" : "text-lo")}>
+                    {competency.observed ? competency.score : "Not reached"}
+                  </span>
                 </div>
-                <div className="mt-1.5 h-1.5 rounded-full bg-white/[0.07]" role="img" aria-label={`${competency.label} ${competency.score} out of 100`}>
-                  <div className={cn("h-full rounded-full", competency.score >= 70 ? "bg-ion-500" : competency.score >= 45 ? "bg-ember-500" : "bg-warn-500")} style={{ width: `${competency.score}%` }} />
+                <div
+                  className="mt-1.5 h-1.5 rounded-full bg-white/[0.07]"
+                  role="img"
+                  aria-label={competency.observed ? `${competency.label} ${competency.score} out of 100` : `${competency.label} not reached`}
+                >
+                  {competency.observed ? (
+                    <div className={cn("h-full rounded-full", competency.score >= 70 ? "bg-ion-500" : competency.score >= 45 ? "bg-ember-500" : "bg-warn-500")} style={{ width: `${competency.score}%` }} />
+                  ) : null}
                 </div>
               </li>
             ))}

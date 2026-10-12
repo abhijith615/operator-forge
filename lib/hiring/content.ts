@@ -40,6 +40,40 @@ export const PHASE_OF: Record<SceneId, Phase> = {
   done: "FINAL CALL",
 };
 
+/**
+ * Roughly how long each part is meant to take, in real seconds. Thirty
+ * minutes in all. A guide for the candidate and nothing else: no score looks
+ * at it.
+ */
+export const PHASE_SECONDS: Record<Phase, number> = {
+  HANDOVER: 120,
+  TEAM: 480,
+  INVENTORY: 360,
+  PEAK: 540,
+  RECOVERY: 120,
+  "FINAL CALL": 180,
+};
+
+/**
+ * Where the time is against where the candidate is.
+ *
+ * `marker` is how far along the six-part bar the elapsed time falls, 0 to 1.
+ * `behind` is the seconds by which the part the candidate is still in has
+ * overrun its guide, or zero.
+ */
+export function paceOf(elapsed: number, phaseIndex: number): { marker: number; behind: number } {
+  let start = 0;
+  let marker = 1;
+  let due = 0;
+  PHASES.forEach((phase, index) => {
+    const length = PHASE_SECONDS[phase];
+    if (elapsed >= start && elapsed < start + length) marker = (index + (elapsed - start) / length) / PHASES.length;
+    start += length;
+    if (index === phaseIndex) due = start;
+  });
+  return { marker: Math.max(0, Math.min(1, marker)), behind: Math.max(0, Math.round(elapsed - due)) };
+}
+
 /* ── Handover ─────────────────────────────────────────────────────────── */
 
 export const HANDOVER_LINES = [

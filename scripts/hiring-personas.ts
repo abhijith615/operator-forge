@@ -5,6 +5,7 @@
  *   npm run test:hiring            assertions only
  *   npm run test:hiring -- -v      plus every behaviour score
  */
+import { paceOf } from "../lib/hiring/content";
 import { expire, replay } from "../lib/hiring/engine";
 import { allSuggestions, answer } from "../lib/hiring/guide";
 import { clockLabel, outputOf } from "../lib/hiring/model";
@@ -235,16 +236,47 @@ for (const form of FORMS) {
 
 /* ── Running out of time ──────────────────────────────────────────────── */
 
+console.log("\nunfinished shifts\n");
+
 for (const form of FORMS) {
   const { actions } = sitShift(form, base);
-  const partial = replay(form, actions.slice(0, Math.floor(actions.length / 2)));
-  const timedOut = scoreAssessment(expire(partial));
   const full = results.balancedLeader[form].result;
-  check(`[${form}] time expiring mid-shift keeps the evidence so far and still produces a result`,
-    timedOut.overall > 0 && timedOut.overall < full.overall && timedOut.evidence.some((e) => e.behaviourTags.includes("not_reached")) &&
-      timedOut.evidence.filter((e) => e.score === 3).length >= 5,
-    `${timedOut.overall}`);
+  const cutAt = (share: number) => scoreAssessment(expire(replay(form, actions.slice(0, Math.floor(actions.length * share)))));
+  const half = cutAt(0.5);
+  const brief = cutAt(0.2);
+  const tag = (name: string) => `[${form}] ${name}`;
+
+  const standard = Math.round(full.competencies.reduce((sum, c) => sum + c.score * c.weight, 0));
+  check(tag("a finished shift is Team × 0.30 + Inventory × 0.25 + Time × 0.20 + Critical × 0.15 + Customer × 0.10"),
+    !full.incomplete && full.observed === full.opportunities && full.overall === standard, `${full.overall} vs ${standard}`);
+
+  check(tag("time expiring mid-shift keeps the evidence so far"),
+    half.incomplete && half.observed < half.opportunities && half.evidence.filter((e) => e.score === 3).length >= 5 &&
+      half.outcomeTitle === "SHIFT NOT COMPLETED", `${half.observed}/${half.opportunities}`);
+
+  check(tag("unreached moments are left out, not scored as zero"),
+    half.competencies.every((c) => (c.observed === 0 ? c.score === 0 && c.available === 0 : c.score === Math.round((c.earned / (c.observed * 3)) * 100))) &&
+      half.overall > 60, `overall ${half.overall}; ${half.competencies.map((c) => `${c.score}(${c.observed}/${c.opportunities})`).join(" ")}`);
+
+  check(tag("an unfinished shift is never indicated as Strong"),
+    !half.indication.startsWith("STRONG") && !cutAt(0.9).indication.startsWith("STRONG"), half.indication);
+
+  check(tag("under half the shift supports only a second look"),
+    brief.observed / brief.opportunities < 0.5 && brief.indication === "ADDITIONAL ASSESSMENT RECOMMENDED",
+    `${brief.observed}/${brief.opportunities} ${brief.overall} ${brief.indication}`);
+
+  const unreached = new Set(half.evidence.filter((e) => e.behaviourTags.includes("not_reached")).map((e) => e.behaviourId));
+  check(tag("probes and advice never come from a moment that was not reached"),
+    half.probes.every((p) => !p.evidence.includes("The shift ended before this point")) &&
+      half.evidence.filter((e) => unreached.has(e.behaviourId)).every((e) => e.opportunityToDemonstrate === false));
 }
+
+const p = (elapsed: number, phase: number) => paceOf(elapsed, phase);
+check("pace: at the start the mark is at zero and nobody is behind", p(0, 0).marker === 0 && p(0, 0).behind === 0);
+check("pace: ten minutes in and still on TEAM is on pace", p(600, 1).behind === 0);
+check("pace: fifteen minutes in and still on TEAM is five behind", p(900, 1).behind === 300 && p(900, 1).marker > 2 / 6 && p(900, 1).marker < 3 / 6,
+  JSON.stringify(p(900, 1)));
+check("pace: being ahead is never 'behind'", p(300, 3).behind === 0 && p(1800, 5).marker === 1);
 
 /* ── The assistant explains, and does not advise ──────────────────────── */
 

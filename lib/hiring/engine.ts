@@ -55,6 +55,7 @@ export function initialState(form: FormId): HiringState {
     form,
     scene: "handover",
     clock: 0,
+    expiry: null,
     arrivals: { handover: 0 },
     assign: handoverFloor(form),
     busy: {},
@@ -1177,6 +1178,7 @@ export function replay(form: FormId, actions: Stamped[]): HiringState {
 export function expire(previous: HiringState): HiringState {
   if (previous.scene === "done" || previous.outcome) return { ...previous, scene: "done" };
   const state = structuredClone(previous);
+  state.expiry = { scene: previous.scene, clock: state.clock, maxCtd: state.maxCtd, firstBreachAt: state.firstBreachAt };
   if (state.tasksOffered.length === 0) state.tasksOffered = buildFinalTasks(state);
   if (state.teamAtFinal.length === 0) state.teamAtFinal = teamSnapshot(state);
   state.scene = "outcome";

@@ -60,7 +60,7 @@ export default async function HiringResultsPage() {
                     <p className="mt-0.5 text-[12.5px] text-lo">
                       {when(attempt.started_at)} · Form {attempt.scenario_variant} · v{attempt.assessment_version}
                       {attempt.device_type ? ` · ${attempt.device_type}` : ""}
-                      {attempt.status === "expired" ? " · ran out of time" : ""}
+                      {result?.incomplete ? ` · not completed, ${result.observed} of ${result.opportunities} moments` : ""}
                     </p>
                   </div>
                   <p className="text-[13px] text-mid sm:text-right">

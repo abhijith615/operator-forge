@@ -4,7 +4,7 @@ import * as React from "react";
 import { Timer } from "lucide-react";
 
 import { logAssessment, syncAssessment } from "@/lib/hiring/actions";
-import { PHASES, PHASE_OF, RIYA_OPTIONS } from "@/lib/hiring/content";
+import { PHASES, PHASE_OF, RIYA_OPTIONS, paceOf } from "@/lib/hiring/content";
 import { formFor } from "@/lib/hiring/forms";
 import { CTD_TARGET, EXTEND_AT, clockLabel, metricsOf } from "@/lib/hiring/model";
 import { nameOf } from "@/lib/hiring/roster";
@@ -221,6 +221,9 @@ export function Simulation({ attempt, onFinished }: { attempt: Attempt; onFinish
   const phaseIndex = PHASES.indexOf(phase);
   const props = { state, act };
   const playback = scene === "outcome";
+  // Where the thirty minutes are against where the candidate is. A guide only.
+  const pace = paceOf(ASSESSMENT_SECONDS - remaining, phaseIndex);
+  const behindMinutes = Math.floor(pace.behind / 60);
 
   return (
     <div className="min-h-dvh bg-void text-hi">
@@ -257,7 +260,16 @@ export function Simulation({ attempt, onFinished }: { attempt: Attempt; onFinish
             </div>
           </div>
 
-          <ol className="mt-2.5 flex gap-1" aria-label="Where you are in the shift">
+          <div className="relative mt-2.5">
+          {!attempt.local && !playback ? (
+            <span
+              aria-hidden
+              title="Where the time is"
+              className="absolute -top-[3px] z-10 h-[10px] w-[3px] -translate-x-1/2 rounded-full bg-white shadow-[0_0_0_2px_rgba(10,10,10,0.9)] transition-[left] duration-1000 ease-linear"
+              style={{ left: `${pace.marker * 100}%` }}
+            />
+          ) : null}
+          <ol className="flex gap-1" aria-label="Where you are in the shift">
             {PHASES.map((label, index) => (
               <li key={label} className="min-w-0 flex-1" aria-current={index === phaseIndex ? "step" : undefined}>
                 <span className={cn("block h-1 rounded-full", index < phaseIndex ? "bg-white/40" : index === phaseIndex ? "bg-ember-500" : "bg-white/[0.09]")} />
@@ -272,6 +284,7 @@ export function Simulation({ attempt, onFinished }: { attempt: Attempt; onFinish
               </li>
             ))}
           </ol>
+          </div>
 
           <div className="mt-1.5 flex items-center justify-between gap-3">
             <p className="font-mono text-[11px] tracking-[0.16em] text-ember-500 uppercase sm:hidden">{phase}</p>
@@ -291,6 +304,16 @@ export function Simulation({ attempt, onFinished }: { attempt: Attempt; onFinish
             </dl>
           </div>
         </div>
+
+        {!attempt.local && !playback && remaining > 300 && behindMinutes >= 1 ? (
+          <p role="status" className="flex items-center justify-center gap-2 border-t border-line px-4 py-1.5 text-center text-[12.5px] text-mid">
+            <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-warn-500" />
+            <span>
+              About {behindMinutes} min behind the suggested pace.
+              <span className="hidden sm:inline"> The white mark on the bar is where the time is.</span>
+            </span>
+          </p>
+        ) : null}
 
         {!attempt.local && remaining <= 300 ? (
           <p

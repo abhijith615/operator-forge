@@ -56,7 +56,7 @@ const ENTRIES: Entry[] = [
   {
     topic: "time",
     match: /\b(how long|time (left|limit|remaining)|timer|30 min\w*|thirty|countdown|run out|runs? out|expire\w*|pace|pacing|too slow|hurry|behind|time)\b/i,
-    text: "You have thirty minutes of real time, shown top right; it does not pause. The shift has six parts, shown in the bar at the top. As a rough guide: handover 2 minutes, team 8, inventory 6, peak 9, recovery 2, final call 3. If the thirty minutes end first, the shift closes on the decisions you have already made — nothing is lost, and the parts you did not reach are simply not observed.",
+    text: "You have thirty minutes of real time, shown top right; it does not pause. The shift has six parts, shown in the bar at the top: yellow is the part you are in, and the white mark is where the time is. If the mark is ahead of the yellow, you are behind the suggested pace. As a rough guide: handover 2 minutes, team 8, inventory 6, peak 9, recovery 2, final call 3. If the thirty minutes end first, the shift closes on the decisions you have already made — the parts you did not reach are left out, not scored against you.",
     suggestions: ["What is the store clock?", "What if I lose connection?"],
   },
   {

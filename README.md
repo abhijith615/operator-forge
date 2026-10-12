@@ -181,6 +181,12 @@ How it is put together, in `lib/hiring/`:
   adjusts or flags anything. Weights live in `weights.ts` and nowhere else.
 - **`forms.ts`** — three parallel forms. Same people and decisions; a different
   high-value line, nil-pick line, and station the surge lands on.
+- **Unfinished shifts** — if the thirty minutes end first, moments that were
+  never reached are left out rather than scored as zero, each competency
+  counts in proportion to how much of it was seen, and the indication is
+  capped (never "Strong"; "Additional assessment" under half). A white mark
+  on the progress bar shows the candidate where the time is against a
+  suggested pace per part; no score reads it.
 - **`guide.ts`** — the in-shift assistant. Written answers, not a model call:
   it explains any word, number or control on the screen, declines to say what
   to decide, and says the same thing to every candidate. Only the topic of a

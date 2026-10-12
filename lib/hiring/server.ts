@@ -37,7 +37,10 @@ export interface AdminAttemptRow extends AttemptRow {
 /** What the candidate is shown. A subset, chosen on purpose. */
 export interface CandidateProfile {
   overall: number;
-  competencies: { id: string; label: string; score: number }[];
+  /** Moments reached, of all there were. Equal on a finished shift. */
+  observed: number;
+  opportunities: number;
+  competencies: { id: string; label: string; score: number; observed: number; opportunities: number }[];
   strongest: { title: string; text: string }[];
   development: { label: string; text: string };
   recommendations: string[];
@@ -63,7 +66,9 @@ export function resultFrom(form: FormId, actions: Stamped[]): { result: Assessme
 export function candidateProfileFrom(result: AssessmentResult, timedOut: boolean): CandidateProfile {
   return {
     overall: result.overall,
-    competencies: result.competencies.map((c) => ({ id: c.id, label: c.label, score: c.score })),
+    observed: result.observed,
+    opportunities: result.opportunities,
+    competencies: result.competencies.map((c) => ({ id: c.id, label: c.label, score: c.score, observed: c.observed, opportunities: c.opportunities })),
     strongest: result.candidate.strongest,
     development: result.candidate.development,
     recommendations: result.candidate.recommendations,

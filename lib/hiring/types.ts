@@ -215,6 +215,12 @@ export interface HiringState {
   scene: SceneId;
   /** Simulated seconds since 17:25:00. */
   clock: number;
+  /**
+   * Set when the thirty minutes ended before the plan was locked: where the
+   * candidate was, and how the store stood at that moment. Everything after it
+   * is the store running on with nobody deciding, and is not theirs.
+   */
+  expiry: { scene: SceneId; clock: number; maxCtd: number; firstBreachAt: number | null } | null;
   /** When the candidate actually reached each part of the shift. */
   arrivals: Partial<Record<SceneId, number>>;
 

@@ -110,7 +110,8 @@ function Positioning({ email, starting, onStart, failed }: { email: string; star
 
       <p className="mt-6 rounded-[14px] border border-line-strong bg-white/[0.03] px-3.5 py-3 text-[13px] leading-snug text-mid">
         The thirty minutes start when you press Start Shift and do not pause. You have one attempt. If the page reloads
-        or your connection drops, you come back to where you were.
+        or your connection drops, you come back to where you were. The bar at the top shows the six parts of the
+        shift: yellow is where you are, and the white mark is where the time is.
       </p>
 
       {failed ? (

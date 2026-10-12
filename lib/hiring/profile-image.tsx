@@ -78,6 +78,7 @@ export async function renderCandidateProfileImage(profile: CandidateProfile, ema
     150;
 
   const readiness = String(profile.overall);
+  const timedOutNote = `The thirty minutes ran out before the shift did. Built from the ${profile.observed} of ${profile.opportunities} assessed moments reached.`;
   const footer = "From one 30-minute simulated shift. One input to a hiring decision, alongside an interview. operatorforge.in";
 
   return new ImageResponse(
@@ -104,7 +105,7 @@ export async function renderCandidateProfileImage(profile: CandidateProfile, ema
 
         {profile.timedOut ? (
           <div style={{ display: "flex", marginTop: 22, fontSize: 20, color: MID }}>
-            The thirty minutes ran out before the shift did. Built from the decisions made.
+            {timedOutNote}
           </div>
         ) : null}
 
@@ -138,14 +139,20 @@ export async function renderCandidateProfileImage(profile: CandidateProfile, ema
             {profile.competencies.map((competency) => (
               <div key={competency.id} style={{ display: "flex", flexDirection: "column" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-                  <div style={{ display: "flex", fontSize: 24, color: HI }}>{competency.label}</div>
-                  <div style={{ display: "flex", fontFamily: "GeistBold", fontSize: 26, color: HI }}>{String(competency.score)}</div>
+                  <div style={{ display: "flex", fontSize: 24, color: HI }}>
+                    {competency.observed > 0 && competency.observed < competency.opportunities
+                      ? `${competency.label}  ·  from ${competency.observed} of ${competency.opportunities} moments`
+                      : competency.label}
+                  </div>
+                  <div style={{ display: "flex", fontFamily: "GeistBold", fontSize: 26, color: competency.observed ? HI : FAINT }}>
+                    {competency.observed ? String(competency.score) : "Not reached"}
+                  </div>
                 </div>
                 <div style={{ display: "flex", marginTop: 8, height: 8, borderRadius: 4, backgroundColor: "#2A2E35" }}>
                   <div
                     style={{
                       display: "flex",
-                      width: `${Math.max(1, competency.score)}%`,
+                      width: `${competency.observed ? Math.max(1, competency.score) : 0}%`,
                       height: 8,
                       borderRadius: 4,
                       backgroundColor: competency.score >= 70 ? TEAL : competency.score >= 45 ? EMBER : ORANGE,

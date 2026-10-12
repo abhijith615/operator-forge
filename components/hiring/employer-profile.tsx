@@ -171,6 +171,20 @@ export function EmployerProfile({ result, meta }: { result: AssessmentResult; me
           </p>
         </section>
 
+        {result.incomplete ? (
+          <section className="mt-3 rounded-[20px] border border-warn-500/40 bg-warn-500/[0.07] p-5 sm:p-6" aria-label="Shift not completed">
+            <p className="font-mono text-[12px] font-semibold tracking-[0.18em] text-warn-500 uppercase">Shift not completed</p>
+            <p className="mt-2 text-[15.5px] font-semibold text-hi">
+              {result.observed} of {result.opportunities} assessed moments were reached before the thirty minutes ended.
+            </p>
+            <p className="mt-1 text-[13.5px] leading-snug text-mid">
+              Scores cover only the moments reached; nothing unreached counts against the candidate. A competency seen
+              in part carries proportionally less of the overall figure, and an unfinished shift cannot be indicated as
+              “Strong evidence”. Read each score with its “moments observed” count beside it.
+            </p>
+          </section>
+        ) : null}
+
         {result.flags.length ? (
           <section className="mt-3 rounded-[20px] border border-alert-500/45 bg-alert-500/[0.07] p-5 sm:p-6" aria-label="Manual review flags">
             <p className="flex items-center gap-2 font-mono text-[12px] font-semibold tracking-[0.18em] text-alert-500 uppercase">
@@ -204,13 +218,21 @@ export function EmployerProfile({ result, meta }: { result: AssessmentResult; me
                   <span className={cn("rounded-full border px-2 py-0.5 font-mono text-[10.5px] tracking-[0.12em] uppercase", STRENGTH_TONE[competency.strength])}>
                     {competency.strength.replace(" EVIDENCE", "")} evidence
                   </span>
-                  <span className="tabular ml-auto text-[24px] leading-none font-bold text-hi">{competency.score}</span>
+                  <span className={cn("tabular ml-auto leading-none font-bold", competency.observed ? "text-[24px] text-hi" : "text-[15px] text-lo")}>
+                    {competency.observed ? competency.score : "Not observed"}
+                  </span>
                 </div>
-                <div className="mt-2 h-1.5 rounded-full bg-white/[0.07]" role="img" aria-label={`${competency.label} ${competency.score} out of 100`}>
-                  <div className={cn("h-full rounded-full", bar(competency.score))} style={{ width: `${competency.score}%` }} />
+                <div
+                  className="mt-2 h-1.5 rounded-full bg-white/[0.07]"
+                  role="img"
+                  aria-label={competency.observed ? `${competency.label} ${competency.score} out of 100` : `${competency.label} not observed`}
+                >
+                  {competency.observed ? <div className={cn("h-full rounded-full", bar(competency.score))} style={{ width: `${competency.score}%` }} /> : null}
                 </div>
-                <p className="mt-1.5 text-[12.5px] text-lo">
-                  {competency.earned} of {competency.available} points · {competency.observed} of {competency.opportunities} moments observed
+                <p className={cn("mt-1.5 text-[12.5px]", competency.observed < competency.opportunities ? "text-warn-500" : "text-lo")}>
+                  {competency.observed
+                    ? `${competency.earned} of ${competency.available} points · ${competency.observed} of ${competency.opportunities} moments observed`
+                    : `None of the ${competency.opportunities} moments was reached`}
                 </p>
               </li>
             ))}
@@ -238,10 +260,12 @@ export function EmployerProfile({ result, meta }: { result: AssessmentResult; me
                 <li key={sub.id}>
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="text-[14px] text-hi">{sub.label}</span>
-                    <span className="tabular text-[14px] font-semibold text-hi">{sub.note ? `${sub.note} · ${sub.score}` : sub.score}</span>
+                    <span className={cn("tabular text-[14px] font-semibold", sub.observed ? "text-hi" : "text-lo")}>
+                      {!sub.observed ? "Not observed" : sub.note ? `${sub.note} · ${sub.score}` : sub.score}
+                    </span>
                   </div>
                   <div className="mt-1.5 h-1 rounded-full bg-white/[0.07]">
-                    <div className={cn("h-full rounded-full", bar(sub.score))} style={{ width: `${sub.score}%` }} />
+                    {sub.observed ? <div className={cn("h-full rounded-full", bar(sub.score))} style={{ width: `${sub.score}%` }} /> : null}
                   </div>
                 </li>
               ))}
@@ -332,6 +356,7 @@ export function EmployerProfile({ result, meta }: { result: AssessmentResult; me
             <li>Every score is assigned by fixed rules from what the candidate did in the simulated store. No AI assigns, adjusts or overrides a score or a flag.</li>
             <li>Timing is operational — before or after a queue breached — never how fast somebody tapped. Language, typing speed and device are not scored.</li>
             <li>Evidence strength reflects how many moments were observed and how consistently they pointed the same way. It is not a statistical confidence interval; there is not yet the data to support one.</li>
+            <li>A competency is scored on the moments the candidate reached. If the thirty minutes end first, unreached moments are left out rather than scored as zero, each competency counts in proportion to how much of it was seen, and the indication is capped: never “Strong” on an unfinished shift, and “Additional assessment” when under half of it was reached.</li>
             <li>This is a work sample from one thirty-minute shift. Use it alongside an interview, not instead of one.</li>
           </ul>
           {!meta.sample ? (

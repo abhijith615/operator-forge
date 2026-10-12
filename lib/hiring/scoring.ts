@@ -653,7 +653,11 @@ function timeEvents(state: HiringState): Draft[] {
   /* P1 · recognises risk before failure */
   const built = (state.floor?.projected[constraint] ?? 0) >= 0.95;
   const p1 = built || first?.where === "case" ? 3 : first?.where === "triage" ? 2 : first ? 1 : 0;
-  out.push({
+  // Time ran out before the floor was set, or before the surge had been lived
+  // through: there has been nothing yet to get ahead of, or to fall behind.
+  const untested = state.expiry !== null && (!state.floor || (!built && !first && state.arrivals.customer === undefined));
+  if (untested) out.push(notReached("P1", C, "Anticipation", "Recognises risk before failure."));
+  else out.push({
     behaviourId: "P1",
     competencyId: C,
     title: p1 === 3 ? `Strengthened ${STATION_LABEL[constraint].toLowerCase()} before it failed` : p1 === 2 ? `Strengthened ${STATION_LABEL[constraint].toLowerCase()} once the pressure was visible` : p1 === 1 ? `Reinforced ${STATION_LABEL[constraint].toLowerCase()} late` : `Never reinforced ${STATION_LABEL[constraint].toLowerCase()}`,
@@ -668,11 +672,16 @@ function timeEvents(state: HiringState): Draft[] {
   });
 
   /* P2 · acts before an avoidable SLA breach */
-  const breach = state.firstBreachAt;
-  const prePeakMax = Math.max(CTD_TARGET - 1, ...state.trace.filter((t) => t.t < PEAK_AT).map((t) => t.ctd));
+  const until = state.expiry ? Math.min(PEAK_AT, state.expiry.clock) : PEAK_AT;
+  const breach = state.expiry ? state.expiry.firstBreachAt : state.firstBreachAt;
+  const peaked = state.expiry ? state.expiry.maxCtd : state.maxCtd;
+  const prePeakMax = Math.max(CTD_TARGET - 1, ...state.trace.filter((t) => t.t < until).map((t) => t.ctd));
   const actedBefore = first !== null && (breach === null || first.at < breach);
   const p2 = breach === null ? 3 : actedBefore || built ? (prePeakMax <= 195 ? 3 : 2) : first ? 1 : 0;
-  out.push({
+  // Holding the target means something once the surge has arrived.
+  if (state.expiry !== null && (!state.floor || (breach === null && state.arrivals.triage === undefined))) {
+    out.push(notReached("P2", C, "Acting before a breach", "Acts before avoidable SLA breach."));
+  } else out.push({
     behaviourId: "P2",
     competencyId: C,
     title: breach === null ? "Kept click-to-dispatch inside target all shift" : p2 >= 2 ? "Acted before the dispatch target was breached" : first ? "Acted after the dispatch target had gone" : "Let the dispatch target go without acting",
@@ -681,7 +690,7 @@ function timeEvents(state: HiringState): Draft[] {
     stateBefore: `Click-to-dispatch target: ${CTD_TARGET} seconds.`,
     candidateAction: first ? `First reinforced the constrained station at ${at(first.at)}, with CTD at ${first.ctd}s.` : built ? "Had the capacity in place from the floor build." : "Did not reinforce the constrained station.",
     timingContext: breach === null ? "No breach occurred" : `Target first breached at ${at(breach)}`,
-    stateAfter: `CTD peaked at ${state.maxCtd}s.`,
+    stateAfter: `CTD peaked at ${peaked}s${state.expiry ? " while the candidate was running the store" : ""}.`,
     score: p2 as 0 | 1 | 2 | 3,
     behaviourTags: breach === null ? ["sla_held"] : p2 >= 2 ? ["acted_before_breach"] : ["acted_after_breach"],
   });
@@ -921,15 +930,19 @@ function criticalEvents(state: HiringState): Draft[] {
 
   /* C6 · investigates with focus */
   const views = state.kase.viewed.length + state.nil.viewed.length + b.viewed.length + state.arjun.checked.length + (state.riya.inspected ? 1 : 0);
-  const blind = [
-    state.kase.viewed.length === 0 && !state.kase.recordsOwner,
-    state.nil.viewed.length === 0 && state.nil.searchOwner === null,
-    b.viewed.length === 0,
-  ].filter(Boolean).length;
+  // An investigation counts once it has been closed, one way or another.
+  const investigations = [
+    { closed: state.kase.stage === "closed" || state.kase.stage === "deferred", blind: state.kase.viewed.length === 0 && !state.kase.recordsOwner },
+    { closed: state.nil.outcome !== null, blind: state.nil.viewed.length === 0 && state.nil.searchOwner === null },
+    { closed: state.arrivals.customer !== undefined, blind: b.viewed.length === 0 },
+  ].filter((entry) => entry.closed);
+  const blind = investigations.filter((entry) => entry.blind).length;
   // Behind by three minutes or more at any point, because of time spent looking.
   const late = Object.entries(state.arrivals).some(([scene, at]) => scene !== "outcome" && at - SCHEDULE[scene as SceneId] >= 180);
   const c6 = blind >= 2 ? 0 : views >= 16 || late ? 1 : views >= 13 ? 2 : 3;
-  out.push({
+  // One investigation is not a pattern.
+  if (investigations.length < 2) out.push(notReached("C6", C, "Focused investigation", "Avoids broad, unfocused investigation."));
+  else out.push({
     behaviourId: "C6",
     competencyId: C,
     title: c6 === 3 ? "Looked at enough to decide, and no more" : blind >= 2 ? "Decided without evidence in most cases" : "Checked nearly everything before acting",
@@ -938,7 +951,7 @@ function criticalEvents(state: HiringState): Draft[] {
     stateBefore: "Eighteen sources of evidence were available across the shift.",
     candidateAction: `Opened ${views} of them personally${state.kase.recordsOwner ? ", and had the case records pulled by a colleague" : ""}.`,
     timingContext: late ? "The shift ran behind schedule" : "The shift stayed on schedule",
-    stateAfter: blind >= 2 ? `${blind} of 3 investigations were decided with nothing opened.` : late ? "Later problems were met minutes after they had started, because of the time spent looking." : "Investigation time did not delay any later decision.",
+    stateAfter: blind >= 2 ? `${blind} of ${investigations.length} investigations were decided with nothing opened.` : late ? "Later problems were met minutes after they had started, because of the time spent looking." : "Investigation time did not delay any later decision.",
     score: c6 as 0 | 1 | 2 | 3,
     behaviourTags: c6 === 3 ? ["focused_investigation"] : blind >= 2 ? ["no_investigation"] : ["over_investigation"],
   });
@@ -1163,11 +1176,17 @@ export interface AssessmentResult {
   version: string;
   form: string;
   overall: number;
+  /** The plan was never locked: time ran out, or the candidate left. */
+  incomplete: boolean;
+  /** Moments the candidate actually reached, of the thirty-four. */
+  observed: number;
+  opportunities: number;
   competencies: CompetencyResult[];
   evidence: EvidenceEvent[];
   flags: ControlFlag[];
   indication: string;
-  teamSubscores: { id: string; label: string; score: number; note?: string }[];
+  /** `observed` is false where none of the subscore's moments were reached. */
+  teamSubscores: { id: string; label: string; score: number; observed: boolean; note?: string }[];
   teamEffect: { label: string; value: string }[];
   crossScenario: { title: string; rating: string; text: string }[];
   probes: { area: string; evidence: string; probe: string }[];
@@ -1181,8 +1200,42 @@ export interface AssessmentResult {
   stats: { delegated: number; delegatedWell: number; personalDelegable: number; maxCtd: number; finalCtd: number | null; trust: number; cost: number };
 }
 
+/** The scene each behaviour is decided in. The rest are read from the whole shift. */
+const DECIDED_IN: Record<string, SceneId> = {
+  T1: "floor", T2: "floor", T4: "floor", T3: "absence",
+  T5: "riya", T6: "riya", T7: "arjun", T8: "arjun",
+  I1: "case", I2: "case", I3: "case", I4: "case", I5: "case", I7: "case", I8: "case",
+  I6: "nilpick", U2: "nilpick",
+  P3: "triage", P6: "triage",
+  C1: "bottleneck", C2: "bottleneck", C3: "bottleneck", C4: "bottleneck", C5: "bottleneck",
+  U1: "customer",
+  P4: "final", P5: "final", U4: "final",
+};
+
+/**
+ * The clock ran out in the middle of something.
+ *
+ * Whatever the candidate had already done in that scene stands. What they had
+ * not got to yet is not a decision to do nothing — the time ended — so a zero
+ * for inaction there becomes "not reached". A zero earned by doing something
+ * (an accusation, a write-off) is kept: that was a decision.
+ */
+function cutShort(state: HiringState, draft: Draft): Draft {
+  if (!state.expiry || draft.missed || draft.counter || draft.score !== 0) return draft;
+  if (DECIDED_IN[draft.behaviourId] !== state.expiry.scene) return draft;
+  // Answering the Floor Lead wrongly, or changing the floor without looking, was done — not left undone.
+  if (draft.behaviourId === "C3" && state.bn.reply !== null) return draft;
+  if (draft.behaviourId === "C1" && state.bn.moves.length > 0) return draft;
+  return notReached(draft.behaviourId, draft.competencyId, draft.title, draft.claim);
+}
+
+/** Did the candidate get as far as this moment? */
+function reached(event: EvidenceEvent): boolean {
+  return !event.behaviourTags.includes("not_reached");
+}
+
 function strengthOf(events: EvidenceEvent[]): { strength: EvidenceStrength; observed: number } {
-  const seen = events.filter((e) => !e.behaviourTags.includes("not_reached"));
+  const seen = events.filter(reached);
   const share = seen.length / events.length;
   const mean = seen.reduce((s, e) => s + e.score, 0) / (seen.length || 1);
   const spread = Math.sqrt(seen.reduce((s, e) => s + (e.score - mean) ** 2, 0) / (seen.length || 1));
@@ -1283,7 +1336,8 @@ function signatureOf(score: Record<CompetencyId, number>, events: EvidenceEvent[
   if (overall >= 78 && anticipated && score.teamManagement >= 75) {
     return { name: "BALANCED FLOOR LEADER", blurb: "Built the team early, ran the store through it, and kept the customer in view when the numbers argued otherwise." };
   }
-  if (overall >= 68 && anticipated) {
+  // Getting ahead of the surge only reads as anticipation if the target then held.
+  if (overall >= 68 && anticipated && get("P2") === 3) {
     return { name: "ANTICIPATORY SHIFT LEADER", blurb: "Moves on the forecast rather than the queue. Problems tended to arrive already half-solved." };
   }
   if (score.criticalThinking >= 60 && score.inventoryManagement >= 60 && score.timePrioritisation < 60) {
@@ -1302,22 +1356,27 @@ export function scoreAssessment(state: HiringState): AssessmentResult {
     ...timeEvents(state),
     ...criticalEvents(state),
     ...customerEvents(state),
-  ].map(typed);
+  ]
+    .map((draft) => cutShort(state, draft))
+    .map(typed);
 
   const byCompetency = Object.fromEntries(
     COMPETENCIES.map((id) => [id, evidence.filter((e) => e.competencyId === id)]),
   ) as Record<CompetencyId, EvidenceEvent[]>;
 
+  // A competency is scored on the moments the candidate reached. One they never
+  // got to says nothing about them, and scoring it as zero would say something.
   const competencies: CompetencyResult[] = COMPETENCIES.map((id) => {
     const events = byCompetency[id];
-    const earned = events.reduce((sum, e) => sum + e.score, 0);
-    const available = events.length * 3;
+    const seen = events.filter(reached);
+    const earned = seen.reduce((sum, e) => sum + e.score, 0);
+    const available = seen.length * 3;
     const { strength, observed } = strengthOf(events);
     return {
       id,
       label: COMPETENCY_LABEL[id],
       weight: assessmentWeights[id],
-      score: Math.round((earned / available) * 100),
+      score: available ? Math.round((earned / available) * 100) : 0,
       earned,
       available,
       strength,
@@ -1326,16 +1385,33 @@ export function scoreAssessment(state: HiringState): AssessmentResult {
     };
   });
 
-  const scoreMap = Object.fromEntries(competencies.map((c) => [c.id, c.score])) as Record<CompetencyId, number>;
-  const overall = Math.round(
-    COMPETENCIES.reduce((sum, id) => sum + scoreMap[id] * assessmentWeights[id], 0),
-  );
+  const incomplete = state.plan === null;
+  const observed = evidence.filter(reached).length;
+  const opportunities = evidence.length;
+
+  // Each competency counts by its weight times the share of it that was seen.
+  // On a finished shift that is exactly Team × 0.30 + Inventory × 0.25 + …;
+  // on an unfinished one, a competency seen once cannot carry a tenth of the
+  // result on that one moment.
+  const seenWeight = competencies.reduce((sum, c) => sum + c.weight * (c.observed / c.opportunities), 0);
+  const overall = seenWeight
+    ? Math.round(competencies.reduce((sum, c) => sum + c.score * c.weight * (c.observed / c.opportunities), 0) / seenWeight)
+    : 0;
+
+  // Where something downstream needs a number for every competency, an
+  // unobserved one borrows the overall rather than reading as a zero.
+  const scoreMap = Object.fromEntries(competencies.map((c) => [c.id, c.observed ? c.score : overall])) as Record<CompetencyId, number>;
 
   const flags = controlFlags(state);
   const get = (id: string) => evidence.find((e) => e.behaviourId === id)!;
   const sub = (label: string, id: string, ids: string[]) => {
-    const events = ids.map(get);
-    return { id, label, score: Math.round((events.reduce((s, e) => s + e.score, 0) / (events.length * 3)) * 100) };
+    const events = ids.map(get).filter(reached);
+    return {
+      id,
+      label,
+      observed: events.length > 0,
+      score: events.length ? Math.round((events.reduce((s, e) => s + e.score, 0) / (events.length * 3)) * 100) : 0,
+    };
   };
 
   const hoarded = state.personal.filter((p) => p.delegable && p.fitAvailable).length;
@@ -1356,7 +1432,7 @@ export function scoreAssessment(state: HiringState): AssessmentResult {
     sub("Performance coaching", "coaching", ["T5", "T6"]),
     sub("Conflict & trust", "trust", ["T7", "T8"]),
     sub("Delegation", "delegation", ["T9"]),
-    { id: "resilience", label: "Team resilience", score: resilience },
+    { id: "resilience", label: "Team resilience", score: resilience, observed: reached(get("T4")) },
     { ...sub("Manager dependency", "dependency", ["T10"]), note: hoarded <= 1 ? "Low" : hoarded <= 3 ? "Moderate" : "High" },
   ];
 
@@ -1434,15 +1510,27 @@ export function scoreAssessment(state: HiringState): AssessmentResult {
 
   // "Strong" means strong throughout: no control flag, and no part of leading
   // a team where the shift showed nothing at all. Those are things to probe.
-  const teamGap = teamSubscores.some((s) => s.score < 34);
-  const indication =
+  const teamGap = teamSubscores.some((s) => s.observed && s.score < 34);
+  const LADDER = [
+    "ADDITIONAL ASSESSMENT RECOMMENDED",
+    "MIXED EVIDENCE — REVIEW",
+    "PROMISING — PROBE SPECIFIC AREAS",
+    "STRONG EVIDENCE — PROCEED TO INTERVIEW",
+  ] as const;
+  const earnedRung =
     overall >= 75 && flags.length === 0 && scoreMap.teamManagement >= 65 && !teamGap
-      ? "STRONG EVIDENCE — PROCEED TO INTERVIEW"
-      : overall >= 62 && competencies.every((c) => c.score >= 40)
-        ? "PROMISING — PROBE SPECIFIC AREAS"
+      ? 3
+      : overall >= 62 && competencies.every((c) => !c.observed || c.score >= 40)
+        ? 2
         : overall >= 48
-          ? "MIXED EVIDENCE — REVIEW"
-          : "ADDITIONAL ASSESSMENT RECOMMENDED";
+          ? 1
+          : 0;
+  // An unfinished shift is scored on what was seen, and what was seen can only
+  // support so much. "Strong" needs the whole shift; under half of it supports
+  // nothing but a second look.
+  const share = observed / opportunities;
+  const ceiling = !incomplete ? 3 : share >= 0.85 ? 2 : share >= 0.5 ? 1 : 0;
+  const indication = LADDER[Math.min(earnedRung, ceiling)]!;
 
   const weak = evidence
     .filter((e) => e.score <= 1 && !e.behaviourTags.includes("not_reached") && PROBES[e.behaviourId])
@@ -1459,9 +1547,9 @@ export function scoreAssessment(state: HiringState): AssessmentResult {
     .map((e) => ({ area: PROBES[e.behaviourId]!.area, evidence: `${e.title}. ${e.candidateAction}`, probe: PROBES[e.behaviourId]!.probe }));
 
   const best = evidence.filter((e) => e.score === 3).sort((a, b) => assessmentWeights[b.competencyId] - assessmentWeights[a.competencyId]);
-  const lowest = [...competencies].sort((a, b) => a.score - b.score)[0]!;
+  const lowest = [...competencies].filter((c) => c.observed > 0).sort((a, b) => a.score - b.score)[0] ?? competencies[0]!;
   const recs = evidence
-    .filter((e) => e.score <= 1 && RECOMMENDATIONS[e.behaviourId])
+    .filter((e) => reached(e) && e.score <= 1 && RECOMMENDATIONS[e.behaviourId])
     .sort((a, b) => a.score - b.score || assessmentWeights[b.competencyId] - assessmentWeights[a.competencyId])
     .map((e) => RECOMMENDATIONS[e.behaviourId]!);
   const fallback = evidence.filter((e) => e.score === 2 && RECOMMENDATIONS[e.behaviourId]).map((e) => RECOMMENDATIONS[e.behaviourId]!);
@@ -1470,6 +1558,9 @@ export function scoreAssessment(state: HiringState): AssessmentResult {
     version: ASSESSMENT_VERSION,
     form: state.form,
     overall,
+    incomplete,
+    observed,
+    opportunities,
     competencies,
     evidence,
     flags,
@@ -1479,12 +1570,13 @@ export function scoreAssessment(state: HiringState): AssessmentResult {
     crossScenario,
     probes,
     signature: signatureOf(scoreMap, evidence, overall),
-    outcomeTitle: state.outcome?.title ?? "SHIFT INCOMPLETE",
+    // A store nobody finished running did not end any particular way.
+    outcomeTitle: incomplete ? "SHIFT NOT COMPLETED" : (state.outcome?.title ?? "SHIFT NOT COMPLETED"),
     candidate: {
       strongest: best.slice(0, 3).map((e) => ({ title: e.title, text: e.laterConsequence ?? e.stateAfter })),
       development: {
         label: lowest.label,
-        text: `Your lowest of the five. ${lowest.earned} of ${lowest.available} points across ${lowest.opportunities} moments in the shift.`,
+        text: `${incomplete ? "Your lowest of those you reached" : "Your lowest of the five"}. ${lowest.earned} of ${lowest.available} points across ${lowest.observed} moment${lowest.observed === 1 ? "" : "s"} in the shift.`,
       },
       // Always three: the weakest moments first, then the partial ones, then the
       // standing advice for the lowest competency.
@@ -1494,7 +1586,7 @@ export function scoreAssessment(state: HiringState): AssessmentResult {
       delegated: state.delegations.length,
       delegatedWell: well,
       personalDelegable: hoarded,
-      maxCtd: state.maxCtd,
+      maxCtd: state.expiry ? state.expiry.maxCtd : state.maxCtd,
       finalCtd: state.outcome?.finalCtd ?? null,
       trust: Math.round(state.trust),
       cost: state.cost,
