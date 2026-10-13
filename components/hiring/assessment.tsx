@@ -15,13 +15,14 @@ import {
   switchHiringAccount,
   type StartedAttempt,
 } from "@/lib/hiring/actions";
-import { CONSENT_VERSION, DATA_NOTICE, HIRING_CONTACT, POSITIONING } from "@/lib/hiring/content";
+import { CONSENT_VERSION, DATA_NOTICE, EXPLAINER_VIDEO, HIRING_CONTACT, POSITIONING } from "@/lib/hiring/content";
 import type { CandidateProfile as Profile } from "@/lib/hiring/server";
 import { deviceType } from "@/lib/hiring/view";
 import { ASSESSMENT_SECONDS } from "@/lib/hiring/weights";
 import { useHiringStore, type Attempt } from "@/stores/hiring-store";
 
 import { CandidateProfile } from "./candidate-profile";
+import { HiringExplainerVideo } from "./explainer-video";
 import { Simulation } from "./simulation";
 import { PrimaryButton, QuietButton } from "./ui";
 
@@ -128,6 +129,14 @@ function Positioning({
     <Frame>
       <p className="mt-10 font-mono text-[12px] tracking-[0.22em] text-ember-500 uppercase">Hiring Test</p>
       <h1 className="mt-2 text-[28px] leading-[1.06] font-bold tracking-[-0.035em] text-hi uppercase">30-minute dark store manager simulation</h1>
+
+      <section aria-labelledby="hiring-explainer" className="mt-6">
+        <h2 id="hiring-explainer" className="font-mono text-[11.5px] tracking-[0.18em] text-lo uppercase">
+          Watch this first
+        </h2>
+        <HiringExplainerVideo id={EXPLAINER_VIDEO.id} title={EXPLAINER_VIDEO.title} className="mt-2" />
+        <p className="mt-2 text-[13px] leading-snug text-mid">{EXPLAINER_VIDEO.note}</p>
+      </section>
 
       <ul className="mt-6 space-y-3">
         {POSITIONING.map((line) => (

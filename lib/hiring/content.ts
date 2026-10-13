@@ -411,6 +411,17 @@ export const DATA_NOTICE: { title: string; text: string }[] = [
 
 /* ── Before the shift ─────────────────────────────────────────────────── */
 
+/**
+ * The explainer shown before Start Shift, on how a dark store operates. The id is the
+ * YouTube video's. It is offered, never required, and the clock is not running
+ * while it plays.
+ */
+export const EXPLAINER_VIDEO = {
+  id: "4ZvVCZe5Nlw",
+  title: "Dark store operations",
+  note: "An introduction to how a dark store operates. Watching is optional, and your time does not start until you press Start Shift.",
+};
+
 export const POSITIONING = [
   "You will take charge of a live simulated dark store.",
   "You will manage people, inventory and operational problems.",
