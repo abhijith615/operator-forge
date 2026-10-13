@@ -34,6 +34,13 @@ const DECLINE =
   "That one is yours to decide — it is what the shift is finding out. I can explain anything on the screen: what a number means, what a record shows, what a button does.";
 
 const ENTRIES: Entry[] = [
+  /* The Floor Lead's question. Ahead of the decline below, because "what do I tell him" is the label being asked about. */
+  {
+    topic: "floor_lead_reply",
+    match: /\b(tell him|answer to (him|the floor lead)|floor lead (says?|said|thinks?|means?|is (wrong|right))|his read|store (is |actually )?stuck|nothing is stuck|it.?s holding|not sure yet)\b/i,
+    text: "The Floor Lead is giving you his read of why orders are backing up. It is what he can see from where he stands, and it may or may not be the reason. The panels under “Look at the floor” show what each part of the store is doing right now. Your answer tells him where you think the store is stuck: picking (not enough hands on orders), putaway (bins running empty), the riders (packed bags waiting to leave), Aisle C (blocked), nothing (the floor is keeping up), or that you are not sure yet. You can change your answer until you move on.",
+    suggestions: ["What do the percentages mean?", "What is pick speed?"],
+  },
   /* Asked for the answer. Checked first, so "what should I do about the nil pick" is a no, not a definition. */
   {
     topic: "asked_for_answer",

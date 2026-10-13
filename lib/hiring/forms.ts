@@ -163,13 +163,21 @@ export const handoverLocks = (id: FormId): Record<string, boolean> =>
   Object.fromEntries(FORMS[id].locked.map((emp) => [emp, true]));
 
 /**
- * What the Floor Lead says at 06:18. He is describing what he can see from
- * where he stands, and it is never where the store is actually stuck.
+ * What the Floor Lead says at 06:18.
+ *
+ * He is giving his read of it, and it is never where the store is actually
+ * stuck. But it is never invented either: each time he starts from something
+ * that is true and can be seen from where he stands — crates still on the
+ * dock, a bad pick speed, orders not leaving — and draws the wrong conclusion
+ * from it. A claim with nothing behind it reads as a mistake in the test; a
+ * true observation with the wrong cause attached is what a manager is
+ * actually handed, and has to check.
  */
-export const FLOOR_LEAD_SAYS: Record<"picking" | "putaway", string> = {
-  picking: "We need faster pickers. Look at the PPI.",
-  putaway: "Putaway is too slow this morning.",
-};
+export function floorLeadSays(blamed: Station | null, constraint: Stage | null): string {
+  if (blamed === "putaway") return "There are still crates all over the dock. I think putaway is too slow this morning.";
+  if (constraint === "riders") return "Orders aren’t getting out. I think we need faster pickers.";
+  return "Look at the pick speed. I think we need faster pickers.";
+}
 
 /** The process change available at each stage. Only one of them is where the problem is. */
 export const PROCESS_FIX: Record<Stage, { label: string; detail: string }> = {

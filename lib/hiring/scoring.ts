@@ -1,5 +1,5 @@
 import { initialState, unitEvidence } from "./engine";
-import { FLOOR_LEAD_SAYS, formFor } from "./forms";
+import { floorLeadSays, formFor } from "./forms";
 import { CTD_TARGET, PEAK_AT, SCHEDULE, clockLabel, floorHolding, isLocked, projectedPeak, taskFit } from "./model";
 import { BY_ID, ROSTER, STATION_LABEL, STATION_PLACE, nameOf } from "./roster";
 import {
@@ -882,7 +882,7 @@ function criticalEvents(state: HiringState): Draft[] {
   } else {
     const constraint = b.constraintAtStart;
     const cover = b.coverageAtStart;
-    const said = FLOOR_LEAD_SAYS[b.blamed === "putaway" ? "putaway" : "picking"];
+    const said = floorLeadSays(b.blamed, constraint);
     const stage = STAGE_WORD[constraint];
     const sawFirst = PANELS_OF[constraint].some((panel) => b.viewedBeforeAct.includes(panel));
     const acted = b.moves.length > 0;

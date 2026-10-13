@@ -4,7 +4,7 @@ import * as React from "react";
 import { ArrowRight, Lock, LockOpen, X } from "lucide-react";
 
 import { BN_PANELS } from "@/lib/hiring/engine";
-import { FLOOR_LEAD_SAYS, PROCESS_FIX, RIDERS_ROSTERED, STANDBY_RIDERS, formFor } from "@/lib/hiring/forms";
+import { PROCESS_FIX, RIDERS_ROSTERED, STANDBY_RIDERS, floorLeadSays, formFor } from "@/lib/hiring/forms";
 import { CTD_TARGET, aisleBlocked, clockLabel, floorHolding, isLocked, metricsOf, ridersOn } from "@/lib/hiring/model";
 import { PPI_TARGET, STATION_LABEL, isTemp, nameOf } from "@/lib/hiring/roster";
 import {
@@ -217,13 +217,18 @@ const PANEL_LABEL: Record<string, string> = {
   bnQueue: "Order queue",
 };
 
-const REPLIES: { id: Stage | "aisle" | "unsure" | "holding"; label: string }[] = [
-  { id: "picking", label: "Picking" },
-  { id: "putaway", label: "Putaway" },
-  { id: "riders", label: "Riders" },
-  { id: "aisle", label: "Aisle C" },
-  { id: "holding", label: "It’s holding" },
-  { id: "unsure", label: "Not sure yet" },
+/**
+ * What the candidate can say back: where they think the store is stuck. Whole
+ * sentences, because a row of one-word buttons under "What do you tell him?"
+ * does not say what is being asked.
+ */
+const REPLIES: { id: Stage | "aisle" | "unsure" | "holding"; label: string; detail: string }[] = [
+  { id: "picking", label: "It’s picking", detail: "Not enough hands on orders." },
+  { id: "putaway", label: "It’s putaway", detail: "Bins are running empty." },
+  { id: "riders", label: "It’s the riders", detail: "Packed bags are waiting to leave." },
+  { id: "aisle", label: "It’s Aisle C", detail: "Pickers are walking round it." },
+  { id: "holding", label: "Nothing is stuck", detail: "The floor is keeping up." },
+  { id: "unsure", label: "I’m not sure yet", detail: "I need to look first." },
 ];
 
 function people(state: HiringState, station: Station): string {
@@ -387,7 +392,7 @@ export function Bottleneck({ state, act }: SceneProps) {
     setDraft([]);
   };
 
-  const said = FLOOR_LEAD_SAYS[b.blamed === "putaway" ? "putaway" : "picking"];
+  const said = floorLeadSays(b.blamed, b.constraintAtStart);
   const isStandby = (step: Intervention) => step.kind === "standby";
   const isDesk = (step: Intervention) => step.kind === "riderDesk";
 
@@ -405,24 +410,7 @@ export function Bottleneck({ state, act }: SceneProps) {
       </div>
 
       <Card className="mt-3">
-        <Speech who="Floor Lead" lines={[said]} />
-        <Eyebrow className="mt-4 mb-2">What do you tell him?</Eyebrow>
-        <div className="flex flex-wrap gap-1.5">
-          {REPLIES.map((reply) => (
-            <button
-              key={reply.id}
-              type="button"
-              aria-pressed={b.reply === reply.id}
-              onClick={() => act({ t: "floorLeadReply", call: reply.id })}
-              className={cn(
-                "min-h-[42px] rounded-full border px-3.5 text-[13.5px] font-semibold transition-colors",
-                b.reply === reply.id ? "border-ember-500 bg-ember-500 text-void" : "border-line-strong bg-white/[0.03] text-mid hover:text-hi",
-              )}
-            >
-              {reply.label}
-            </button>
-          ))}
-        </div>
+        <Speech who="Floor Lead" role="his read of it" lines={[said]} />
       </Card>
 
       <Eyebrow className="mt-5 mb-2">Look at the floor</Eyebrow>
@@ -430,6 +418,30 @@ export function Bottleneck({ state, act }: SceneProps) {
         {BN_PANELS.map((panel) => (
           <Tile key={panel} label={PANEL_LABEL[panel]!} opened={b.viewed.includes(panel)} onClick={() => show(panel)} />
         ))}
+      </div>
+
+      <Eyebrow className="mt-5 mb-1">Your answer to the Floor Lead</Eyebrow>
+      <p className="mb-2 text-[13.5px] leading-snug text-mid">Where is the store stuck? You can change your answer until you move on.</p>
+      <div role="radiogroup" aria-label="Where is the store stuck?" className="grid gap-1.5 sm:grid-cols-2">
+        {REPLIES.map((reply) => {
+          const chosen = b.reply === reply.id;
+          return (
+            <button
+              key={reply.id}
+              type="button"
+              role="radio"
+              aria-checked={chosen}
+              onClick={() => act({ t: "floorLeadReply", call: reply.id })}
+              className={cn(
+                "min-h-[52px] rounded-[12px] border px-3.5 py-2 text-left transition-colors",
+                chosen ? "border-ember-500/70 bg-ember-500/[0.1]" : "border-line-strong bg-white/[0.03] hover:border-ember-500/60",
+              )}
+            >
+              <span className="block text-[14px] font-semibold text-hi">“{reply.label}.”</span>
+              <span className="block text-[12.5px] leading-snug text-mid">{reply.detail}</span>
+            </button>
+          );
+        })}
       </div>
 
       {!ran ? (
