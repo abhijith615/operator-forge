@@ -2195,3 +2195,246 @@ revoke all on function public.hiring_sitting(text, text) from public, anon;
 revoke all on function public.hiring_open(text, text, text, text, text) from public, anon;
 grant execute on function public.hiring_sitting(text, text) to authenticated;
 grant execute on function public.hiring_open(text, text, text, text, text) to authenticated;
+
+-- ── Hiring Test: sitting it with a name, without signing in ───────────────
+-- A candidate types their name and starts. There is no email link to wait
+-- for, and so no email rate limit to hit. The attempt belongs to no account:
+-- it is reached with a secret that only the browser that started it holds
+-- (kept in an httpOnly cookie, and stored here only as a hash). Everything
+-- else about an attempt is unchanged: the same append-only saves, the same
+-- time limit decided by this database, the same replay on the server.
+--
+-- The functions below are callable without signing in, which is the point.
+-- Each one does nothing unless it is given both the attempt's id and its
+-- secret, and starting attempts is capped per hour so the table cannot be
+-- filled from outside. Signed-in sittings (admins, and anyone sent the email
+-- link) keep using the functions above.
+
+alter table public.hiring_assessments alter column candidate_id drop not null;
+alter table public.hiring_assessments
+  add column if not exists candidate_name text,
+  add column if not exists access_hash text;
+
+comment on column public.hiring_assessments.access_hash is
+  'SHA-256 of the secret a name-only attempt is reached with. Null for a signed-in attempt.';
+
+create or replace function public.hiring_guest_open(
+  p_name text,
+  p_version text,
+  p_consent_version text,
+  p_device text default null,
+  p_role text default 'asm',
+  p_campaign text default null
+)
+returns table (
+  id uuid, token text, scenario_variant text, status text, started_at timestamptz,
+  completed_at timestamptz, actions jsonb, server_now timestamptz, time_limit_seconds integer
+)
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_name text := regexp_replace(trim(coalesce(p_name, '')), '\s+', ' ', 'g');
+  v_token text := replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
+  v_variant text;
+begin
+  if char_length(v_name) < 2 or char_length(v_name) > 80 then
+    raise exception 'a name is required' using errcode = '22023';
+  end if;
+  if coalesce(trim(p_consent_version), '') = '' then
+    raise exception 'consent is required to start' using errcode = '22023';
+  end if;
+  -- Nobody is signed in, so nothing else stops this being called in a loop.
+  if (select count(*) from public.hiring_assessments a
+       where a.candidate_id is null and a.started_at > now() - interval '1 hour') >= 300 then
+    raise exception 'too many attempts are being started' using errcode = '53400';
+  end if;
+
+  -- Forms in rotation, so the three fill evenly.
+  v_variant := (array['A', 'B', 'C'])[1 + ((select count(*) from public.hiring_assessments)::integer % 3)];
+
+  return query
+  insert into public.hiring_assessments as a
+    (candidate_id, candidate_email, candidate_name, access_hash, campaign_id, role_id, assessment_version,
+     scenario_variant, device_type, time_limit_seconds, consented_at, consent_version)
+  values (
+    null, '', v_name, encode(sha256(convert_to(v_token, 'UTF8')), 'hex'), nullif(left(p_campaign, 80), ''),
+    case when p_role in ('asm', 'sm') then p_role else 'asm' end,
+    left(p_version, 16), v_variant, nullif(left(p_device, 16), ''),
+    1800, now(), left(p_consent_version, 24)
+  )
+  returning a.id, v_token, a.scenario_variant, a.status, a.started_at, a.completed_at, a.actions, now(), a.time_limit_seconds;
+end;
+$$;
+
+create or replace function public.hiring_guest_attempt(p_id uuid, p_token text)
+returns table (
+  id uuid, scenario_variant text, status text, started_at timestamptz,
+  completed_at timestamptz, actions jsonb, server_now timestamptz,
+  time_limit_seconds integer, assessment_version text, candidate_name text
+)
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_hash text := encode(sha256(convert_to(coalesce(p_token, ''), 'UTF8')), 'hex');
+begin
+  update public.hiring_assessments a
+     set status = 'expired', completed_at = a.started_at + make_interval(secs => a.time_limit_seconds)
+   where a.id = p_id and a.candidate_id is null and a.access_hash = v_hash
+     and a.status = 'in_progress'
+     and now() > public.hiring_deadline(a.started_at, a.time_limit_seconds);
+
+  return query
+  select a.id, a.scenario_variant, a.status, a.started_at, a.completed_at, a.actions, now(),
+         a.time_limit_seconds, a.assessment_version, a.candidate_name
+    from public.hiring_assessments a
+   where a.id = p_id and a.candidate_id is null and a.access_hash = v_hash;
+end;
+$$;
+
+create or replace function public.hiring_guest_sync(p_id uuid, p_token text, p_actions jsonb)
+returns boolean
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_hash text := encode(sha256(convert_to(coalesce(p_token, ''), 'UTF8')), 'hex');
+  v_saved jsonb;
+  v_length integer;
+begin
+  if jsonb_typeof(p_actions) <> 'array' or jsonb_array_length(p_actions) > 800 then
+    return false;
+  end if;
+
+  select a.actions into v_saved
+    from public.hiring_assessments a
+   where a.id = p_id and a.candidate_id is null and a.access_hash = v_hash and a.status = 'in_progress'
+     and now() <= public.hiring_deadline(a.started_at, a.time_limit_seconds)
+     for update;
+  if not found then
+    return false;
+  end if;
+
+  v_length := jsonb_array_length(v_saved);
+  if jsonb_array_length(p_actions) < v_length then
+    return false;
+  end if;
+  if v_length > 0 and (
+    select jsonb_agg(e.value order by e.ordinality)
+      from jsonb_array_elements(p_actions) with ordinality e
+     where e.ordinality <= v_length
+  ) is distinct from v_saved then
+    return false;
+  end if;
+
+  update public.hiring_assessments a set actions = p_actions where a.id = p_id;
+  return true;
+end;
+$$;
+
+create or replace function public.hiring_guest_complete(p_id uuid, p_token text, p_actions jsonb)
+returns text
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_hash text := encode(sha256(convert_to(coalesce(p_token, ''), 'UTF8')), 'hex');
+  v_status text;
+begin
+  perform public.hiring_guest_sync(p_id, p_token, p_actions);
+
+  select a.status into v_status from public.hiring_assessments a
+   where a.id = p_id and a.candidate_id is null and a.access_hash = v_hash
+     for update;
+  if not found then
+    return null;
+  end if;
+  if v_status <> 'in_progress' then
+    return v_status;
+  end if;
+
+  update public.hiring_assessments a
+     set status = case when now() <= public.hiring_deadline(a.started_at, a.time_limit_seconds) then 'completed' else 'expired' end,
+         completed_at = least(now(), a.started_at + make_interval(secs => a.time_limit_seconds))
+   where a.id = p_id
+  returning a.status into v_status;
+
+  return v_status;
+end;
+$$;
+
+create or replace function public.hiring_guest_log(p_id uuid, p_token text, p_events jsonb)
+returns void
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_hash text := encode(sha256(convert_to(coalesce(p_token, ''), 'UTF8')), 'hex');
+begin
+  if jsonb_typeof(p_events) <> 'array' or jsonb_array_length(p_events) > 200 then
+    return;
+  end if;
+  if not exists (
+    select 1 from public.hiring_assessments a
+     where a.id = p_id and a.candidate_id is null and a.access_hash = v_hash
+  ) then
+    return;
+  end if;
+  if (select count(*) from public.hiring_events e where e.assessment_id = p_id) > 4000 then
+    return;
+  end if;
+
+  insert into public.hiring_events (assessment_id, real_ms, sim_time, event_type, entity_id, payload)
+  select
+    p_id,
+    case when e.value ->> 'realMs' ~ '^[0-9]{1,12}$' then (e.value ->> 'realMs')::bigint end,
+    case when e.value ->> 'simTime' ~ '^[0-9]{1,6}$' then (e.value ->> 'simTime')::integer end,
+    left(coalesce(e.value ->> 'eventType', 'unknown'), 40),
+    left(e.value ->> 'entityId', 60),
+    coalesce(e.value -> 'payload', '{}'::jsonb)
+  from jsonb_array_elements(p_events) e;
+end;
+$$;
+
+-- Every attempt, for admins, as one JSON object each: adding a column later
+-- does not need another function. The secret's hash is never returned.
+create or replace function public.admin_hiring_rows(p_id uuid default null)
+returns setof jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not authorised' using errcode = '42501';
+  end if;
+  return query
+  select (to_jsonb(a) - 'access_hash' - 'candidate_id') || jsonb_build_object(
+           'status', case when a.status = 'in_progress' and now() > public.hiring_deadline(a.started_at, a.time_limit_seconds) then 'expired' else a.status end,
+           'completed_at', coalesce(a.completed_at, case when now() > public.hiring_deadline(a.started_at, a.time_limit_seconds) then a.started_at + make_interval(secs => a.time_limit_seconds) end),
+           'signed_in', a.candidate_id is not null,
+           'session', coalesce((
+             select jsonb_object_agg(s.event_type, s.n)
+               from (
+                 select e.event_type, count(*) as n
+                   from public.hiring_events e
+                  where e.assessment_id = a.id
+                    and e.event_type in ('hidden', 'visible', 'offline', 'online', 'resume', 'warning_5', 'warning_1', 'expired', 'assistant', 'consent')
+                  group by e.event_type
+               ) s
+           ), '{}'::jsonb)
+         )
+    from public.hiring_assessments a
+   where p_id is null or a.id = p_id
+   order by a.started_at desc
+   limit 2000;
+end;
+$$;
+
+revoke all on function public.hiring_guest_open(text, text, text, text, text, text) from public;
+revoke all on function public.hiring_guest_attempt(uuid, text) from public;
+revoke all on function public.hiring_guest_sync(uuid, text, jsonb) from public;
+revoke all on function public.hiring_guest_complete(uuid, text, jsonb) from public;
+revoke all on function public.hiring_guest_log(uuid, text, jsonb) from public;
+revoke all on function public.admin_hiring_rows(uuid) from public, anon;
+
+grant execute on function public.hiring_guest_open(text, text, text, text, text, text) to anon, authenticated;
+grant execute on function public.hiring_guest_attempt(uuid, text) to anon, authenticated;
+grant execute on function public.hiring_guest_sync(uuid, text, jsonb) to anon, authenticated;
+grant execute on function public.hiring_guest_complete(uuid, text, jsonb) to anon, authenticated;
+grant execute on function public.hiring_guest_log(uuid, text, jsonb) to anon, authenticated;
+grant execute on function public.admin_hiring_rows(uuid) to authenticated;

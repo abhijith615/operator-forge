@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { EmployerProfile } from "@/components/hiring/employer-profile";
 import { isAdmin } from "@/lib/admin/queries";
 import { SAMPLE_CANDIDATE, sampleResult } from "@/lib/hiring/sample";
-import { isCurrentVersion, readAttempt, resultFrom } from "@/lib/hiring/server";
+import { candidateLabel, isCurrentVersion, readAttempt, resultFrom } from "@/lib/hiring/server";
 import { ASSESSMENT_VERSION } from "@/lib/hiring/weights";
 
 export const metadata: Metadata = {
@@ -59,7 +59,7 @@ export default async function HiringResultPage({ params }: { params: Promise<{ a
             </Link>
           </p>
           <h1 className="mt-6 text-[24px] leading-tight font-bold tracking-[-0.03em] text-hi">Sat on version {attempt.assessment_version}</h1>
-          <p className="mt-1 text-[14px] text-mid">{attempt.candidate_email}</p>
+          <p className="mt-1 text-[14px] text-mid">{candidateLabel(attempt)}</p>
           <p className="mt-4 text-[15px] leading-relaxed text-mid">
             This attempt was sat on an earlier version of the simulation, with a different store. A result is the
             candidate’s decisions replayed through the store they were made in, so it cannot be produced by version{" "}
@@ -83,7 +83,7 @@ export default async function HiringResultPage({ params }: { params: Promise<{ a
       <EmployerProfile
         result={result}
         meta={{
-          candidate: attempt.candidate_email,
+          candidate: candidateLabel(attempt),
           role: ROLE[attempt.role_id] ?? "ASM / SM",
           form: attempt.scenario_variant,
           version: attempt.assessment_version,

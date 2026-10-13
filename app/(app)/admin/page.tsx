@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { Download } from "lucide-react";
+import { ArrowDown, Download } from "lucide-react";
 
 import { AdminView } from "@/components/admin/admin-view";
+import { HiringAdminDashboard } from "@/components/hiring/admin-dashboard";
 import { PageHeader, PageShell } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { readAdminSnapshot, requireAdmin } from "@/lib/admin/queries";
+import { getOperator } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
   title: "Admin",
@@ -20,7 +23,7 @@ export const revalidate = 0;
 export default async function AdminPage() {
   await requireAdmin();
 
-  const snapshot = await readAdminSnapshot();
+  const [snapshot, operator] = await Promise.all([readAdminSnapshot(), getOperator()]);
 
   return (
     <PageShell className="max-w-6xl">
@@ -40,6 +43,13 @@ export default async function AdminPage() {
         <p className="text-[12.5px] text-lo">
           Everyone registered, with day-by-day scores, skills, drop-off and start times.
         </p>
+        <a
+          href="#hiring-test"
+          className="ml-auto inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-mid underline-offset-4 hover:text-hi hover:underline"
+        >
+          Hiring Test dashboard
+          <ArrowDown className="size-3.5" aria-hidden />
+        </a>
       </div>
 
       {snapshot ? (
@@ -50,6 +60,17 @@ export default async function AdminPage() {
           have not been applied to this project yet — see supabase/schema.sql.
         </p>
       )}
+
+      {/*
+        The Hiring Test is a separate product with its own tables and its own
+        scoring. It gets its own section, read on its own, so nothing above
+        waits on it and nothing in it can change what the panels above show.
+      */}
+      <div className="mt-12">
+        <Suspense fallback={<p className="border-t border-line pt-8 text-[12.5px] text-lo">Reading the Hiring Test…</p>}>
+          <HiringAdminDashboard ownEmail={operator?.email ?? null} />
+        </Suspense>
+      </div>
 
       <p className="mt-10 text-[12px] leading-relaxed text-faint">
         This page shows other people&rsquo;s names, email addresses and phone

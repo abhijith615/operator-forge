@@ -78,6 +78,7 @@ export function buildItemWorkbook(attempts: AdminAttemptRow[]): ExcelJS.Workbook
   attemptsSheet.columns = [
     { header: "assessment_id", key: "id", width: 38 },
     { header: "candidate_email", key: "email", width: 32 },
+    { header: "candidate_name", key: "name", width: 26 },
     { header: "form", key: "form", width: 7 },
     { header: "version", key: "version", width: 9 },
     { header: "device", key: "device", width: 10 },
@@ -113,6 +114,7 @@ export function buildItemWorkbook(attempts: AdminAttemptRow[]): ExcelJS.Workbook
     attemptsSheet.addRow({
       id: attempt.id,
       email: attempt.candidate_email,
+      name: attempt.candidate_name ?? "",
       form: attempt.scenario_variant,
       version: attempt.assessment_version,
       device: attempt.device_type ?? "",
@@ -219,6 +221,7 @@ export function buildItemWorkbook(attempts: AdminAttemptRow[]): ExcelJS.Workbook
     ["Unit of analysis", "Use the Decisions sheet for reliability (omega, alpha), factor structure and item models. Behaviours inside one decision share a cause and are not independent."],
     ["Competency score", "The plain average of that competency's observed decision scores. Overall is each competency weighted by its weight times the share of its decisions observed."],
     ["incomplete", "1 = the plan was never locked (time ran out or the candidate left). ended_in_scene says where."],
+    ["candidate_name", "The name typed at the start by somebody who sat it without signing in. Not verified. candidate_email is blank for those rows."],
     ["form", "A, B or C. Compare score distributions by form before treating the forms as equivalent."],
     ["version", "Every row is the current simulation version. Attempts sat on an earlier version are left out: they were played in a different store and cannot be pooled with these."],
     ["device", "mobile, tablet or desktop at the start. Use for differential-functioning and time-limit checks."],

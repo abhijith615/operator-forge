@@ -5,7 +5,7 @@ import { isAdmin } from "@/lib/admin/queries";
 import { getOperator } from "@/lib/auth/session";
 import type { StartedAttempt } from "@/lib/hiring/actions";
 import { HIRING_CONTACT } from "@/lib/hiring/content";
-import { candidateProfileFrom, readCurrentAttempt, readTimeLimit, resultFrom } from "@/lib/hiring/server";
+import { candidateProfileFrom, readCurrentAttempt, readGuestAttempt, readTimeLimit, resultFrom } from "@/lib/hiring/server";
 import { ASSESSMENT_SECONDS } from "@/lib/hiring/weights";
 
 export const metadata: Metadata = {
@@ -18,10 +18,15 @@ export const dynamic = "force-dynamic";
 /**
  * The candidate's route.
  *
- * Signed out: an email address. Signed in and not started: the positioning
- * screen. Mid-shift: straight back into the store. Finished: the profile.
- * Which of those it is gets decided here, from the database, so reloading or
- * coming back on another device never restarts an attempt.
+ * Not started: the start screen, which asks somebody who is not signed in for
+ * their name and nothing else. Mid-shift: straight back into the store.
+ * Finished: the profile. Which of those it is gets decided here, from the
+ * database, so reloading never restarts an attempt.
+ *
+ * There are two ways to hold an attempt. Somebody signed in holds it on their
+ * account, and can come back to it from any device. Somebody who started with
+ * a name holds it in this browser, by a key in a cookie. `?signin=1` shows the
+ * email sign-in for whoever wants the first.
  *
  * A candidate has one attempt. An admin can sit it again — to check the test,
  * or to show it to somebody — from a button on their own profile, which
@@ -31,11 +36,54 @@ export const dynamic = "force-dynamic";
 export default async function HiringAssessmentPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; again?: string }>;
+  searchParams: Promise<{ error?: string; again?: string; signin?: string }>;
 }) {
   const query = await searchParams;
   const operator = await getOperator();
-  if (!operator) return <CandidateEntry error={query.error} />;
+
+  if (!operator) {
+    if (query.signin === "1" || query.error) return <CandidateEntry error={query.error} />;
+
+    // No account: whatever this browser started with a name, if it started anything.
+    const held = await readGuestAttempt();
+    // One from a simulation that has since been replaced is not this test. They start again.
+    const guest = held && !held.retired ? held : null;
+
+    if (guest && guest.status !== "in_progress") {
+      const { result, incomplete } = resultFrom(guest.scenario_variant, guest.actions);
+      return (
+        <HiringAssessment
+          email={null}
+          who={guest.candidate_name}
+          initial={null}
+          profile={candidateProfileFrom(result, incomplete)}
+          limit={ASSESSMENT_SECONDS}
+        />
+      );
+    }
+
+    const resumed: StartedAttempt | null = guest
+      ? {
+          id: guest.id,
+          form: guest.scenario_variant,
+          status: guest.status,
+          startedAt: Date.parse(guest.started_at),
+          serverNow: guest.server_now ? Date.parse(guest.server_now) : Date.now(),
+          limit: guest.time_limit_seconds ?? ASSESSMENT_SECONDS,
+          actions: guest.actions,
+        }
+      : null;
+
+    return (
+      <HiringAssessment
+        email={null}
+        who={guest?.candidate_name}
+        initial={resumed}
+        profile={null}
+        limit={resumed ? resumed.limit : ASSESSMENT_SECONDS}
+      />
+    );
+  }
 
   const [attempt, admin] = await Promise.all([readCurrentAttempt(), isAdmin()]);
 

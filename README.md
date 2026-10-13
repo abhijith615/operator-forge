@@ -166,7 +166,7 @@ from one product into the other.
 | Route | Who | What |
 | --- | --- | --- |
 | `/hiring-test` | anyone | What it is and what an employer gets |
-| `/hiring-test/assessment` | candidate, signed in by email link | Positioning → the shift → the candidate's profile |
+| `/hiring-test/assessment` | candidate: a name, no sign-in (`?signin=1` for the email link) | Start screen → the shift → the candidate's profile |
 | `/hiring-test/results/sample` | anyone | A simulated candidate's employer profile |
 | `/hiring-test/results` and `/results/[id]` | admins | Every attempt, each one's employer profile, extra time, and the item-level export |
 
@@ -193,6 +193,12 @@ How it is put together, in `lib/hiring/`:
   Behaviours that come from the same decision are grouped (`DECISIONS`,
   twenty-one of them), and a competency is the plain average of its decisions,
   so one choice cannot count several times.
+- **Starting with a name** — a candidate types their name and starts; there is
+  no email link, so no email rate limit to hit. The attempt belongs to no
+  account and is reached with a secret the database issues, kept in an
+  httpOnly cookie and stored only as a hash (`guest.ts`, the `hiring_guest_*`
+  functions). It is tied to that browser, and the name is not verified.
+  Signing in by email still works for admins and for extra time.
 - **Consent and extra time** — the start screen shows what is recorded and who
   sees it, and the shift cannot start until the candidate agrees
   (`hiring_begin` refuses without it). An admin can arrange 25%, 50% or 100%

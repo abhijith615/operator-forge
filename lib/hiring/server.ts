@@ -3,6 +3,7 @@ import "server-only";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 import { expire, replay } from "./engine";
+import { readGuestKey } from "./guest";
 import { scoreAssessment, type AssessmentResult } from "./scoring";
 import type { FormId, Stamped } from "./types";
 import { ASSESSMENT_SECONDS, ASSESSMENT_VERSION, CURRENT_SINCE } from "./weights";
@@ -30,6 +31,8 @@ export interface AttemptRow {
   assessment_version?: string;
   /** Sat on a simulation that has since been replaced, and cannot be replayed on this one. */
   retired?: boolean;
+  /** The name given at the start, where the attempt was sat without signing in. */
+  candidate_name?: string | null;
 }
 
 /**
@@ -46,6 +49,7 @@ export function isCurrentVersion(row: { assessment_version?: string; started_at:
 }
 
 export interface AdminAttemptRow extends AttemptRow {
+  /** Empty where the attempt was started with a name and no sign-in. */
   candidate_email: string;
   role_id: string;
   campaign_id: string | null;
@@ -53,6 +57,11 @@ export interface AdminAttemptRow extends AttemptRow {
   device_type: string | null;
   consented_at?: string | null;
   session?: Record<string, number>;
+}
+
+/** Who an attempt is shown as: their email if they signed in, the name they typed if they did not. */
+export function candidateLabel(row: { candidate_email?: string | null; candidate_name?: string | null }): string {
+  return row.candidate_email?.trim() || row.candidate_name?.trim() || "Unnamed candidate";
 }
 
 export interface Accommodation {
@@ -139,6 +148,22 @@ export async function readCurrentAttempt(): Promise<AttemptRow | null> {
   return { ...row, actions: asActions(row.actions), retired: unversioned && !isCurrentVersion(row) };
 }
 
+/**
+ * The attempt this browser started with a name and no sign-in, if it started
+ * one. Read with the secret in its cookie; the id alone opens nothing.
+ */
+export async function readGuestAttempt(): Promise<AttemptRow | null> {
+  const key = await readGuestKey();
+  if (!key) return null;
+  const supabase = await getSupabaseServerClient();
+  if (!supabase) return null;
+  const { data, error } = await supabase.rpc("hiring_guest_attempt", { p_id: key.id, p_token: key.token });
+  if (error) return null;
+  const row = first<AttemptRow>(data);
+  if (!row) return null;
+  return { ...row, actions: asActions(row.actions), retired: !isCurrentVersion(row) };
+}
+
 /** How long the signed-in candidate will be given, including any extra time arranged for them. */
 export async function readTimeLimit(): Promise<number> {
   const supabase = await getSupabaseServerClient();
@@ -151,7 +176,9 @@ export async function readTimeLimit(): Promise<number> {
 export async function readAllAttempts(): Promise<AdminAttemptRow[]> {
   const supabase = await getSupabaseServerClient();
   if (!supabase) return [];
-  let { data, error } = await supabase.rpc("admin_hiring_list");
+  // `admin_hiring_rows` returns each attempt whole, including the name of somebody who sat it without signing in.
+  let { data, error } = await supabase.rpc("admin_hiring_rows", { p_id: null });
+  if (isMissing(error)) ({ data, error } = await supabase.rpc("admin_hiring_list"));
   if (isMissing(error)) ({ data, error } = await supabase.rpc("admin_hiring_assessments"));
   if (error || !Array.isArray(data)) return [];
   return (data as AdminAttemptRow[]).map((row) => ({ ...row, actions: asActions(row.actions) }));
@@ -161,7 +188,8 @@ export async function readAttempt(id: string): Promise<AdminAttemptRow | null> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   const supabase = await getSupabaseServerClient();
   if (!supabase) return null;
-  let { data, error } = await supabase.rpc("admin_hiring_one", { p_id: id });
+  let { data, error } = await supabase.rpc("admin_hiring_rows", { p_id: id });
+  if (isMissing(error)) ({ data, error } = await supabase.rpc("admin_hiring_one", { p_id: id }));
   if (isMissing(error)) ({ data, error } = await supabase.rpc("admin_hiring_assessment", { p_id: id }));
   if (error) return null;
   const row = first<AdminAttemptRow>(data);

@@ -69,7 +69,7 @@ const ENTRIES: Entry[] = [
   {
     topic: "connection",
     match: /\b(refresh\w*|reload\w*|connection|internet|offline|network|disconnect\w*|close(d)? the (tab|page)|battery|crash\w*|resume)\b/i,
-    text: "Your progress is saved as you go. If the page reloads or the connection drops, open the same link and sign in with the same email: you come back to where you were. The timer keeps running while you are away.",
+    text: "Your progress is saved as you go. If the page reloads or the connection drops, open the same link again in the same browser on the same device: you come back to where you were. If you signed in with an email address, signing in with it again does the same from any device. The timer keeps running while you are away.",
     suggestions: ["How does the time work?"],
   },
   {

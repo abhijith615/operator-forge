@@ -10,10 +10,12 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { absoluteUrl } from "@/lib/utils";
 
 import { CONSENT_VERSION } from "./content";
+import { readGuestKey, writeGuestKey } from "./guest";
 import {
   candidateProfileFrom,
   isMissing,
   readCurrentAttempt,
+  readGuestAttempt,
   resultFrom,
   type CandidateProfile,
 } from "./server";
@@ -81,21 +83,74 @@ export interface StartedAttempt {
   actions: Stamped[];
 }
 
+export type StartFailure = "name" | "busy" | "failed";
+
+/** A name as it will be stored: trimmed, single-spaced, two to eighty characters. */
+function tidyName(value: unknown): string | null {
+  const name = String(value ?? "").replace(/\s+/g, " ").trim();
+  return name.length >= 2 && name.length <= 80 ? name : null;
+}
+
+/**
+ * Starting without signing in: a name, and nothing else.
+ *
+ * The attempt belongs to no account. The database hands back a secret with
+ * it, which goes into a cookie this browser keeps and the page's scripts
+ * cannot read; every later save has to present it.
+ */
+async function startAsGuest(name: unknown, p_device: string): Promise<StartedAttempt | { error: StartFailure }> {
+  const p_name = tidyName(name);
+  if (!p_name) return { error: "name" };
+  const supabase = await getSupabaseServerClient();
+  if (!supabase) return { error: "failed" };
+
+  const { data, error } = await supabase.rpc("hiring_guest_open", {
+    p_name,
+    p_version: ASSESSMENT_VERSION,
+    p_consent_version: CONSENT_VERSION,
+    p_device,
+    p_role: "asm",
+    p_campaign: null,
+  });
+  const row = (Array.isArray(data) ? data[0] : data) as
+    | { id: string; token: string; scenario_variant: FormId; status: StartedAttempt["status"]; started_at: string; actions: unknown; server_now: string; time_limit_seconds?: number }
+    | undefined;
+  if (error || !row) return { error: error?.code === "53400" ? "busy" : "failed" };
+
+  await writeGuestKey({ id: row.id, token: row.token });
+  return {
+    id: row.id,
+    form: row.scenario_variant,
+    status: row.status,
+    startedAt: Date.parse(row.started_at),
+    serverNow: Date.parse(row.server_now),
+    limit: row.time_limit_seconds ?? ASSESSMENT_SECONDS,
+    actions: Array.isArray(row.actions) ? (row.actions as Stamped[]) : [],
+  };
+}
+
 /**
  * Pressing START SHIFT. The clock is the database's, and starts here.
  *
  * Only with consent: the candidate has to have ticked the data notice, and the
  * version of the notice they agreed to is recorded with the attempt. A call
  * without it starts nothing.
+ *
+ * Somebody signed in starts an attempt on their account. Anybody else starts
+ * one under the name they typed.
  */
-export async function startAssessment(device: string, consented: boolean): Promise<StartedAttempt | null> {
-  if (consented !== true) return null;
-  const operator = await getOperator();
-  if (!operator) return null;
-  const supabase = await getSupabaseServerClient();
-  if (!supabase) return null;
-
+export async function startAssessment(
+  device: string,
+  consented: boolean,
+  name?: string,
+): Promise<StartedAttempt | { error: StartFailure }> {
+  if (consented !== true) return { error: "failed" };
   const p_device = ["mobile", "tablet", "desktop"].includes(device) ? device : "unknown";
+  const operator = await getOperator();
+  if (!operator) return startAsGuest(name, p_device);
+  const supabase = await getSupabaseServerClient();
+  if (!supabase) return { error: "failed" };
+
   const begin = { p_version: ASSESSMENT_VERSION, p_consent_version: CONSENT_VERSION, p_device, p_role: "asm", p_campaign: null };
   // `hiring_open` knows which simulation an earlier attempt was sat on; the older functions do not.
   let { data, error } = await supabase.rpc("hiring_open", begin);
@@ -106,7 +161,7 @@ export async function startAssessment(device: string, consented: boolean): Promi
   const row = (Array.isArray(data) ? data[0] : data) as
     | { id: string; scenario_variant: FormId; status: StartedAttempt["status"]; started_at: string; actions: unknown; server_now: string; time_limit_seconds?: number }
     | undefined;
-  if (error || !row) return null;
+  if (error || !row) return { error: "failed" };
 
   return {
     id: row.id,
@@ -143,11 +198,20 @@ export async function setAccommodation(formData: FormData): Promise<void> {
 const tidy = (actions: Stamped[]): Stamped[] =>
   (Array.isArray(actions) ? actions : []).slice(0, 800).map((entry) => ({ a: entry.a, at: Math.round(Number(entry.at) || 0) }));
 
+/** The secret for this attempt, where it was started without signing in and this browser holds its key. */
+async function guestTokenFor(id: string): Promise<string | null> {
+  const key = await readGuestKey();
+  return key && key.id === id ? key.token : null;
+}
+
 /** Progress, saved as the candidate goes. The database only accepts additions. */
 export async function syncAssessment(id: string, actions: Stamped[]): Promise<boolean> {
   const supabase = await getSupabaseServerClient();
   if (!supabase) return false;
-  const { data, error } = await supabase.rpc("hiring_sync", { p_id: id, p_actions: tidy(actions) });
+  const token = await guestTokenFor(id);
+  const { data, error } = token
+    ? await supabase.rpc("hiring_guest_sync", { p_id: id, p_token: token, p_actions: tidy(actions) })
+    : await supabase.rpc("hiring_sync", { p_id: id, p_actions: tidy(actions) });
   return !error && data === true;
 }
 
@@ -162,7 +226,10 @@ export interface TelemetryEvent {
 export async function logAssessment(id: string, events: TelemetryEvent[]): Promise<boolean> {
   const supabase = await getSupabaseServerClient();
   if (!supabase || events.length === 0) return false;
-  const { error } = await supabase.rpc("hiring_log", { p_id: id, p_events: events.slice(0, 200) });
+  const token = await guestTokenFor(id);
+  const { error } = token
+    ? await supabase.rpc("hiring_guest_log", { p_id: id, p_token: token, p_events: events.slice(0, 200) })
+    : await supabase.rpc("hiring_log", { p_id: id, p_events: events.slice(0, 200) });
   return !error;
 }
 
@@ -177,17 +244,21 @@ export async function completeAssessment(id: string, actions: Stamped[]): Promis
   const supabase = await getSupabaseServerClient();
   if (!supabase) return null;
 
-  const { error } = await supabase.rpc("hiring_complete", { p_id: id, p_actions: tidy(actions) });
+  const token = await guestTokenFor(id);
+  const { error } = token
+    ? await supabase.rpc("hiring_guest_complete", { p_id: id, p_token: token, p_actions: tidy(actions) })
+    : await supabase.rpc("hiring_complete", { p_id: id, p_actions: tidy(actions) });
   if (error) return null;
 
-  const attempt = await readCurrentAttempt();
+  const attempt = token ? await readGuestAttempt() : await readCurrentAttempt();
   if (!attempt || attempt.id !== id || attempt.status === "in_progress") return null;
 
   const { result, incomplete } = resultFrom(attempt.scenario_variant, attempt.actions);
 
   // The evidence the result rests on, alongside the rest of the telemetry.
-  await supabase.rpc("hiring_log", {
+  await supabase.rpc(token ? "hiring_guest_log" : "hiring_log", {
     p_id: id,
+    ...(token ? { p_token: token } : {}),
     p_events: result.evidence.map((evidence) => ({
       eventType: "evidence",
       simTime: evidence.simTime ?? 0,

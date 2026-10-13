@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useActionState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Mail } from "lucide-react";
+import { ArrowRight, Mail, UserRound } from "lucide-react";
 
 import { LogoMark } from "@/components/brand/logo";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import {
   sendHiringLink,
   startAssessment,
   switchHiringAccount,
+  type StartFailure,
   type StartedAttempt,
 } from "@/lib/hiring/actions";
 import { CONSENT_VERSION, DATA_NOTICE, EXPLAINER_VIDEO, HIRING_CONTACT, POSITIONING } from "@/lib/hiring/content";
@@ -44,7 +45,11 @@ function Frame({ children }: { children: React.ReactNode }) {
 
 /* ── The way in ───────────────────────────────────────────────────────── */
 
-/** OPERATOR FORGE · HIRING TEST · an email address. Nothing else is asked. */
+/**
+ * Signing in by email link. Not the way in for a candidate any more — they
+ * type a name and start — but still here for an admin, and for anybody who
+ * has been asked to sit it under their email address.
+ */
 export function CandidateEntry({ error }: { error?: string }) {
   const [state, action, pending] = useActionState(sendHiringLink, idleFormState);
 
@@ -52,7 +57,7 @@ export function CandidateEntry({ error }: { error?: string }) {
     <Frame>
       <p className="mt-10 font-mono text-[12px] tracking-[0.22em] text-ember-500 uppercase">Hiring Test</p>
       <h1 className="mt-2 text-[30px] leading-[1.05] font-bold tracking-[-0.035em] text-hi">Dark Store Manager Simulation</h1>
-      <p className="mt-3 text-[14.5px] leading-relaxed text-mid">Enter your email address. We will send a link to sign you in, and your result is recorded against it.</p>
+      <p className="mt-3 text-[14.5px] leading-relaxed text-mid">Sign in with your email address. We will send a link, and your result is recorded against it.</p>
 
       {state.status === "success" ? (
         <div className="mt-7 rounded-[16px] border border-ion-500/35 bg-ion-500/[0.07] p-4" role="status">
@@ -89,6 +94,11 @@ export function CandidateEntry({ error }: { error?: string }) {
           </PrimaryButton>
         </form>
       )}
+      <p className="mt-6 text-center text-[13px] text-lo">
+        <a href="/hiring-test/assessment" className="text-mid underline underline-offset-4 hover:text-hi">
+          Start with just your name instead
+        </a>
+      </p>
     </Frame>
   );
 }
@@ -108,22 +118,32 @@ function spoken(seconds: number): string {
  * What the shift is, how long the candidate has, what is recorded about them
  * and who sees it — and a box to tick. Start Shift does nothing until it is
  * ticked, and the server will not start an attempt without it either.
+ *
+ * Somebody who is not signed in is asked for their name here, and for nothing
+ * else: no email, no link to wait for.
  */
 function Positioning({
   email,
+  name,
+  onName,
   limit,
   starting,
   onStart,
   failed,
 }: {
-  email: string;
+  /** Null for somebody who is not signed in, and is starting under a name. */
+  email: string | null;
+  name: string;
+  onName: (name: string) => void;
   limit: number;
   starting: boolean;
   onStart: () => void;
-  failed: boolean;
+  failed: StartFailure | null;
 }) {
   const [agreed, setAgreed] = React.useState(false);
   const extra = limit - ASSESSMENT_SECONDS;
+  const guest = email === null;
+  const named = !guest || name.replace(/\s+/g, " ").trim().length >= 2;
 
   return (
     <Frame>
@@ -160,7 +180,8 @@ function Positioning({
         <a href={`mailto:${HIRING_CONTACT}?subject=Hiring%20Test%20%E2%80%94%20adjustment`} className="text-mid underline underline-offset-4 hover:text-hi">
           {HIRING_CONTACT}
         </a>{" "}
-        before you start. It is arranged in advance and is not shown on your result.
+        before you start. It is arranged in advance against your email address, you then start by signing in with
+        that email, and it is not shown on your result.
       </p>
 
       <section aria-labelledby="hiring-notice" className="mt-6 rounded-[16px] border border-line-strong bg-surface p-4">
@@ -200,23 +221,71 @@ function Positioning({
         </label>
       </section>
 
+      {guest ? (
+        <div className="mt-6">
+          <label htmlFor="hiring-name" className="block text-[13px] font-medium text-mid">
+            Your full name
+          </label>
+          <div className="mt-2">
+            <Input
+              id="hiring-name"
+              name="name"
+              type="text"
+              autoComplete="name"
+              autoCapitalize="words"
+              spellCheck={false}
+              required
+              maxLength={80}
+              placeholder="As you want it on your result"
+              adornment={<UserRound />}
+              value={name}
+              onChange={(event) => onName(event.target.value)}
+              invalid={failed === "name"}
+              aria-describedby="hiring-name-note"
+            />
+          </div>
+          <p id="hiring-name-note" className="mt-2 text-[12.5px] leading-snug text-lo">
+            Your result is recorded under this name. Stay on this device and browser until you finish: it is how the
+            test knows it is you.
+          </p>
+        </div>
+      ) : null}
+
       {failed ? (
         <p role="alert" className="mt-3 text-[13px] text-alert-500">
-          The shift could not be started. Check your connection and try again.
+          {failed === "name"
+            ? "Enter your full name to start."
+            : failed === "busy"
+              ? "A lot of people are starting right now. Wait a minute and try again."
+              : "The shift could not be started. Check your connection and try again."}
         </p>
       ) : null}
 
-      <PrimaryButton className="mt-6 sm:w-full" disabled={starting || !agreed} onClick={onStart}>
+      <PrimaryButton className="mt-6 sm:w-full" disabled={starting || !agreed || !named} onClick={onStart}>
         {starting ? "Opening the store…" : "Start shift"}
       </PrimaryButton>
-      {!agreed ? <p className="mt-2 text-center text-[12.5px] text-lo">Tick the box above to start.</p> : null}
+      {!agreed || !named ? (
+        <p className="mt-2 text-center text-[12.5px] text-lo">
+          {!named ? "Enter your name" : "Tick the box above"}
+          {!named && !agreed ? " and tick the box above" : ""} to start.
+        </p>
+      ) : null}
 
-      <form action={switchHiringAccount} className="mt-5 text-center text-[13px] text-lo">
-        Signed in as <span className="break-all text-mid">{email}</span>.{" "}
-        <button type="submit" className="text-mid underline underline-offset-4 hover:text-hi">
-          Use a different email
-        </button>
-      </form>
+      {guest ? (
+        <p className="mt-5 text-center text-[13px] text-lo">
+          Asked to sit it under your email address?{" "}
+          <a href="/hiring-test/assessment?signin=1" className="text-mid underline underline-offset-4 hover:text-hi">
+            Sign in by email instead
+          </a>
+        </p>
+      ) : (
+        <form action={switchHiringAccount} className="mt-5 text-center text-[13px] text-lo">
+          Signed in as <span className="break-all text-mid">{email}</span>.{" "}
+          <button type="submit" className="text-mid underline underline-offset-4 hover:text-hi">
+            Use a different email
+          </button>
+        </form>
+      )}
     </Frame>
   );
 }
@@ -244,12 +313,16 @@ const toAttempt = (started: StartedAttempt): Attempt => ({
  */
 export function HiringAssessment({
   email,
+  who,
   initial,
   profile: finished,
   limit,
   canRetake = false,
 }: {
-  email: string;
+  /** The signed-in candidate's email, or null for somebody starting under a name. */
+  email: string | null;
+  /** The name an attempt was started under, where there is one already. */
+  who?: string | null;
   initial: StartedAttempt | null;
   profile: Profile | null;
   /** An admin, who may sit the test again. Shows the way back to the start on their profile. */
@@ -263,8 +336,11 @@ export function HiringAssessment({
   );
   const [profile, setProfile] = React.useState<Profile | null>(finished);
   const [starting, setStarting] = React.useState(false);
-  const [failed, setFailed] = React.useState(false);
+  const [failed, setFailed] = React.useState<StartFailure | null>(null);
+  const [name, setName] = React.useState(who ?? "");
   const attempt = useHiringStore((store) => store.attempt);
+  // What the profile is headed with: the email signed in with, or the name typed.
+  const shown = email ?? (name.replace(/\s+/g, " ").trim() || who || "");
 
   React.useEffect(() => {
     if (finished) {
@@ -283,12 +359,12 @@ export function HiringAssessment({
 
   const start = async () => {
     setStarting(true);
-    setFailed(false);
+    setFailed(null);
     try {
       // Reaching here means the box was ticked: the button is dead until it is.
-      const started = await startAssessment(deviceType(), true);
-      if (!started) {
-        setFailed(true);
+      const started = await startAssessment(deviceType(), true, email === null ? name : undefined);
+      if ("error" in started) {
+        setFailed(started.error);
       } else if (started.status === "in_progress") {
         const store = useHiringStore.getState();
         store.begin(toAttempt(started), started.actions);
@@ -302,7 +378,7 @@ export function HiringAssessment({
         router.refresh();
       }
     } catch {
-      setFailed(true);
+      setFailed("failed");
     } finally {
       setStarting(false);
     }
@@ -327,9 +403,11 @@ export function HiringAssessment({
     }
   }, []);
 
-  if (phase === "finished" && profile) return <CandidateProfile profile={profile} email={email} retakeHref={canRetake ? RETAKE_ROUTE : null} />;
+  if (phase === "finished" && profile) return <CandidateProfile profile={profile} email={shown} retakeHref={canRetake ? RETAKE_ROUTE : null} />;
   if (phase === "running" && attempt) return <Simulation attempt={attempt} onFinished={finish} />;
-  if (phase === "ready") return <Positioning email={email} limit={limit} starting={starting} onStart={start} failed={failed} />;
+  if (phase === "ready") {
+    return <Positioning email={email} name={name} onName={setName} limit={limit} starting={starting} onStart={start} failed={failed} />;
+  }
 
   return (
     <Frame>

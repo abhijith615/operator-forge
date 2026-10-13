@@ -5,7 +5,7 @@ import { Download } from "lucide-react";
 
 import { isAdmin } from "@/lib/admin/queries";
 import { setAccommodation } from "@/lib/hiring/actions";
-import { isCurrentVersion, readAccommodations, readAllAttempts, resultFrom } from "@/lib/hiring/server";
+import { candidateLabel, isCurrentVersion, readAccommodations, readAllAttempts, resultFrom } from "@/lib/hiring/server";
 import { ASSESSMENT_SECONDS, ASSESSMENT_VERSION } from "@/lib/hiring/weights";
 
 export const metadata: Metadata = {
@@ -87,10 +87,11 @@ export default async function HiringResultsPage() {
                   className="grid gap-x-4 gap-y-1 rounded-[18px] border border-line bg-surface px-4 py-3.5 transition-colors hover:border-line-bright sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-[15px] font-semibold text-hi">{attempt.candidate_email}</p>
+                    <p className="truncate text-[15px] font-semibold text-hi">{candidateLabel(attempt)}</p>
                     <p className="mt-0.5 text-[12.5px] text-lo">
                       {when(attempt.started_at)} · Form {attempt.scenario_variant} · v{attempt.assessment_version}
                       {attempt.device_type ? ` · ${attempt.device_type}` : ""}
+                      {attempt.candidate_email ? "" : " · name only, not verified"}
                       {(attempt.time_limit_seconds ?? ASSESSMENT_SECONDS) > ASSESSMENT_SECONDS ? " · extra time" : ""}
                       {result?.incomplete ? ` · not completed, ${result.observed} of ${result.opportunities} moments` : ""}
                     </p>
