@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { CandidateEntry, HiringAssessment } from "@/components/hiring/assessment";
+import { isAdmin } from "@/lib/admin/queries";
 import { getOperator } from "@/lib/auth/session";
 import type { StartedAttempt } from "@/lib/hiring/actions";
 import { HIRING_CONTACT } from "@/lib/hiring/content";
@@ -21,16 +22,22 @@ export const dynamic = "force-dynamic";
  * screen. Mid-shift: straight back into the store. Finished: the profile.
  * Which of those it is gets decided here, from the database, so reloading or
  * coming back on another device never restarts an attempt.
+ *
+ * A candidate has one attempt. An admin can sit it again — to check the test,
+ * or to show it to somebody — from a button on their own profile, which
+ * brings them back here with `?again=1`. The database decides who is an
+ * admin, and refuses a second attempt to anybody else whatever the URL says.
  */
 export default async function HiringAssessmentPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; again?: string }>;
 }) {
+  const query = await searchParams;
   const operator = await getOperator();
-  if (!operator) return <CandidateEntry error={(await searchParams).error} />;
+  if (!operator) return <CandidateEntry error={query.error} />;
 
-  const attempt = await readCurrentAttempt();
+  const [attempt, admin] = await Promise.all([readCurrentAttempt(), isAdmin()]);
 
   // Sat on a simulation that has since been replaced. It cannot be replayed on
   // this one, so it is neither resumed nor scored here.
@@ -54,8 +61,20 @@ export default async function HiringAssessmentPage({
   }
 
   if (attempt && attempt.status !== "in_progress") {
+    // An admin who has asked to sit it again goes back to the start screen. The earlier attempt is kept.
+    if (admin && query.again === "1") {
+      return <HiringAssessment email={operator.email} initial={null} profile={null} limit={await readTimeLimit()} canRetake />;
+    }
     const { result, incomplete } = resultFrom(attempt.scenario_variant, attempt.actions);
-    return <HiringAssessment email={operator.email} initial={null} profile={candidateProfileFrom(result, incomplete)} limit={ASSESSMENT_SECONDS} />;
+    return (
+      <HiringAssessment
+        email={operator.email}
+        initial={null}
+        profile={candidateProfileFrom(result, incomplete)}
+        limit={ASSESSMENT_SECONDS}
+        canRetake={admin}
+      />
+    );
   }
 
   const initial: StartedAttempt | null = attempt
@@ -73,5 +92,5 @@ export default async function HiringAssessmentPage({
   // Nothing started yet: say how long they will have before they agree to start.
   const limit = initial ? initial.limit : await readTimeLimit();
 
-  return <HiringAssessment email={operator.email} initial={initial} profile={null} limit={limit} />;
+  return <HiringAssessment email={operator.email} initial={initial} profile={null} limit={limit} canRetake={admin} />;
 }

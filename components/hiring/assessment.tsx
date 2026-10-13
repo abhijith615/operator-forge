@@ -223,6 +223,9 @@ function Positioning({
 
 /* ── The attempt, start to finish ─────────────────────────────────────── */
 
+/** Where an admin goes to sit the test again. The server checks that they are one. */
+const RETAKE_ROUTE = "/hiring-test/assessment?again=1";
+
 const toAttempt = (started: StartedAttempt): Attempt => ({
   id: started.id,
   form: started.form,
@@ -244,10 +247,13 @@ export function HiringAssessment({
   initial,
   profile: finished,
   limit,
+  canRetake = false,
 }: {
   email: string;
   initial: StartedAttempt | null;
   profile: Profile | null;
+  /** An admin, who may sit the test again. Shows the way back to the start on their profile. */
+  canRetake?: boolean;
   /** Seconds this candidate will be given if they start now. */
   limit: number;
 }) {
@@ -288,6 +294,8 @@ export function HiringAssessment({
         store.begin(toAttempt(started), started.actions);
         // Kept with the attempt's own record of events, as well as on the attempt.
         if (started.actions.length === 0) useHiringStore.getState().note("consent", { version: CONSENT_VERSION });
+        // An admin sitting it again arrived with `?again=1`. Drop it, so a reload resumes this attempt.
+        if (window.location.search) window.history.replaceState(null, "", window.location.pathname);
         setPhase("running");
       } else {
         // Already sat. The server has the profile.
@@ -319,7 +327,7 @@ export function HiringAssessment({
     }
   }, []);
 
-  if (phase === "finished" && profile) return <CandidateProfile profile={profile} email={email} />;
+  if (phase === "finished" && profile) return <CandidateProfile profile={profile} email={email} retakeHref={canRetake ? RETAKE_ROUTE : null} />;
   if (phase === "running" && attempt) return <Simulation attempt={attempt} onFinished={finish} />;
   if (phase === "ready") return <Positioning email={email} limit={limit} starting={starting} onStart={start} failed={failed} />;
 

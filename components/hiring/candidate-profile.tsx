@@ -1,4 +1,4 @@
-import { Download } from "lucide-react";
+import { Download, RotateCcw } from "lucide-react";
 
 import type { CandidateProfile as Profile } from "@/lib/hiring/server";
 import { cn } from "@/lib/utils";
@@ -16,11 +16,14 @@ export function CandidateProfile({
   profile,
   email,
   downloadHref = "/hiring-test/assessment/download",
+  retakeHref = null,
 }: {
   profile: Profile;
   email: string;
   /** Where the PNG of this profile comes from. Null hides the button. */
   downloadHref?: string | null;
+  /** Admins only: where sitting the test again starts. A candidate has one attempt and is never given this. */
+  retakeHref?: string | null;
 }) {
   return (
     <div className="min-h-dvh bg-void text-hi">
@@ -30,15 +33,31 @@ export function CandidateProfile({
           Your dark store manager profile
         </h1>
         <p className="mt-2 text-[14px] break-all text-lo">{email}</p>
-        {downloadHref ? (
-          <a
-            href={downloadHref}
-            download
-            className="mt-4 inline-flex min-h-[46px] items-center gap-2 rounded-full bg-ember-500 px-5 text-[13.5px] font-bold tracking-[0.06em] text-void uppercase transition-[filter] hover:brightness-110"
-          >
-            <Download className="size-4" aria-hidden />
-            Download profile
-          </a>
+        <div className="mt-4 flex flex-wrap items-center gap-2.5">
+          {downloadHref ? (
+            <a
+              href={downloadHref}
+              download
+              className="inline-flex min-h-[46px] items-center gap-2 rounded-full bg-ember-500 px-5 text-[13.5px] font-bold tracking-[0.06em] text-void uppercase transition-[filter] hover:brightness-110"
+            >
+              <Download className="size-4" aria-hidden />
+              Download profile
+            </a>
+          ) : null}
+          {retakeHref ? (
+            <a
+              href={retakeHref}
+              className="inline-flex min-h-[46px] items-center gap-2 rounded-full border border-line-strong bg-white/[0.04] px-5 text-[13.5px] font-bold tracking-[0.06em] text-hi uppercase transition-colors hover:border-line-bright hover:bg-white/[0.08]"
+            >
+              <RotateCcw className="size-4" aria-hidden />
+              Sit the test again
+            </a>
+          ) : null}
+        </div>
+        {retakeHref ? (
+          <p className="mt-2 text-[12.5px] leading-snug text-lo">
+            You see this because you are an admin. A candidate has one attempt. This attempt stays in the results list.
+          </p>
         ) : null}
 
         {profile.timedOut ? (
