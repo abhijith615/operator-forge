@@ -25,6 +25,7 @@ import {
   Segmented,
   Stat,
 } from "../ui";
+import { useShuffle } from "../shuffle";
 import type { SceneProps } from "./handover";
 
 /* ── The bag ──────────────────────────────────────────────────────────── */
@@ -153,6 +154,7 @@ export function FinalCall({ state, act }: SceneProps) {
   const tasks = state.tasksOffered;
   const [plan, setPlan] = React.useState<Record<string, PlanEntry>>({});
   const [picking, setPicking] = React.useState<string | null>(null);
+  const order = useShuffle("lateOrder");
 
   const count = (bucket: Bucket) => Object.values(plan).filter((entry) => entry.bucket === bucket).length;
   const set = (id: string, bucket: Bucket) => {
@@ -260,7 +262,7 @@ export function FinalCall({ state, act }: SceneProps) {
               ) : null}
               {task.id === "lateOrder" && entry && entry.bucket !== "later" ? (
                 <div className="mt-2 grid gap-1.5">
-                  {LATE_ORDER_FIXES.map((fix) => (
+                  {order(LATE_ORDER_FIXES).map((fix) => (
                     <Choice
                       key={fix.id}
                       selected={entry.fix === fix.id}

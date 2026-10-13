@@ -37,6 +37,7 @@ import {
   Tile,
   coverageTone,
 } from "../ui";
+import { useShuffle } from "../shuffle";
 import type { SceneProps } from "./handover";
 
 /* ── Three problems, one manager ──────────────────────────────────────── */
@@ -373,6 +374,9 @@ export function Bottleneck({ state, act }: SceneProps) {
   const b = state.bn;
   const now = metricsOf(state);
   const ran = b.ranAt !== null;
+  // "Not sure yet" is not a diagnosis, and stays last; the five that are go in this attempt's order.
+  const order = useShuffle("floorLead");
+  const replies = [...order(REPLIES.filter((reply) => reply.id !== "unsure")), ...REPLIES.filter((reply) => reply.id === "unsure")];
 
   const [open, setOpen] = React.useState<string | null>(null);
   const [draft, setDraft] = React.useState<Intervention[]>([]);
@@ -423,7 +427,7 @@ export function Bottleneck({ state, act }: SceneProps) {
       <Eyebrow className="mt-5 mb-1">Your answer to the Floor Lead</Eyebrow>
       <p className="mb-2 text-[13.5px] leading-snug text-mid">Where is the store stuck? You can change your answer until you move on.</p>
       <div role="radiogroup" aria-label="Where is the store stuck?" className="grid gap-1.5 sm:grid-cols-2">
-        {REPLIES.map((reply) => {
+        {replies.map((reply) => {
           const chosen = b.reply === reply.id;
           return (
             <button

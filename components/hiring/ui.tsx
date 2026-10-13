@@ -9,6 +9,8 @@ import { STATION_LABEL } from "@/lib/hiring/roster";
 import type { OwnerOption } from "@/lib/hiring/view";
 import { cn } from "@/lib/utils";
 
+import { useShuffle } from "./shuffle";
+
 /**
  * The Hiring Test's shared surface.
  *
@@ -447,6 +449,8 @@ export function OwnerSheet({
     onOpenChange(false);
     onPick(owner);
   };
+  // Not best-suited first: who suits the job is on each row to be read, not given away by where the row sits.
+  const order = useShuffle(`owner:${title}`);
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={title} description={description}>
       {self ? (
@@ -466,7 +470,7 @@ export function OwnerSheet({
         </>
       ) : null}
       <ul className="space-y-1.5">
-        {options.map((option) => (
+        {order(options).map((option) => (
           <li key={option.id}>
             <button
               type="button"

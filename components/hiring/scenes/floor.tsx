@@ -24,6 +24,7 @@ import { skillWord } from "@/lib/hiring/view";
 import { cn } from "@/lib/utils";
 
 import { ActionBar, Card, Choice, Eyebrow, Meter, Notice, PrimaryButton, SceneHeading, Sheet } from "../ui";
+import { useShuffle } from "../shuffle";
 import type { SceneProps } from "./handover";
 
 const SKILL_TONE: Record<string, string> = {
@@ -386,6 +387,7 @@ export function Floor({ state, act }: SceneProps) {
 export function Absence({ state, act }: SceneProps) {
   // Agency staff already called in from the floor board are part of the answer until taken out of it.
   const [chosen, setChosen] = React.useState<AbsenceChoice[]>(state.agency > 0 ? ["onDemand"] : []);
+  const order = useShuffle("absence");
 
   const toggle = (id: AbsenceChoice) => {
     setChosen((current) => {
@@ -414,7 +416,7 @@ export function Absence({ state, act }: SceneProps) {
 
       <Eyebrow className="mt-5 mb-2">What do you do?</Eyebrow>
       <div className="grid gap-2">
-        {ABSENCE_OPTIONS.map((option) => (
+        {order(ABSENCE_OPTIONS).map((option) => (
           <Choice
             key={option.id}
             selected={chosen.includes(option.id)}

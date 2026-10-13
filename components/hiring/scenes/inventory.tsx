@@ -45,6 +45,7 @@ import {
   Stat,
   Tile,
 } from "../ui";
+import { useShuffle } from "../shuffle";
 import type { SceneProps } from "./handover";
 
 const inr = (value: number) => `₹${value.toLocaleString("en-IN")}`;
@@ -218,6 +219,7 @@ export function HighValueCase({ state, act }: SceneProps) {
 const PILES: UnitCall[] = ["explained", "recovered", "unresolved", "writeoff", "theft"];
 
 function Disposition({ state, act, onBack }: SceneProps & { onBack: () => void }) {
+  const order = useShuffle("case");
   const hv = formFor(state.form).highValue;
   const short = hv.system - hv.physical;
   const [piles, setPiles] = React.useState<Record<UnitCall, number>>({ explained: 0, recovered: 0, unresolved: 0, writeoff: 0, theft: 0 });
@@ -251,7 +253,7 @@ function Disposition({ state, act, onBack }: SceneProps & { onBack: () => void }
           </span>
         </div>
         <ul className="space-y-1.5">
-          {UNIT_CALLS.map((pile) => (
+          {order(UNIT_CALLS).map((pile) => (
             <li key={pile.id} className="flex items-center gap-3 rounded-[12px] border border-line bg-white/[0.02] px-3 py-2">
               <span className="min-w-0 flex-1 text-[14.5px] font-medium text-hi">{pile.label}</span>
               <button
@@ -280,7 +282,7 @@ function Disposition({ state, act, onBack }: SceneProps & { onBack: () => void }
 
       <Eyebrow className="mt-5 mb-2">What happens next</Eyebrow>
       <div className="grid gap-2 sm:grid-cols-2">
-        {CASE_STEPS.map((step) => (
+        {order(CASE_STEPS).map((step) => (
           <Choice key={step.id} selected={steps.includes(step.id)} onClick={() => setSteps((current) => flip(current, step.id))}>
             {step.label}
           </Choice>
@@ -289,7 +291,7 @@ function Disposition({ state, act, onBack }: SceneProps & { onBack: () => void }
 
       <Eyebrow className="mt-5 mb-2">Change to the process · up to two</Eyebrow>
       <div className="grid gap-2">
-        {CONTROL_FIXES.map((fix) => (
+        {order(CONTROL_FIXES).map((fix) => (
           <Choice
             key={fix.id}
             selected={controls.includes(fix.id)}
@@ -325,6 +327,7 @@ export function NilPick({ state, act }: SceneProps) {
   const records = React.useMemo(() => nilRecords(state.form), [state.form]);
   const [reading, setReading] = React.useState<string | null>(null);
   const [sheet, setSheet] = React.useState<"search" | "restock" | null>(null);
+  const order = useShuffle("nil");
 
   const found = nilFound(state);
   const searching = n.searchOwner !== null && n.searchDoneAt !== null && n.searchDoneAt > state.clock;
@@ -375,18 +378,16 @@ export function NilPick({ state, act }: SceneProps) {
 
       <Eyebrow className="mt-5 mb-2">Decide</Eyebrow>
       <div className="grid gap-2 sm:grid-cols-2">
-        <Choice go disabled={!found} onClick={() => setSheet("restock")} detail={found ? "Fill the bin and ship the order complete." : "Nothing found to put away yet."}>
-          Put the crate away
-        </Choice>
-        <Choice go onClick={() => act({ t: "nilResolve", how: "authorise" })} detail="Ship the order without it. Refund the line.">
-          Authorise the nil pick
-        </Choice>
-        <Choice go onClick={() => act({ t: "nilResolve", how: "delist" })} detail="Take the item off sale in the app.">
-          De-list the item
-        </Choice>
-        <Choice go onClick={() => act({ t: "nilResolve", how: "ignore" })} detail="Leave it with the picker.">
-          Ignore
-        </Choice>
+        {order([
+          { id: "replenish", label: "Put the crate away", detail: found ? "Fill the bin and ship the order complete." : "Nothing found to put away yet.", disabled: !found, go: () => setSheet("restock") },
+          { id: "authorise", label: "Authorise the nil pick", detail: "Ship the order without it. Refund the line.", disabled: false, go: () => act({ t: "nilResolve", how: "authorise" }) },
+          { id: "delist", label: "De-list the item", detail: "Take the item off sale in the app.", disabled: false, go: () => act({ t: "nilResolve", how: "delist" }) },
+          { id: "ignore", label: "Ignore", detail: "Leave it with the picker.", disabled: false, go: () => act({ t: "nilResolve", how: "ignore" }) },
+        ]).map((choice) => (
+          <Choice go key={choice.id} disabled={choice.disabled} onClick={choice.go} detail={choice.detail}>
+            {choice.label}
+          </Choice>
+        ))}
       </div>
 
       {searching ? (

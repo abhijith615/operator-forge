@@ -15,6 +15,7 @@ import type { ArjunResponse, RiyaChoice } from "@/lib/hiring/types";
 import { cn } from "@/lib/utils";
 
 import { ActionBar, Card, Choice, Eyebrow, Facts, PrimaryButton, QuietButton, SceneHeading, Speech, Tile } from "../ui";
+import { useShuffle } from "../shuffle";
 import type { SceneProps } from "./handover";
 
 /* ── Riya ─────────────────────────────────────────────────────────────── */
@@ -28,6 +29,7 @@ import type { SceneProps } from "./handover";
 export function Riya({ state, act }: SceneProps) {
   const [chosen, setChosen] = React.useState<RiyaChoice[]>([]);
   const opened = state.riya.inspected;
+  const order = useShuffle("riya");
 
   const toggle = (id: RiyaChoice) =>
     setChosen((current) =>
@@ -88,7 +90,7 @@ export function Riya({ state, act }: SceneProps) {
 
       <Eyebrow className="mt-5 mb-2">Your call · choose up to two</Eyebrow>
       <div className="grid gap-2 sm:grid-cols-2">
-        {RIYA_OPTIONS.map((option) => (
+        {order(RIYA_OPTIONS).map((option) => (
           <Choice
             key={option.id}
             selected={chosen.includes(option.id)}
@@ -122,11 +124,13 @@ function Group<T extends string>({
   value: T | null;
   onChange: (value: T) => void;
 }) {
+  // Ranked one by one, so an answer that only appears once something has been checked slots in without moving the rest.
+  const order = useShuffle(`arjun:${label}`);
   return (
     <div>
       <Eyebrow className="mb-2">{label}</Eyebrow>
       <div className="grid gap-1.5">
-        {options.map((option) => (
+        {order(options).map((option) => (
           <Choice key={option.id} selected={value === option.id} onClick={() => onChange(option.id)}>
             “{option.label}”
           </Choice>
