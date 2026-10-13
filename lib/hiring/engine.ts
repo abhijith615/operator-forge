@@ -24,7 +24,7 @@ import {
   taskFit,
   weakestStage,
 } from "./model";
-import { BY_ID, ROSTER, STATION_LABEL, STATION_PLACE, nameOf } from "./roster";
+import { AGENCY_COST, AGENCY_MAX, BY_ID, ROSTER, STATION_LABEL, STATION_PLACE, nameOf } from "./roster";
 import {
   STAGES,
   STATIONS,
@@ -91,6 +91,7 @@ export function initialState(form: FormId): HiringState {
     floor: null,
     absence: null,
     tempArrivesAt: null,
+    agency: 0,
     riya: { inspected: false, choices: null, pairUntil: 0, pairPartner: null, leftAt: null },
     arjun: { place: null, checked: [], response: null, outcome: "pending", unsupportedPromise: false },
     kase: {
@@ -282,6 +283,14 @@ function delegate(
     state.busy[owner] = { until: state.clock + duration, task };
   }
   return state.clock + duration;
+}
+
+/** Book, change or cancel agency staff. Each is paid for four hours whether or not the rush lasts that long. */
+function bookAgency(state: HiringState, wanted: number): void {
+  const count = Math.max(0, Math.min(AGENCY_MAX, Math.round(wanted)));
+  state.cost += (count - state.agency) * AGENCY_COST;
+  state.agency = count;
+  state.tempArrivesAt = count > 0 ? TEMP_AT : null; // 06:20
 }
 
 /** Something was done about the stage that is stuck. */
@@ -574,6 +583,11 @@ function apply(state: HiringState, action: Action): string[] {
       }
       break;
 
+    case "agency":
+      // Extra hands from the staffing agency, by the hour. Booked from the floor board.
+      if (state.scene === "floor" || state.scene === "absence") bookAgency(state, action.count);
+      break;
+
     case "standby":
       if (state.scene === "floor" || state.scene === "absence") {
         if (action.on !== state.riders.standby) state.cost += action.on ? 300 : -300;
@@ -597,10 +611,9 @@ function apply(state: HiringState, action: Action): string[] {
 
     case "absence": {
       if (state.scene !== "absence") break;
-      if (action.choices.includes("onDemand")) {
-        state.tempArrivesAt = TEMP_AT; // 06:20
-        state.cost += 640;
-      }
+      // The staffing decision is settled here: whatever was booked on the floor
+      // board stands if agency cover is part of it, and is cancelled if it is not.
+      bookAgency(state, action.choices.includes("onDemand") ? Math.max(1, state.agency) : 0);
       const projected = projectedPeak(state, action.choices.includes("extend"));
       state.absence = {
         choices: action.choices,
@@ -1206,6 +1219,8 @@ function admissible(state: HiringState, action: Action): boolean {
       return person(action.emp) && typeof action.locked === "boolean";
     case "standby":
       return typeof action.on === "boolean";
+    case "agency":
+      return Number.isInteger(action.count) && action.count >= 0 && action.count <= AGENCY_MAX;
     case "absence":
       return within(ABSENCE_CHOICES, action.choices);
     case "riya":

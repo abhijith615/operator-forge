@@ -131,7 +131,7 @@ export const DEMAND_OUTLOOK = [
 /* ── Absence ──────────────────────────────────────────────────────────── */
 
 export const ABSENCE_OPTIONS: { id: AbsenceChoice; label: string; detail: string }[] = [
-  { id: "onDemand", label: "Agency replacement", detail: "A picker from the staffing agency. 4-hour booking, ₹640. Arrives 06:20. Picking only, first shift here." },
+  { id: "onDemand", label: "Agency staff, by the hour", detail: "A picker from the staffing agency: ₹160 an hour, 4-hour minimum (₹640). Arrives 06:20. Picking only, first shift here." },
   { id: "reallocate", label: "Internal reallocation", detail: "Move the people you have, and set their devices. Opens the floor board." },
   { id: "extend", label: "Ask an associate to extend", detail: "Arjun’s overnight shift ends at 06:30. Ask him to stay to 08:30." },
   { id: "short", label: "Operate short", detail: "Run the morning with the twelve on the floor." },

@@ -13,7 +13,7 @@ import {
   perishablesEta,
   projectedPeak,
 } from "./model";
-import { BY_ID, ROSTER } from "./roster";
+import { BY_ID, ROSTER, isTemp } from "./roster";
 import {
   STATIONS,
   type AbsenceChoice,
@@ -175,7 +175,7 @@ function misplaced(state: HiringState): number {
  * couple of devices left open for a rush bigger than forecast.
  */
 function projectedView(state: HiringState, withTemp: boolean): number[] {
-  const view = withTemp && state.tempArrivesAt === null ? { ...state, tempArrivesAt: TEMP_AT } : state;
+  const view = withTemp && state.tempArrivesAt === null ? { ...state, tempArrivesAt: TEMP_AT, agency: 1 } : state;
   const eta = perishablesEta(view);
   return [
     -empty(view),
@@ -216,7 +216,7 @@ function withDesk(state: HiringState, emp: string): HiringState {
 }
 
 function movable(state: HiringState, id: string): boolean {
-  return id !== "riya" && id !== "temp" && isFree(state, id);
+  return id !== "riya" && !isTemp(id) && isFree(state, id);
 }
 
 /** One thing a manager can change on the floor board. */

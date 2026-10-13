@@ -1,6 +1,6 @@
 import { candidatesFor, leavesStation } from "./engine";
 import { coverageOf, isFree, isLocked, pullOf } from "./model";
-import { BY_ID, STATION_LABEL } from "./roster";
+import { BY_ID, STATION_LABEL, isTemp } from "./roster";
 import type { HiringState, Station, TaskKind } from "./types";
 
 /**
@@ -73,7 +73,7 @@ function without(state: HiringState, id: string): string {
 /** Who could be given a job, best suited first, and what it costs to give it to them. */
 export function ownerOptions(state: HiringState, kind: TaskKind): OwnerOption[] {
   return candidatesFor(state, kind)
-    .filter((candidate) => candidate.id !== "temp")
+    .filter((candidate) => !isTemp(candidate.id))
     .map((candidate) => {
       const employee = BY_ID[candidate.id]!;
       const station = state.assign[candidate.id]!;
@@ -100,7 +100,7 @@ export function ownerOptions(state: HiringState, kind: TaskKind): OwnerOption[] 
 /** Who could be moved to stand at a station, and what they leave behind. */
 export function moverOptions(state: HiringState, to: Station): OwnerOption[] {
   return Object.keys(state.assign)
-    .filter((id) => id !== "riya" && id !== "temp" && state.assign[id] !== to)
+    .filter((id) => id !== "riya" && !isTemp(id) && state.assign[id] !== to)
     .map((id) => {
       const employee = BY_ID[id]!;
       const skill = employee.skills[to];

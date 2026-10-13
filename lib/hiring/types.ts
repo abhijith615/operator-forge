@@ -130,6 +130,8 @@ export type Action =
   | { t: "lock"; emp: string; locked: boolean }
   /** Ask the rider partner for the two standby riders, or stand them down. */
   | { t: "standby"; on: boolean }
+  /** Call in agency staff by the hour: how many, from none to two. */
+  | { t: "agency"; count: number }
   | { t: "lockFloor" }
   | { t: "absence"; choices: AbsenceChoice[] }
   | { t: "riya"; choices: RiyaChoice[] }
@@ -304,6 +306,8 @@ export interface HiringState {
     at: number;
   } | null;
   tempArrivesAt: number | null;
+  /** Agency staff booked by the hour, none to two. */
+  agency: number;
 
   riya: {
     inspected: boolean;

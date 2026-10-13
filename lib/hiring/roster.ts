@@ -153,11 +153,11 @@ export const ROSTER: Employee[] = [
   },
 ];
 
-/** The agency's replacement picker, if one is booked. Picking only, and not quick. */
+/** An agency picker, if one is booked. Picking only, and not quick. */
 export const TEMP: Employee = {
   id: "temp",
   name: "Agency picker",
-  title: "4-hour booking",
+  title: "Paid by the hour",
   skills: skills(0.7, 0, 0),
   auth: none,
   tenure: "First shift here",
@@ -165,8 +165,24 @@ export const TEMP: Employee = {
   note: "Sent by the staffing agency. Does not know the racks.",
 };
 
+/**
+ * Extra hands from the staffing agency, paid by the hour. Up to two can be
+ * called in for the morning; each is booked for at least four hours, and
+ * neither arrives before 06:20.
+ */
+export const AGENCY_RATE = 160;
+export const AGENCY_HOURS = 4;
+export const AGENCY_COST = AGENCY_RATE * AGENCY_HOURS;
+export const AGENCY_MAX = 2;
+
+const TEMPS: Employee[] = [TEMP, { ...TEMP, id: "temp2", name: "Agency picker 2" }];
+export const TEMP_IDS = TEMPS.map((employee) => employee.id);
+export function isTemp(id: string): boolean {
+  return TEMP_IDS.includes(id);
+}
+
 export const BY_ID: Record<string, Employee> = Object.fromEntries(
-  [...ROSTER, TEMP].map((employee) => [employee.id, employee]),
+  [...ROSTER, ...TEMPS].map((employee) => [employee.id, employee]),
 );
 
 /**

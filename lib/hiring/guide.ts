@@ -110,7 +110,7 @@ const ENTRIES: Entry[] = [
   {
     topic: "coverage",
     match: /(\d ?%|\b(percent\w*|coverage|capacity|forecast|bars?|projected)\b)/i,
-    text: "Each percentage is capacity measured against the work being asked for. 100% is exactly enough. Picking counts the pickers, plus the share of their time the app will take from unlocked devices. Putaway is the people filling bins against what is selling. Riders is riders logged in against bags going out. On the floor board the figures are for 06:30, the forecast peak, with the floor as it is now. In the panels during the shift they are right now.",
+    text: "Each percentage is capacity measured against the work being asked for. 100% is exactly enough. Picking counts the pickers, plus the share of their time the app will take from unlocked devices. Putaway is the people filling bins against what is selling, less the time the app takes from any of them whose device is unlocked. Riders is riders logged in against bags going out. So moving a picker to putaway with their device unlocked changes less than it looks as if it should: in the rush the app sends that person orders again. The line under each bar says how the number is made up. On the floor board the figures are for 06:30, the forecast peak, with the floor as it is now. In the panels during the shift they are right now.",
     suggestions: ["What are the three kinds of work?", "What is the flexible reserve?", "What is “load”?"],
   },
   {
@@ -229,8 +229,8 @@ const ENTRIES: Entry[] = [
   },
   {
     topic: "absence",
-    match: /\b(agency|on.?demand|temp(orary)?|booking|₹ ?640|extend|overtime|operate short|reallocat\w*|absen\w*)\b/i,
-    text: "Four ways to cover the absence, and you can combine them. An agency replacement is a picker sent by the staffing agency on a four-hour booking: it costs ₹640, arrives at 06:20, and can only pick. Internal reallocation opens the floor board so you can move the people you have and set their devices. Asking an associate to extend means asking Arjun, whose overnight shift ends at 06:30, to stay to 08:30. Operating short means running with the twelve present.",
+    match: /\b(agency|on.?demand|temp(orary)?|booking|₹ ?640|₹ ?160|by the hour|hourly|call in|extra staff|additional staff|extend|overtime|operate short|reallocat\w*|absen\w*)\b/i,
+    text: "Agency staff are extra pickers from the staffing agency, paid by the hour: ₹160 an hour each with a four-hour minimum, so ₹640 each. Up to two can be called in, from the floor board or when the absence comes up. They arrive at 06:20 and can only pick, because they do not know the racks. The absence has three other answers, and they can be combined: internal reallocation opens the floor board so you can move the people you have and set their devices; asking an associate to extend means asking Arjun, whose overnight shift ends at 06:30, to stay to 08:30; operating short means running with the twelve present.",
     suggestions: ["What do the percentages mean?", "How do I move someone?"],
   },
   {

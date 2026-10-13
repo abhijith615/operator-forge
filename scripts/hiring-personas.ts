@@ -8,7 +8,7 @@
 import { paceOf } from "../lib/hiring/content";
 import { expire, replay } from "../lib/hiring/engine";
 import { allSuggestions, answer } from "../lib/hiring/guide";
-import { clockLabel, outputOf } from "../lib/hiring/model";
+import { clockLabel, forecastParts, outputOf, projectedPeak } from "../lib/hiring/model";
 import { PERSONAS, sitShift, type PersonaId, type Style } from "../lib/hiring/personas";
 import { DECISIONS, scoreAssessment, type AssessmentResult } from "../lib/hiring/scoring";
 import type { FormId, HiringState } from "../lib/hiring/types";
@@ -287,6 +287,49 @@ for (const form of FORMS) {
   check(tag("cross-scenario evidence is produced"), good.result.crossScenario.length >= 3 && riyaRemoved.result.crossScenario.length >= 3,
     `${good.result.crossScenario.length}`);
   check(tag("interview probes come from the evidence"), neglected.result.probes.length >= 3 && neglected.result.probes.every((p) => p.evidence.length > 20));
+}
+
+/* ── The floor board: agency staff, and what the percentages are made of ── */
+
+console.log("\nfloor board\n");
+
+for (const form of FORMS) {
+  const tag = (name: string) => `[${form}] ${name}`;
+  const at = (n: number) => n * 1000;
+  const take = { a: { t: "takeShift" } as const, at: at(1) };
+  const start = replay(form, [take]);
+
+  const two = replay(form, [take, { a: { t: "agency", count: 2 }, at: at(2) }]);
+  check(tag("agency staff can be called in from the floor board, paid by the hour"),
+    two.agency === 2 && two.cost === 2 * 640 && two.tempArrivesAt !== null &&
+      forecastParts(two).picking.people === forecastParts(start).picking.people + 2 &&
+      forecastParts(two).picking.own > forecastParts(start).picking.own + 0.1,
+    `agency ${two.agency} cost ${two.cost} own ${forecastParts(start).picking.own.toFixed(2)} → ${forecastParts(two).picking.own.toFixed(2)}`);
+
+  const lock = { a: { t: "lockFloor" } as const, at: at(3) };
+  const kept = replay(form, [take, { a: { t: "agency", count: 2 }, at: at(2) }, lock, { a: { t: "absence", choices: ["onDemand", "extend"] }, at: at(4) }]);
+  const dropped = replay(form, [take, { a: { t: "agency", count: 2 }, at: at(2) }, lock, { a: { t: "absence", choices: ["short"] }, at: at(4) }]);
+  const single = replay(form, [take, lock, { a: { t: "absence", choices: ["onDemand"] }, at: at(4) }]);
+  check(tag("the staffing decision keeps, cancels or makes the booking"),
+    kept.agency === 2 && kept.cost === 1280 && dropped.agency === 0 && dropped.cost === 0 && dropped.tempArrivesAt === null &&
+      single.agency === 1 && single.cost === 640,
+    `kept ${kept.agency}/${kept.cost} dropped ${dropped.agency}/${dropped.cost} single ${single.agency}/${single.cost}`);
+  check(tag("more than two agency staff is not on offer"),
+    replay(form, [take, { a: { t: "agency", count: 3 }, at: at(2) }]).agency === 0);
+
+  // Moving a picker to putaway with the device unlocked: the board has to be able to say what happened.
+  const moved = replay(form, [take, { a: { t: "assign", emp: "kiran", to: "putaway" }, at: at(2) }]);
+  const before = forecastParts(start);
+  const after = forecastParts(moved);
+  check(tag("moving a picker to putaway shows as one picker fewer and one putaway hand more"),
+    after.picking.people === before.picking.people - 1 && after.picking.own < before.picking.own - 0.05 &&
+      after.putaway.people === before.putaway.people + 1 && after.putaway.own > before.putaway.own + 0.2 &&
+      after.putaway.unlocked === before.putaway.unlocked + 1,
+    `picking ${before.picking.own.toFixed(2)} → ${after.picking.own.toFixed(2)}, putaway ${before.putaway.own.toFixed(2)} → ${after.putaway.own.toFixed(2)}`);
+  const lockedMove = replay(form, [take, { a: { t: "assign", emp: "kiran", to: "putaway" }, at: at(2) }, { a: { t: "lock", emp: "kiran", locked: true }, at: at(3) }]);
+  check(tag("and locking that device is what makes the move count at 06:30"),
+    projectedPeak(lockedMove).putaway > projectedPeak(moved).putaway + 0.05,
+    `putaway ${projectedPeak(moved).putaway.toFixed(2)} unlocked → ${projectedPeak(lockedMove).putaway.toFixed(2)} locked`);
 }
 
 /* ── Running out of time ──────────────────────────────────────────────── */

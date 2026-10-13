@@ -1,5 +1,5 @@
 import { STANDBY_RIDERS, formFor } from "./forms";
-import { BY_ID, PPI_TARGET, ROSTER } from "./roster";
+import { BY_ID, PPI_TARGET, ROSTER, TEMP_IDS, isTemp } from "./roster";
 import {
   STAGES,
   STATIONS,
@@ -114,7 +114,9 @@ export function demandAt(clock: number): number {
 /* ── People ───────────────────────────────────────────────────────────── */
 
 export function isPresent(state: HiringState, id: string, clock = state.clock): boolean {
-  if (id === "temp") return state.tempArrivesAt !== null && clock >= state.tempArrivesAt;
+  if (isTemp(id)) {
+    return TEMP_IDS.indexOf(id) < state.agency && state.tempArrivesAt !== null && clock >= state.tempArrivesAt;
+  }
   if (id === "arjun" && state.arjun.outcome === "leaving" && clock >= PEAK_AT) return false;
   if (id === "riya" && state.riya.leftAt !== null && clock >= state.riya.leftAt) return false;
   return id in state.assign;
@@ -325,22 +327,59 @@ function shelfFactor(state: HiringState, clock: number): number {
   return 1 - SHELF_DRAG * Math.max(0, 1 - shelf);
 }
 
+const FORECAST_AT = PEAK_AT - 1;
+
+/** The floor as it will stand at 06:30: nobody away on a task, and any agency staff booked already in. */
+function forecastView(state: HiringState, includeArjun: boolean): HiringState {
+  const assign =
+    includeArjun || state.assign.arjun === undefined ? { ...state.assign } : withoutKey(state.assign, "arjun");
+  if (state.tempArrivesAt !== null) {
+    for (const id of TEMP_IDS.slice(0, state.agency)) assign[id] ??= "picking";
+  }
+  return { ...state, assign, busy: {} };
+}
+
 /** What the planning board shows for 06:30, given who is where and which devices are locked. */
 export function projectedPeak(state: HiringState, includeArjun = true): Record<Stage, number> {
-  const at = PEAK_AT - 1;
-  const view: HiringState =
-    includeArjun || state.assign.arjun === undefined
-      ? state
-      : { ...state, assign: withoutKey(state.assign, "arjun") };
-  // Nobody is counted as away on a task for a forecast.
-  const settled: HiringState = { ...view, busy: {} };
-  const withTemp: HiringState =
-    state.tempArrivesAt !== null && !("temp" in settled.assign)
-      ? { ...settled, assign: { ...settled.assign, temp: "picking" } }
-      : settled;
+  const view = forecastView(state, includeArjun);
   return Object.fromEntries(
-    STAGES.map((stage) => [stage, coverageOf(withTemp, stage, at, true)]),
+    STAGES.map((stage) => [stage, coverageOf(view, stage, FORECAST_AT, true)]),
   ) as Record<Stage, number>;
+}
+
+/**
+ * How the forecast is made up, so the board can say why a number is what it
+ * is. Moving three pickers to putaway does not drop picking by three pickers
+ * if their devices are unlocked: the app sends them orders in the rush, and
+ * what falls is the putaway they were moved to do. The percentages are right
+ * and, without this, look wrong.
+ */
+export interface ForecastParts {
+  /** Share of their time the unlocked devices spend on orders at 06:30. */
+  pull: number;
+  picking: { people: number; own: number };
+  putaway: { people: number; unlocked: number; own: number };
+  auditing: { people: number; unlocked: number };
+}
+
+export function forecastParts(state: HiringState, includeArjun = true): ForecastParts {
+  const view = forecastView(state, includeArjun);
+  const at = FORECAST_AT;
+  const open = (station: Station) => staffAt(view, station, at).filter((id) => !isLocked(view, id, at)).length;
+  const whole = (station: Station) => staffAt(view, station, at).reduce((sum, id) => sum + outputOf(view, id, station, at), 0);
+  return {
+    pull: pullOf(view, at, true),
+    picking: {
+      people: staffAt(view, "picking", at).length,
+      own: dedicatedPicking(view, at) / requiredOf(view, "picking", at, true),
+    },
+    putaway: {
+      people: staffAt(view, "putaway", at).length,
+      unlocked: open("putaway"),
+      own: whole("putaway") / requiredOf(view, "putaway", at, true),
+    },
+    auditing: { people: staffAt(view, "auditing", at).length, unlocked: open("auditing") },
+  };
 }
 
 function withoutKey<T>(record: Record<string, T>, key: string): Record<string, T> {
@@ -453,8 +492,8 @@ export function advanceTo(state: HiringState, target: number): void {
     const minutes = dt / 60;
     const rate = ORDERS_PER_MINUTE * demandAt(state.clock);
 
-    if (state.tempArrivesAt !== null && state.clock >= state.tempArrivesAt && !state.assign.temp) {
-      state.assign.temp = "picking";
+    if (state.tempArrivesAt !== null && state.clock >= state.tempArrivesAt) {
+      for (const id of TEMP_IDS.slice(0, state.agency)) state.assign[id] ??= "picking";
     }
 
     const pick = rate * coverageOf(state, "picking") * minutes;
@@ -518,7 +557,7 @@ export function advanceTo(state: HiringState, target: number): void {
  */
 export function taskFit(id: string, kind: TaskKind): { fit: number; seconds: number } {
   const employee = BY_ID[id];
-  if (!employee || id === "temp") return { fit: 0.2, seconds: 600 };
+  if (!employee || isTemp(id)) return { fit: 0.2, seconds: 600 };
   const { auth, skills: s } = employee;
 
   switch (kind) {

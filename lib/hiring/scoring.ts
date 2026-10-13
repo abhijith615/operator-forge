@@ -164,7 +164,7 @@ function teamEvents(state: HiringState): Draft[] {
     let score = projectedMin >= 0.93 ? 3 : projectedMin >= 0.85 ? 2 : projectedMin >= 0.8 ? 1 : 0;
     if (over && score === 3) score = 2;
     const did: Record<string, string> = {
-      onDemand: "booked a four-hour agency picker",
+      onDemand: state.agency > 1 ? `called in ${state.agency} agency pickers by the hour` : "called in an agency picker by the hour",
       reallocate: "reallocated internally",
       extend: "asked an overnight associate to stay",
       short: "chose to run short",

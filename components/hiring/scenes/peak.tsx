@@ -6,7 +6,7 @@ import { ArrowRight, Lock, LockOpen, X } from "lucide-react";
 import { BN_PANELS } from "@/lib/hiring/engine";
 import { FLOOR_LEAD_SAYS, PROCESS_FIX, RIDERS_ROSTERED, STANDBY_RIDERS, formFor } from "@/lib/hiring/forms";
 import { CTD_TARGET, aisleBlocked, clockLabel, floorHolding, isLocked, metricsOf, ridersOn } from "@/lib/hiring/model";
-import { PPI_TARGET, STATION_LABEL, nameOf } from "@/lib/hiring/roster";
+import { PPI_TARGET, STATION_LABEL, isTemp, nameOf } from "@/lib/hiring/roster";
 import {
   STATIONS,
   type HiringState,
@@ -233,7 +233,7 @@ function people(state: HiringState, station: Station): string {
 
 /** Everybody whose device has a lock on it: on putaway or auditing. */
 function devices(state: HiringState): string[] {
-  return Object.keys(state.assign).filter((id) => state.assign[id] !== "picking" && id !== "temp");
+  return Object.keys(state.assign).filter((id) => state.assign[id] !== "picking" && !isTemp(id));
 }
 
 function PanelBody({ state, panel }: { state: HiringState; panel: string }) {
