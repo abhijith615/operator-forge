@@ -12,7 +12,13 @@ const nextConfig: NextConfig = {
   // deployed function carries them.
   outputFileTracingIncludes: {
     "/challenge/certificate/download": ["./assets/fonts/*.ttf", "./public/logo.png"],
-    "/hiring-test/results/[assessmentId]/pdf": ["./assets/fonts/*.ttf", "./assets/hiring/mark.png"],
+    // The PDF library loads its built-in fonts by a path the tracer cannot follow.
+    "/hiring-test/results/[assessmentId]/pdf": [
+      "./assets/fonts/*.ttf",
+      "./assets/hiring/mark.png",
+      "./node_modules/pdfkit/js/standard-fonts/*",
+      "./node_modules/pdfkit/js/data/*",
+    ],
   },
 };
 
