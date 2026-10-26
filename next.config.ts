@@ -16,8 +16,8 @@ const nextConfig: NextConfig = {
     "/hiring-test/results/[assessmentId]/pdf": [
       "./assets/fonts/*.ttf",
       "./assets/hiring/mark.png",
-      "./node_modules/pdfkit/js/standard-fonts/*",
-      "./node_modules/pdfkit/js/data/*",
+      "./node_modules/pdfkit/js/standard-fonts/**/*",
+      "./node_modules/pdfkit/js/data/**/*",
     ],
   },
 };
