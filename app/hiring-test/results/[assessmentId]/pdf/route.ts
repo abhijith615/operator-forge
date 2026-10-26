@@ -34,8 +34,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ ass
   const { assessmentId } = await params;
 
   if (assessmentId === "sample") {
-    const brief = buildEmployerBrief(sampleResult(), { candidate: "Sample Candidate", role: "Assistant Store Manager", sample: true });
-    return pdfResponse(await renderBriefPdf(brief), "Sample Candidate");
+    try {
+      const brief = buildEmployerBrief(sampleResult(), { candidate: "Sample Candidate", role: "Assistant Store Manager", sample: true });
+      return pdfResponse(await renderBriefPdf(brief), "Sample Candidate");
+    } catch (error) {
+      // TEMPORARY: diagnosing a failure seen only on the deployed server. Public sample only.
+      const detail = error instanceof Error ? `${error.message}\n${error.stack ?? ""}` : String(error);
+      return new Response(`diag2\n${detail}`, { status: 500, headers: { "Content-Type": "text/plain" } });
+    }
   }
 
   if (!(await isAdmin())) notFound();
