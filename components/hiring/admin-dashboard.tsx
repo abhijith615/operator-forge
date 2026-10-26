@@ -224,13 +224,24 @@ export function HiringAdminDashboardView({ data }: { data: HiringDashboardData }
                     <td className="px-3 py-2.5 text-[12.5px] tabular-nums text-mid">{row.attempts}</td>
                     <td className="px-3 py-2.5 text-right text-[12.5px]">
                       {row.latest.state === "in_progress" ? null : (
-                        <Link
-                          href={`/hiring-test/results/${row.latest.id}`}
-                          className="inline-flex items-center gap-1 font-semibold text-ember-400 underline-offset-4 hover:underline"
-                        >
-                          Profile
-                          <ArrowUpRight className="size-3.5" aria-hidden />
-                        </Link>
+                        <span className="inline-flex items-center gap-3 whitespace-nowrap">
+                          <Link
+                            href={`/hiring-test/results/${row.latest.id}`}
+                            className="inline-flex items-center gap-1 font-semibold text-ember-400 underline-offset-4 hover:underline"
+                          >
+                            Profile
+                            <ArrowUpRight className="size-3.5" aria-hidden />
+                          </Link>
+                          <a
+                            href={`/hiring-test/results/${row.latest.id}/pdf`}
+                            download
+                            aria-label={`Download the 2-page PDF for ${row.who}`}
+                            className="inline-flex items-center gap-1 font-semibold text-mid underline-offset-4 hover:text-hi hover:underline"
+                          >
+                            PDF
+                            <Download className="size-3.5" aria-hidden />
+                          </a>
+                        </span>
                       )}
                     </td>
                   </tr>

@@ -8,10 +8,11 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
   },
-  // The certificate is drawn on the server from these files; make sure the
+  // The certificate and the candidate PDF are drawn on the server from these files; make sure the
   // deployed function carries them.
   outputFileTracingIncludes: {
     "/challenge/certificate/download": ["./assets/fonts/*.ttf", "./public/logo.png"],
+    "/hiring-test/results/[assessmentId]/pdf": ["./assets/fonts/*.ttf", "./assets/hiring/mark.png"],
   },
 };
 

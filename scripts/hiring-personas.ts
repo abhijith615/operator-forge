@@ -5,7 +5,10 @@
  *   npm run test:hiring            assertions only
  *   npm run test:hiring -- -v      plus every behaviour score
  */
+import { allBriefText, buildEmployerBrief } from "../lib/hiring/brief";
 import { paceOf } from "../lib/hiring/content";
+import { FORMS as FORM_CONTENT } from "../lib/hiring/forms";
+import { ROSTER } from "../lib/hiring/roster";
 import { expire, replay } from "../lib/hiring/engine";
 import { allSuggestions, answer } from "../lib/hiring/guide";
 import { clockLabel, forecastParts, outputOf, projectedPeak } from "../lib/hiring/model";
@@ -425,6 +428,26 @@ const FISHING = [
 ];
 const leaked = FISHING.filter((question) => answer(question).topic !== "asked_for_answer");
 check("questions fishing for the answer are declined", leaked.length === 0, leaked.join(" | "));
+
+/* ── The employer's two-page brief ────────────────────────────────────── */
+
+// An employer has never sat the simulation: nothing in the brief may name a
+// person, item, order, form or clock time from inside it.
+const INSIDE = [
+  ...ROSTER.map((employee) => employee.name),
+  ...Object.values(FORM_CONTENT).flatMap((form) => [form.highValue.item, form.nilPick.item, form.nilPick.order]),
+  "Form A", "Form B", "Form C", "Aisle", "cage", "Floor Lead", "nil pick", "Nil Pick",
+];
+const named = allBriefText().filter((line) => INSIDE.some((word) => line.includes(word)) || /\b0?[56]:\d\d\b/.test(line));
+check("the employer brief names nothing from inside the simulation", named.length === 0, named.join(" | "));
+
+for (const id of Object.keys(PERSONAS) as PersonaId[]) {
+  for (const form of FORMS) {
+    const brief = buildEmployerBrief(scoreAssessment(sitShift(form, PERSONAS[id]).state), { candidate: "x", role: "x" });
+    check(`${id} ${form}: brief has questions to ask`, brief.probes.length >= 3, String(brief.probes.length));
+    check(`${id} ${form}: brief lists at most five weaknesses`, brief.weaknesses.length <= 5);
+  }
+}
 
 console.log(failures.length ? `\n${failures.length} FAILED\n` : "\nall checks passed\n");
 process.exit(failures.length ? 1 : 0);

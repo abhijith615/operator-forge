@@ -33,7 +33,14 @@ export default async function HiringResultPage({ params }: { params: Promise<{ a
       <>
         <EmployerProfile
           result={sampleResult()}
-          meta={{ candidate: SAMPLE_CANDIDATE, role: "Assistant Store Manager", form: "A", version: ASSESSMENT_VERSION, sample: true }}
+          meta={{
+            candidate: SAMPLE_CANDIDATE,
+            role: "Assistant Store Manager",
+            form: "A",
+            version: ASSESSMENT_VERSION,
+            sample: true,
+            pdfHref: "/hiring-test/results/sample/pdf",
+          }}
         />
         <p className="bg-void pb-12 text-center text-[13.5px] text-mid">
           <Link href="/hiring-test" className="underline underline-offset-4 hover:text-hi">
@@ -92,6 +99,7 @@ export default async function HiringResultPage({ params }: { params: Promise<{ a
           status: attempt.status,
           device: attempt.device_type,
           session: attempt.session,
+          pdfHref: `/hiring-test/results/${encodeURIComponent(assessmentId)}/pdf`,
         }}
       />
     </>
