@@ -377,7 +377,6 @@ export interface BriefProbe extends BriefItem {
 
 export interface EmployerBrief {
   candidate: string;
-  role: string;
   date: string | null;
   sample: boolean;
   overall: number;
@@ -416,7 +415,7 @@ const FALLBACK_PROBES = ["T9", "C5", "P1", "I5"];
 
 export function buildEmployerBrief(
   result: AssessmentResult,
-  meta: { candidate: string; role: string; completedAt?: string | null; sample?: boolean },
+  meta: { candidate: string; completedAt?: string | null; sample?: boolean },
 ): EmployerBrief {
   const byWeight = (a: EvidenceEvent, b: EvidenceEvent) => assessmentWeights[b.competencyId] - assessmentWeights[a.competencyId];
   const evidence = result.evidence.filter(reached).filter((event) => PLAIN[event.behaviourId]);
@@ -464,7 +463,6 @@ export function buildEmployerBrief(
 
   return {
     candidate: meta.candidate,
-    role: meta.role,
     date: meta.completedAt ?? null,
     sample: meta.sample ?? false,
     overall: result.overall,

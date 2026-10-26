@@ -443,7 +443,7 @@ check("the employer brief names nothing from inside the simulation", named.lengt
 
 for (const id of Object.keys(PERSONAS) as PersonaId[]) {
   for (const form of FORMS) {
-    const brief = buildEmployerBrief(scoreAssessment(sitShift(form, PERSONAS[id]).state), { candidate: "x", role: "x" });
+    const brief = buildEmployerBrief(scoreAssessment(sitShift(form, PERSONAS[id]).state), { candidate: "x" });
     check(`${id} ${form}: brief has questions to ask`, brief.probes.length >= 3, String(brief.probes.length));
     check(`${id} ${form}: brief lists at most five weaknesses`, brief.weaknesses.length <= 5);
   }

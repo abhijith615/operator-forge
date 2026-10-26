@@ -155,7 +155,8 @@ function Band({ brief, title, sub, compact = false }: { brief: EmployerBrief; ti
 
 function BriefDocument({ brief }: { brief: EmployerBrief }) {
   const date = formatDate(brief.date);
-  const sub = [brief.role, date ? `Test taken ${date}` : null, "Dark store manager work sample"].filter(Boolean).join("  ·  ");
+  // No role: the same test is used for Assistant Store Manager and Store Manager hires.
+  const sub = [date ? `Test taken ${date}` : null, "Dark store manager work sample"].filter(Boolean).join("  ·  ");
   // Page one has to hold the serious concerns too; the lists give way to them.
   // The concerns are weaknesses themselves, and page two still covers the top four.
   const weakShown = brief.flags.length > 3 ? 3 : brief.flags.length ? 4 : 5;

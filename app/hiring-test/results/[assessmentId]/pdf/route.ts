@@ -16,8 +16,6 @@ import { candidateLabel, isCurrentVersion, readAttempt, resultFrom } from "@/lib
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const ROLE: Record<string, string> = { asm: "Assistant Store Manager", sm: "Store Manager" };
-
 function pdfResponse(pdf: Buffer, candidate: string) {
   return new Response(new Uint8Array(pdf), {
     status: 200,
@@ -34,7 +32,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ ass
   const { assessmentId } = await params;
 
   if (assessmentId === "sample") {
-    const brief = buildEmployerBrief(sampleResult(), { candidate: "Sample Candidate", role: "Assistant Store Manager", sample: true });
+    const brief = buildEmployerBrief(sampleResult(), { candidate: "Sample Candidate", sample: true });
     return pdfResponse(await renderBriefPdf(brief), "Sample Candidate");
   }
 
@@ -47,7 +45,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ ass
   const candidate = candidateLabel(attempt);
   const brief = buildEmployerBrief(result, {
     candidate,
-    role: ROLE[attempt.role_id] ?? "Assistant / Store Manager",
     completedAt: attempt.completed_at ?? attempt.started_at,
   });
   return pdfResponse(await renderBriefPdf(brief), candidate);
