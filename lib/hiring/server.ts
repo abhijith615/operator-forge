@@ -33,6 +33,8 @@ export interface AttemptRow {
   retired?: boolean;
   /** The name given at the start, where the attempt was sat without signing in. */
   candidate_name?: string | null;
+  /** The WhatsApp number given with the name (+91 and ten digits). Admin reads only. */
+  candidate_phone?: string | null;
 }
 
 /**

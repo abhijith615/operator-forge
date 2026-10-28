@@ -11,6 +11,7 @@ import { absoluteUrl } from "@/lib/utils";
 
 import { CONSENT_VERSION } from "./content";
 import { readGuestKey, writeGuestKey } from "./guest";
+import { whatsappNumber } from "./phone";
 import {
   candidateProfileFrom,
   isMissing,
@@ -83,7 +84,7 @@ export interface StartedAttempt {
   actions: Stamped[];
 }
 
-export type StartFailure = "name" | "busy" | "failed";
+export type StartFailure = "name" | "phone" | "busy" | "failed";
 
 /** A name as it will be stored: trimmed, single-spaced, two to eighty characters. */
 function tidyName(value: unknown): string | null {
@@ -92,20 +93,23 @@ function tidyName(value: unknown): string | null {
 }
 
 /**
- * Starting without signing in: a name, and nothing else.
+ * Starting without signing in: a name and a WhatsApp number, and nothing else.
  *
  * The attempt belongs to no account. The database hands back a secret with
  * it, which goes into a cookie this browser keeps and the page's scripts
  * cannot read; every later save has to present it.
  */
-async function startAsGuest(name: unknown, p_device: string): Promise<StartedAttempt | { error: StartFailure }> {
+async function startAsGuest(name: unknown, phone: unknown, p_device: string): Promise<StartedAttempt | { error: StartFailure }> {
   const p_name = tidyName(name);
   if (!p_name) return { error: "name" };
+  const p_phone = whatsappNumber(phone);
+  if (!p_phone) return { error: "phone" };
   const supabase = await getSupabaseServerClient();
   if (!supabase) return { error: "failed" };
 
-  const { data, error } = await supabase.rpc("hiring_guest_open", {
+  const { data, error } = await supabase.rpc("hiring_guest_begin", {
     p_name,
+    p_phone,
     p_version: ASSESSMENT_VERSION,
     p_consent_version: CONSENT_VERSION,
     p_device,
@@ -137,17 +141,18 @@ async function startAsGuest(name: unknown, p_device: string): Promise<StartedAtt
  * without it starts nothing.
  *
  * Somebody signed in starts an attempt on their account. Anybody else starts
- * one under the name they typed.
+ * one under the name and WhatsApp number they typed.
  */
 export async function startAssessment(
   device: string,
   consented: boolean,
   name?: string,
+  phone?: string,
 ): Promise<StartedAttempt | { error: StartFailure }> {
   if (consented !== true) return { error: "failed" };
   const p_device = ["mobile", "tablet", "desktop"].includes(device) ? device : "unknown";
   const operator = await getOperator();
-  if (!operator) return startAsGuest(name, p_device);
+  if (!operator) return startAsGuest(name, phone, p_device);
   const supabase = await getSupabaseServerClient();
   if (!supabase) return { error: "failed" };
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight, Download } from "lucide-react";
 
 import { buildHiringDashboard, INDICATIONS, type HiringAttemptSummary, type HiringDashboardData } from "@/lib/hiring/dashboard";
+import { formatWhatsapp, whatsappLink } from "@/lib/hiring/phone";
 import { readAllAttempts } from "@/lib/hiring/server";
 import { cn } from "@/lib/utils";
 
@@ -198,6 +199,17 @@ export function HiringAdminDashboardView({ data }: { data: HiringDashboardData }
                       <span className={row.nameOnly ? "text-[13px] font-medium text-hi" : "font-mono text-[11.5px] text-hi"}>{row.who}</span>
                       {row.own ? <span className="ml-2 rounded-full border border-line-strong px-1.5 py-px text-[10px] text-lo">you · admin</span> : null}
                       {row.nameOnly ? <span className="ml-2 text-[11px] text-lo">name only</span> : null}
+                      {row.phone ? (
+                        <a
+                          href={whatsappLink(row.phone) ?? undefined}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-0.5 block font-mono text-[11.5px] whitespace-nowrap text-lo underline-offset-4 hover:text-hi hover:underline"
+                          aria-label={`WhatsApp ${row.who} on ${formatWhatsapp(row.phone)}`}
+                        >
+                          {formatWhatsapp(row.phone)}
+                        </a>
+                      ) : null}
                     </td>
                     <td className="px-3 py-2.5 text-[12.5px] whitespace-nowrap text-mid">{when(row.latest.startedAt)}</td>
                     <td className="px-3 py-2.5 text-[12.5px] text-mid">{row.latest.form}</td>

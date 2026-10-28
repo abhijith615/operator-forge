@@ -381,7 +381,7 @@ export const HIRING_CONTACT = "hello@operatorforge.in";
  * possible to say what a given candidate agreed to. Change it whenever the
  * notice changes in substance.
  */
-export const CONSENT_VERSION = "2026-10-13";
+export const CONSENT_VERSION = "2026-10-28";
 
 /**
  * What is collected and what is done with it, in the candidate's terms.
@@ -393,11 +393,11 @@ export const CONSENT_VERSION = "2026-10-13";
 export const DATA_NOTICE: { title: string; text: string }[] = [
   {
     title: "What we record",
-    text: "The name you enter, or your email address if you sign in with one; every decision you make in the simulation and when you made it; whether you are on a phone, tablet or computer; when the page was hidden, reloaded or lost its connection; and the topics you ask the assistant about (not the words you type).",
+    text: "The name and WhatsApp number you enter, or your email address if you sign in with one; every decision you make in the simulation and when you made it; whether you are on a phone, tablet or computer; when the page was hidden, reloaded or lost its connection; and the topics you ask the assistant about (not the words you type).",
   },
   {
     title: "What it is used for",
-    text: "To produce your profile and an assessment of how you ran the shift, for hiring. It is scored by fixed rules. No AI model scores you, and nothing rejects you automatically — a person decides.",
+    text: "To produce your profile and an assessment of how you ran the shift, for hiring, and to contact you on WhatsApp about this assessment. It is scored by fixed rules. No AI model scores you, and nothing rejects you automatically — a person decides.",
   },
   {
     title: "Who sees it",

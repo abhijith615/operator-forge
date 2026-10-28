@@ -50,6 +50,8 @@ export interface HiringCandidateRow {
   who: string;
   /** Sat with a name and no sign-in. Two rows with the same name may or may not be the same person. */
   nameOnly: boolean;
+  /** The WhatsApp number given with the name (+91 and ten digits), where there is one. */
+  phone: string | null;
   /** The signed-in admin's own attempts: shown, and kept out of the totals. */
   own: boolean;
   attempts: number;
@@ -129,6 +131,7 @@ export function buildHiringDashboard(rows: AdminAttemptRow[], ownEmail: string |
       key,
       who: candidateLabel(attempts[0]!),
       nameOnly,
+      phone: attempts[0]!.candidate_phone ?? null,
       own: !nameOnly && key === own,
       attempts: attempts.length,
       latest: summaries[0]!,

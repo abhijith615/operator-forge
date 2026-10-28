@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useActionState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Mail, UserRound } from "lucide-react";
+import { ArrowRight, Mail, Phone, UserRound } from "lucide-react";
 
 import { LogoMark } from "@/components/brand/logo";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import {
   type StartedAttempt,
 } from "@/lib/hiring/actions";
 import { CONSENT_VERSION, DATA_NOTICE, EXPLAINER_VIDEO, HIRING_CONTACT, POSITIONING } from "@/lib/hiring/content";
+import { whatsappNumber } from "@/lib/hiring/phone";
 import type { CandidateProfile as Profile } from "@/lib/hiring/server";
 import { deviceType } from "@/lib/hiring/view";
 import { ASSESSMENT_SECONDS } from "@/lib/hiring/weights";
@@ -119,13 +120,15 @@ function spoken(seconds: number): string {
  * and who sees it — and a box to tick. Start Shift does nothing until it is
  * ticked, and the server will not start an attempt without it either.
  *
- * Somebody who is not signed in is asked for their name here, and for nothing
- * else: no email, no link to wait for.
+ * Somebody who is not signed in is asked for their name and WhatsApp number
+ * here, and for nothing else: no email, no link to wait for.
  */
 function Positioning({
   email,
   name,
   onName,
+  phone,
+  onPhone,
   limit,
   starting,
   onStart,
@@ -135,6 +138,8 @@ function Positioning({
   email: string | null;
   name: string;
   onName: (name: string) => void;
+  phone: string;
+  onPhone: (phone: string) => void;
   limit: number;
   starting: boolean;
   onStart: () => void;
@@ -144,6 +149,9 @@ function Positioning({
   const extra = limit - ASSESSMENT_SECONDS;
   const guest = email === null;
   const named = !guest || name.replace(/\s+/g, " ").trim().length >= 2;
+  const reachable = !guest || whatsappNumber(phone) !== null;
+  // Only say the number is wrong once it is long enough to be a whole one.
+  const phoneWrong = guest && !reachable && phone.replace(/\D/g, "").length >= 10;
 
   return (
     <Frame>
@@ -248,6 +256,32 @@ function Positioning({
             Your result is recorded under this name. Stay on this device and browser until you finish: it is how the
             test knows it is you.
           </p>
+
+          <label htmlFor="hiring-phone" className="mt-5 block text-[13px] font-medium text-mid">
+            Your WhatsApp number
+          </label>
+          <div className="mt-2">
+            <Input
+              id="hiring-phone"
+              name="phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              required
+              maxLength={20}
+              placeholder="10-digit mobile number"
+              adornment={<Phone />}
+              value={phone}
+              onChange={(event) => onPhone(event.target.value)}
+              invalid={failed === "phone" || phoneWrong}
+              aria-describedby="hiring-phone-note"
+            />
+          </div>
+          <p id="hiring-phone-note" className={phoneWrong ? "mt-2 text-[12.5px] leading-snug text-alert-500" : "mt-2 text-[12.5px] leading-snug text-lo"}>
+            {phoneWrong
+              ? "Enter a 10-digit Indian mobile number, for example 98765 43210."
+              : "An Indian mobile number on WhatsApp. We use it only to contact you about this assessment."}
+          </p>
         </div>
       ) : null}
 
@@ -255,20 +289,19 @@ function Positioning({
         <p role="alert" className="mt-3 text-[13px] text-alert-500">
           {failed === "name"
             ? "Enter your full name to start."
-            : failed === "busy"
+            : failed === "phone"
+              ? "Enter a 10-digit Indian WhatsApp number to start."
+              : failed === "busy"
               ? "A lot of people are starting right now. Wait a minute and try again."
-              : "The shift could not be started. Check your connection and try again."}
+                : "The shift could not be started. Check your connection and try again."}
         </p>
       ) : null}
 
-      <PrimaryButton className="mt-6 sm:w-full" disabled={starting || !agreed || !named} onClick={onStart}>
+      <PrimaryButton className="mt-6 sm:w-full" disabled={starting || !agreed || !named || !reachable} onClick={onStart}>
         {starting ? "Opening the store…" : "Start shift"}
       </PrimaryButton>
-      {!agreed || !named ? (
-        <p className="mt-2 text-center text-[12.5px] text-lo">
-          {!named ? "Enter your name" : "Tick the box above"}
-          {!named && !agreed ? " and tick the box above" : ""} to start.
-        </p>
+      {!agreed || !named || !reachable ? (
+        <p className="mt-2 text-center text-[12.5px] text-lo">{stillNeeded(named, reachable, agreed)} to start.</p>
       ) : null}
 
       {guest ? (
@@ -288,6 +321,17 @@ function Positioning({
       )}
     </Frame>
   );
+}
+
+/** "Enter your name, your WhatsApp number and tick the box above", or whichever of those is left. */
+function stillNeeded(named: boolean, reachable: boolean, agreed: boolean): string {
+  const left = [
+    named ? null : "your name",
+    reachable ? null : "your WhatsApp number",
+  ].filter((part): part is string => part !== null);
+  const enter = left.length ? `Enter ${left.join(" and ")}` : "";
+  if (agreed) return enter;
+  return enter ? `${enter} and tick the box above` : "Tick the box above";
 }
 
 /* ── The attempt, start to finish ─────────────────────────────────────── */
@@ -338,6 +382,7 @@ export function HiringAssessment({
   const [starting, setStarting] = React.useState(false);
   const [failed, setFailed] = React.useState<StartFailure | null>(null);
   const [name, setName] = React.useState(who ?? "");
+  const [phone, setPhone] = React.useState("");
   const attempt = useHiringStore((store) => store.attempt);
   // What the profile is headed with: the email signed in with, or the name typed.
   const shown = email ?? (name.replace(/\s+/g, " ").trim() || who || "");
@@ -362,7 +407,7 @@ export function HiringAssessment({
     setFailed(null);
     try {
       // Reaching here means the box was ticked: the button is dead until it is.
-      const started = await startAssessment(deviceType(), true, email === null ? name : undefined);
+      const started = await startAssessment(deviceType(), true, email === null ? name : undefined, email === null ? phone : undefined);
       if ("error" in started) {
         setFailed(started.error);
       } else if (started.status === "in_progress") {
@@ -406,7 +451,19 @@ export function HiringAssessment({
   if (phase === "finished" && profile) return <CandidateProfile profile={profile} email={shown} retakeHref={canRetake ? RETAKE_ROUTE : null} />;
   if (phase === "running" && attempt) return <Simulation attempt={attempt} onFinished={finish} />;
   if (phase === "ready") {
-    return <Positioning email={email} name={name} onName={setName} limit={limit} starting={starting} onStart={start} failed={failed} />;
+    return (
+      <Positioning
+        email={email}
+        name={name}
+        onName={setName}
+        phone={phone}
+        onPhone={setPhone}
+        limit={limit}
+        starting={starting}
+        onStart={start}
+        failed={failed}
+      />
+    );
   }
 
   return (

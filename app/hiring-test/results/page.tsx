@@ -5,6 +5,7 @@ import { Download } from "lucide-react";
 
 import { isAdmin } from "@/lib/admin/queries";
 import { setAccommodation } from "@/lib/hiring/actions";
+import { formatWhatsapp } from "@/lib/hiring/phone";
 import { candidateLabel, isCurrentVersion, readAccommodations, readAllAttempts, resultFrom } from "@/lib/hiring/server";
 import { ASSESSMENT_SECONDS, ASSESSMENT_VERSION } from "@/lib/hiring/weights";
 
@@ -92,6 +93,7 @@ export default async function HiringResultsPage() {
                       {when(attempt.started_at)} · Form {attempt.scenario_variant} · v{attempt.assessment_version}
                       {attempt.device_type ? ` · ${attempt.device_type}` : ""}
                       {attempt.candidate_email ? "" : " · name only, not verified"}
+                      {attempt.candidate_phone ? ` · WhatsApp ${formatWhatsapp(attempt.candidate_phone)}` : ""}
                       {(attempt.time_limit_seconds ?? ASSESSMENT_SECONDS) > ASSESSMENT_SECONDS ? " · extra time" : ""}
                       {result?.incomplete ? ` · not completed, ${result.observed} of ${result.opportunities} moments` : ""}
                     </p>
