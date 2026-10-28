@@ -2507,3 +2507,63 @@ $$;
 
 revoke all on function public.hiring_guest_begin(text, text, text, text, text, text, text) from public;
 grant execute on function public.hiring_guest_begin(text, text, text, text, text, text, text) to anon, authenticated;
+
+-- ── Hiring Test: FC Executive ──────────────────────────────────────────
+--
+-- A second Hiring Test, for the FC Executive (inbound) role. Its attempts sit
+-- in hiring_assessments with role_id 'fc_exec' and an 'fc-' version, started
+-- name-only like the store-manager test. Saving, completing and logging reuse
+-- the hiring_guest_* functions above, which work by attempt id + secret. The
+-- store-manager test's admin reads filter these rows out in the app.
+
+create or replace function public.hiring_fc_begin(
+  p_name text,
+  p_phone text,
+  p_version text,
+  p_consent_version text,
+  p_device text default null,
+  p_campaign text default null
+)
+returns table (
+  id uuid, token text, scenario_variant text, status text, started_at timestamptz,
+  completed_at timestamptz, actions jsonb, server_now timestamptz, time_limit_seconds integer
+)
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_name text := regexp_replace(trim(coalesce(p_name, '')), '\s+', ' ', 'g');
+  v_phone text := trim(coalesce(p_phone, ''));
+  v_token text := replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
+begin
+  if char_length(v_name) < 2 or char_length(v_name) > 80 then
+    raise exception 'a name is required' using errcode = '22023';
+  end if;
+  if v_phone !~ '^\+91[6-9][0-9]{9}$' then
+    raise exception 'a WhatsApp number is required' using errcode = '22023';
+  end if;
+  if coalesce(trim(p_consent_version), '') = '' then
+    raise exception 'consent is required to start' using errcode = '22023';
+  end if;
+  if left(coalesce(p_version, ''), 3) <> 'fc-' then
+    raise exception 'not an FC Executive version' using errcode = '22023';
+  end if;
+  if (select count(*) from public.hiring_assessments a
+       where a.candidate_id is null and a.started_at > now() - interval '1 hour') >= 300 then
+    raise exception 'too many attempts are being started' using errcode = '53400';
+  end if;
+
+  return query
+  insert into public.hiring_assessments as a
+    (candidate_id, candidate_email, candidate_name, candidate_phone, access_hash, campaign_id, role_id, assessment_version,
+     scenario_variant, device_type, time_limit_seconds, consented_at, consent_version)
+  values (
+    null, '', v_name, v_phone, encode(sha256(convert_to(v_token, 'UTF8')), 'hex'), nullif(left(p_campaign, 80), ''),
+    'fc_exec', left(p_version, 16), 'A', nullif(left(p_device, 16), ''),
+    1800, now(), left(p_consent_version, 24)
+  )
+  returning a.id, v_token, a.scenario_variant, a.status, a.started_at, a.completed_at, a.actions, now(), a.time_limit_seconds;
+end;
+$$;
+
+revoke all on function public.hiring_fc_begin(text, text, text, text, text, text) from public;
+grant execute on function public.hiring_fc_begin(text, text, text, text, text, text) to anon, authenticated;

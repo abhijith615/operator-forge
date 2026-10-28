@@ -235,6 +235,20 @@ that an early decision changes a later scene, and that the forms stay within a
 few points of each other. `-- -v` prints every behaviour score;
 `-- --trace individualHero B` prints one shift action by action.
 
+### FC Executive test
+
+A second, separate Hiring Test for the FC Executive (inbound) role, at
+`/hiring-test/fc-executive` (not linked anywhere yet; admins see results at
+`/hiring-test/fc-executive/results`). One 30-minute inbound shift at a
+fulfilment centre, 07:00–12:00: handover, a dock board to plan and replan,
+receiving a chilled truck, a 12-carton discrepancy, the inbound tracker and a
+peak collision. 25 behaviours, five per competency, each 0–3; the five
+competencies count 20% each. Code lives in `lib/fc`, `components/fc` and
+`stores/fc-store.ts` and shares nothing with the store-manager test's scoring.
+Attempts are name + WhatsApp only and sit in `hiring_assessments` with
+`role_id = 'fc_exec'` (started by `hiring_fc_begin`); the store-manager admin
+reads filter them out. `npm run test:fc` runs scripted candidates through it.
+
 ---
 
 ## Quick start

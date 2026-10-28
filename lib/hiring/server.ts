@@ -61,6 +61,11 @@ export interface AdminAttemptRow extends AttemptRow {
   session?: Record<string, number>;
 }
 
+/** An attempt at a different Hiring Test (FC Executive) that shares the table. */
+function isOtherTest(row: { role_id?: string | null; assessment_version?: string | null }): boolean {
+  return row.role_id === "fc_exec" || (row.assessment_version ?? "").startsWith("fc-");
+}
+
 /** Who an attempt is shown as: their email if they signed in, the name they typed if they did not. */
 export function candidateLabel(row: { candidate_email?: string | null; candidate_name?: string | null }): string {
   return row.candidate_email?.trim() || row.candidate_name?.trim() || "Unnamed candidate";
@@ -183,7 +188,8 @@ export async function readAllAttempts(): Promise<AdminAttemptRow[]> {
   if (isMissing(error)) ({ data, error } = await supabase.rpc("admin_hiring_list"));
   if (isMissing(error)) ({ data, error } = await supabase.rpc("admin_hiring_assessments"));
   if (error || !Array.isArray(data)) return [];
-  return (data as AdminAttemptRow[]).map((row) => ({ ...row, actions: asActions(row.actions) }));
+  // The FC Executive test shares the table; its attempts are never this test's.
+  return (data as AdminAttemptRow[]).filter((row) => !isOtherTest(row)).map((row) => ({ ...row, actions: asActions(row.actions) }));
 }
 
 export async function readAttempt(id: string): Promise<AdminAttemptRow | null> {
@@ -195,7 +201,7 @@ export async function readAttempt(id: string): Promise<AdminAttemptRow | null> {
   if (isMissing(error)) ({ data, error } = await supabase.rpc("admin_hiring_assessment", { p_id: id }));
   if (error) return null;
   const row = first<AdminAttemptRow>(data);
-  return row ? { ...row, actions: asActions(row.actions) } : null;
+  return row && !isOtherTest(row) ? { ...row, actions: asActions(row.actions) } : null;
 }
 
 /**

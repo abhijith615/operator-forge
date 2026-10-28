@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test:hiring": "tsx scripts/hiring-personas.ts"
+    "test:hiring": "tsx scripts/hiring-personas.ts",
+    "test:fc": "tsx scripts/fc-personas.ts"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.10",
