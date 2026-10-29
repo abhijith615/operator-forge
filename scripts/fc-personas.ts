@@ -206,6 +206,25 @@ check("hero: a zero on delegation rules out Strong", heroResult.indication === "
   check("replan: telling only FreshFarm scores 2 on DP3", scoreFc(partial).evidence.find((e) => e.id === "DP3")?.score === 2);
 }
 
+// The right people, not just the right numbers.
+{
+  const base = IDEAL.slice(0, IDEAL.findIndex((a) => a.t === "lockTeam"));
+  const tl1 = (extra: Action[]) => scoreFc(expire(run([...base, ...extra, { t: "lockTeam" }]).state)).evidence.find((e) => e.id === "TL1")!;
+  // Loaders on putaway and licensed drivers unloading: right head count, wrong people.
+  const swapped = tl1([
+    { t: "assign", p: "ravi", task: "putaway" },
+    { t: "assign", p: "ganesh", task: "putaway" },
+    { t: "assign", p: "suresh", task: "unload" },
+    { t: "assign", p: "arif", task: "unload" },
+  ]);
+  check("team: loaders on putaway instead of licensed drivers scores low", swapped.score <= 1, `${swapped.score} ${swapped.did}`);
+  // A receiver unloading while scanning is short.
+  const receiver = tl1([{ t: "assign", p: "divya", task: "unload" }, { t: "assign", p: "ganesh", task: "putaway" }]);
+  check("team: a receiver kept off scanning while it is short loses points", receiver.score < 3, `${receiver.score} ${receiver.did}`);
+  // One licensed driver helping unload while putaway still has two: fine.
+  check("team: the ideal team still scores 3", tl1([]).score === 3, tl1([]).did);
+}
+
 // Nobody starts where they should be: the handover floor scores 0 on staffing if left alone.
 {
   const lazy = run([...IDEAL.slice(0, IDEAL.findIndex((a) => a.t === "assign")), { t: "lockTeam" }]).state;

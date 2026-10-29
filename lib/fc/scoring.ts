@@ -3,6 +3,8 @@ import {
   COLD_DOCK,
   CONFIRMED,
   CREWS_AT_FULL_TEAM,
+  MAIN_JOBS,
+  MHE_DRIVERS,
   DOCKS,
   ESCALATIONS,
   PROCUREMENT_MESSAGES,
@@ -12,6 +14,8 @@ import {
   VEHICLES,
   VENDOR_REPLIES,
   nameOf,
+  type PersonId,
+  type TaskId,
   type VehicleId,
 } from "./content";
 import { arrivesAt, busyAt, canPlace, crewsOf, outcomeOf } from "./engine";
@@ -401,19 +405,29 @@ function evaluate(state: FcState, id: string): Eval {
     case "TL1": {
       if (!state.teamLocked) return null;
       const P = Math.min(3, Math.max(1, state.plannedPeak));
-      const have = (task: string) => Object.values(state.team).filter((t) => t === task).length;
-      const need: Record<string, number> = { unload: 2 * P, scan: P, qc: 1, putaway: 2, grn: 1 };
-      const empty = Object.keys(need).filter((t) => have(t) === 0);
-      const short = Math.max(...Object.keys(need).map((t) => need[t]! - have(t)));
-      const surplus = Math.max(have("unload") - need.unload!, have("scan") - need.scan!);
-      const score = empty.length ? 0 : short >= 2 ? 1 : short === 1 ? 2 : surplus >= 3 ? 1 : 3;
-      const label: Record<string, string> = { unload: "unloading", scan: "scanning", qc: "QC", putaway: "putaway", grn: "GRN" };
-      return {
-        score,
-        did: empty.length
-          ? `Left nobody on ${empty.map((t) => label[t]).join(", ")}.`
-          : `Team: ${Object.keys(need).map((t) => `${label[t]} ${have(t)}/${need[t]}`).join(", ")}.`,
-      };
+      const people = Object.keys(state.team) as PersonId[];
+      // Putaway onto the racks only counts licensed drivers; a loader sent there does not.
+      const have = (task: TaskId) => people.filter((p) => state.team[p] === task && (task !== "putaway" || MHE_DRIVERS.includes(p))).length;
+      const need: Record<TaskId, number> = { unload: 2 * P, scan: P, qc: 1, putaway: 2, grn: 1 };
+      const tasks = Object.keys(need) as TaskId[];
+      // Nobody at all on a job. Loaders on putaway with no licensed driver is short, not empty.
+      const empty = tasks.filter((t) => people.every((p) => state.team[p] !== t));
+      const unlicensed = have("putaway") === 0 && !empty.includes("putaway");
+      const short = Math.max(...tasks.map((t) => need[t] - have(t)));
+      const surplus = Math.max(have("unload") - need.unload, have("scan") - need.scan);
+      const counted: 0 | 1 | 2 | 3 = empty.length ? 0 : short >= 2 ? 1 : short === 1 ? 2 : surplus >= 3 ? 1 : 3;
+      // The right people: nobody away from their main job while that job is short.
+      const misplaced = people.filter((p) => !MAIN_JOBS[p].includes(state.team[p]) && MAIN_JOBS[p].some((t) => have(t) < need[t]));
+      const score = Math.min(counted, 3 - Math.min(3, misplaced.length)) as 0 | 1 | 2 | 3;
+      const label: Record<TaskId, string> = { unload: "unloading", scan: "scanning", qc: "QC", putaway: "putaway (licensed drivers)", grn: "GRN" };
+      const parts = [
+        empty.length ? `left nobody on ${empty.map((t) => label[t]).join(", ")}` : `${tasks.map((t) => `${label[t]} ${have(t)}/${need[t]}`).join(", ")}`,
+        unlicensed ? "no licensed driver on putaway, so pallets cannot go up on the racks" : null,
+        misplaced.length
+          ? `away from their main job while it was short: ${misplaced.map((p) => `${nameOf(p)} (on ${label[state.team[p]].split(" ")[0]})`).join(", ")}`
+          : null,
+      ].filter(Boolean);
+      return { score, did: `Team: ${parts.join("; ")}.` };
     }
 
     case "TL2": {
@@ -467,7 +481,10 @@ function flagsOf(state: FcState, byId: Record<string, FcEvidence>): FcFlag[] {
   if (got("IP3")?.reached && got("IP3")!.score === 0) flags.push({ id: "grn", title: "GRN made with a known discrepancy", detail: got("IP3")!.did });
   if (state.disc.decision?.damagedFate === "accept" && state.disc.decision.damaged > 0) flags.push({ id: "damaged", title: "Damaged stock accepted", detail: "Crushed cartons were accepted into normal stock." });
   if (state.peak.vendorReply === "threat") flags.push({ id: "threat", title: "Vendor threatened or blamed without evidence", detail: "The reply blamed the driver and threatened the vendor's bookings." });
-  if (got("TL1")?.reached && got("TL1")!.score === 0) flags.push({ id: "uncovered", title: "An activity left with nobody", detail: got("TL1")!.did });
+  {
+    const nobody = (["unload", "scan", "qc", "putaway", "grn"] as const).filter((task) => state.teamLocked && Object.values(state.team).every((x) => x !== task));
+    if (nobody.length) flags.push({ id: "uncovered", title: "An activity left with nobody", detail: got("TL1")?.did ?? "" });
+  }
   if (state.data.report?.inconsistent || state.data.escalation === "wrong" || state.data.escalation === "hide") {
     flags.push({ id: "report", title: "Wrong numbers reported, or a loss hidden", detail: state.data.report?.inconsistent ? "The shift update was sent with a repeated row in the totals." : "The escalation gave wrong numbers or hid the vendor's losses." });
   }

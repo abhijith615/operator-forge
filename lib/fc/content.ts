@@ -93,7 +93,7 @@ export const TASK_NOTE: Record<TaskId, string> = {
   unload: "Takes cartons and pallets off the truck. Two per working dock.",
   scan: "Scans every carton with a handheld. One per working dock.",
   qc: "Checks dates, damage and temperature before stock is accepted.",
-  putaway: "Moves accepted pallets to the racks and cold room.",
+  putaway: "Moves accepted pallets to the racks and cold room. Racks need a licensed MHE driver.",
   grn: "Enters the GRN in the system once the count and QC are done.",
 };
 
@@ -139,6 +139,22 @@ export const HANDOVER_TEAM: Record<PersonId, TaskId> = {
   divya: "unload", imran: "scan", meena: "scan", neha: "scan",
   babu: "unload", suresh: "putaway", arif: "putaway",
 };
+
+/**
+ * What each person is best used for. Somebody away from their main job while
+ * that job is short of people is in the wrong place, whatever the head count
+ * says. Ajay is as useful scanning as unloading.
+ */
+export const MAIN_JOBS: Record<PersonId, TaskId[]> = {
+  ravi: ["unload"], salim: ["unload"], ganesh: ["unload"], mohan: ["unload"], pradeep: ["unload"],
+  ajay: ["unload", "scan"],
+  divya: ["scan"], imran: ["scan"],
+  meena: ["qc"], neha: ["grn"],
+  babu: ["putaway"], suresh: ["putaway"], arif: ["putaway"],
+};
+
+/** Licensed to drive the reach truck, forklift or pallet truck: only they can put pallets away on the racks. */
+export const MHE_DRIVERS: PersonId[] = ["babu", "suresh", "arif"];
 
 /** Work that somebody on the team can do. "Fit" is for the candidate's eye; the scorer reads `suited`. */
 export type JobId = "recountCrates" | "qcCheck" | "grnEntry" | "recountPallet" | "relabel" | "putawayBacklog" | "spiceGrn" | "tempLog";
