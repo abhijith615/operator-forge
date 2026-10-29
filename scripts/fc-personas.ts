@@ -51,7 +51,7 @@ const IDEAL: Action[] = [
   { t: "place", v: "bright", dock: "D4", start: 2 },
   { t: "place", v: "dairy", dock: "D3", start: 3 },
   { t: "place", v: "quickbev", dock: "D2", start: 1 },
-  { t: "notify", on: true },
+  { t: "notice", choice: "all" },
   { t: "lockReplan" },
   { t: "gateCheck", id: "appointment" },
   { t: "gateCheck", id: "seal" },
@@ -181,6 +181,29 @@ check("hero: a zero on delegation rules out Strong", heroResult.indication === "
   for (const a of after) s = reduce(s, { a, at: 1 });
   const dr2 = scoreFc(expire(s)).evidence.find((e) => e.id === "DR2");
   check("data: wrong checks, fixed only when warned, scores 1", dr2?.score === 1, `${dr2?.score} ${dr2?.did}`);
+}
+
+// Spotting the repeated row by eye and flagging it counts the same as finding it with a check.
+{
+  const upTo = run(IDEAL.slice(0, IDEAL.findIndex((a) => a.t === "sheetTool"))).state;
+  let s = reduce(upTo, { a: { t: "flagRow", id: "spice2" }, at: 1 });
+  check("data: a flag uses a check", s.data.flags.length === 1);
+  for (const a of [
+    { t: "removeDuplicate" },
+    { t: "signals", picks: ["brightGrn", "spiceLoss", "crunchyOpen"] },
+    { t: "driver", id: "spice" },
+    { t: "report", lines: ["volume", "exceptions", "grnPending", "actions"] },
+  ] as Action[]) s = reduce(s, { a, at: 1 });
+  check("data: flagged by eye and fixed before sending scores 3", scoreFc(expire(s)).evidence.find((e) => e.id === "DR2")?.score === 3);
+  let brute = upTo;
+  for (const id of ["quickbev", "bright", "dairy", "crunchy"]) brute = reduce(brute, { a: { t: "flagRow", id }, at: 1 });
+  check("data: flags share the limit of three checks", brute.data.flags.length === 3);
+}
+
+// Telling only the late vendor is a partial answer.
+{
+  const partial = run(IDEAL.map((a): Action => (a.t === "notice" ? { t: "notice", choice: "dairy" } : a))).state;
+  check("replan: telling only FreshFarm scores 2 on DP3", scoreFc(partial).evidence.find((e) => e.id === "DP3")?.score === 2);
 }
 
 // Nobody starts where they should be: the handover floor scores 0 on staffing if left alone.

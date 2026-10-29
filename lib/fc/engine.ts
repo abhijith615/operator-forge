@@ -4,7 +4,9 @@ import {
   DAIRY_LATE_ARRIVES,
   DOCKS,
   HANDOVER_TEAM,
+  NOTICE_OPTIONS,
   PERSON,
+  SHEET,
   SHEET_TOOLS,
   SHEET_TOOL_LIMIT,
   SLOTS,
@@ -43,10 +45,11 @@ export function initialState(): FcState {
     bumped: [],
     quickbev: null,
     notified: false,
+    notice: null,
     finalPlan: null,
     receive: { checks: {}, steps: {}, step: 0, count: null, reconciled: false, qc: null, grn: null, putaway: null, closed: false },
     disc: { evidence: [], recount: null, decision: null },
-    data: { tools: [], deduped: false, dedupedAfterPrompt: false, prompted: false, signals: null, driver: null, report: null, escalation: null },
+    data: { tools: [], flags: [], deduped: false, dedupedAfterPrompt: false, prompted: false, signals: null, driver: null, report: null, escalation: null },
     peak: { buckets: null, vendorReply: null, procurement: null },
     personal: [],
     handed: [],
@@ -208,6 +211,10 @@ function apply(state: FcState, action: Action, at: number): FcState | null {
       if (s.scene !== "replan" || s.notified === action.on) return null;
       return { ...s, notified: Boolean(action.on) };
 
+    case "notice":
+      if (s.scene !== "replan" || s.notice === action.choice || !NOTICE_OPTIONS.some((o) => o.id === action.choice)) return null;
+      return { ...s, notice: action.choice, notified: action.choice === "all" };
+
     case "lockReplan":
       if (s.scene !== "replan") return null;
       return enter({ ...s, finalPlan: { ...s.board } }, "receive", at);
@@ -316,9 +323,14 @@ function apply(state: FcState, action: Action, at: number): FcState | null {
     /* ── Data ── */
 
     case "sheetTool":
-      if (s.scene !== "data" || s.data.tools.includes(action.id) || s.data.tools.length >= SHEET_TOOL_LIMIT) return null;
+      if (s.scene !== "data" || s.data.tools.includes(action.id) || s.data.tools.length + s.data.flags.length >= SHEET_TOOL_LIMIT) return null;
       if (!SHEET_TOOLS.some((tool) => tool.id === action.id)) return null;
       return { ...s, data: { ...s.data, tools: [...s.data.tools, action.id] } };
+
+    case "flagRow":
+      if (s.scene !== "data" || s.data.flags.includes(action.id) || s.data.tools.length + s.data.flags.length >= SHEET_TOOL_LIMIT) return null;
+      if (!SHEET.some((row) => row.id === action.id)) return null;
+      return { ...s, data: { ...s.data, flags: [...s.data.flags, action.id] } };
 
     case "removeDuplicate":
       if (s.scene !== "data" || s.data.deduped) return null;

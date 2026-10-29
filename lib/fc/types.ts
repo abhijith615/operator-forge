@@ -5,6 +5,7 @@ import type {
   EvidenceId,
   GateCheckId,
   JobId,
+  NoticeId,
   PeakItemId,
   PersonId,
   TaskId,
@@ -59,6 +60,7 @@ export type Action =
   | { t: "lockTeam" }
   | { t: "quickbev"; choice: "board" | "offpeak" | "turnaway" }
   | { t: "notify"; on: boolean }
+  | { t: "notice"; choice: NoticeId }
   | { t: "lockReplan" }
   | { t: "gateCheck"; id: GateCheckId }
   | { t: "unload" }
@@ -83,6 +85,7 @@ export type Action =
     }
   | { t: "sheetTool"; id: SheetToolId }
   | { t: "removeDuplicate" }
+  | { t: "flagRow"; id: string }
   | { t: "signals"; picks: string[] }
   | { t: "driver"; id: string }
   | { t: "report"; lines: string[]; sendAnyway?: boolean }
@@ -144,6 +147,8 @@ export interface FcState {
   bumped: VehicleId[];
   quickbev: "board" | "offpeak" | "turnaway" | null;
   notified: boolean;
+  /** What the vendors were told after the replan. */
+  notice: NoticeId | null;
   /** The board as locked after the 07:45 update. */
   finalPlan: Partial<Record<VehicleId, Placement>> | null;
 
@@ -170,6 +175,8 @@ export interface FcState {
 
   data: {
     tools: SheetToolId[];
+    /** Rows the candidate flagged by eye. Each uses one of the checks. */
+    flags: string[];
     deduped: boolean;
     /** The duplicate was removed only after the send-time warning. */
     dedupedAfterPrompt: boolean;

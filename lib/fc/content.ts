@@ -241,8 +241,18 @@ export const REPLAN_UPDATES: { id: string; title: string; text: string }[] = [
 
 export const QUICKBEV_OPTIONS: { id: "board" | "offpeak" | "turnaway"; label: string; detail: string }[] = [
   { id: "board", label: "Give it a slot on the board", detail: "Place QuickBev on a dock and time that is free." },
-  { id: "offpeak", label: "Ask it to wait for a quiet slot", detail: "The driver waits; QuickBev unloads after 12:00." },
+  { id: "offpeak", label: "Ask it to wait for a quiet slot", detail: "The driver waits outside; QuickBev unloads in a quiet slot after 12:00." },
   { id: "turnaway", label: "Turn it away", detail: "No booking, no unloading today. The vendor must book again." },
+];
+
+export type NoticeId = "all" | "dairy" | "board" | "none";
+
+/** What the vendors are told after the 07:45 replan. */
+export const NOTICE_OPTIONS: { id: NoticeId; label: string; detail: string }[] = [
+  { id: "all", label: "Message every vendor whose time or dock changed", detail: "Each gets their new slot before they arrive." },
+  { id: "dairy", label: "Message FreshFarm only, as it is the late one", detail: "The others find their dock when they reach the gate." },
+  { id: "board", label: "Update the gate board for the security team", detail: "Drivers are told their dock when they check in." },
+  { id: "none", label: "No message; trucks follow the gate queue", detail: "The plan is ours; vendors only need the gate." },
 ];
 
 /* ── 09:00 Receive: FreshFarm Dairy ───────────────────────────────────── */
@@ -277,10 +287,10 @@ export const GATE_CHECKS: { id: GateCheckId; label: string; detail: string; resu
 ];
 
 export const COUNT_OPTIONS: { id: "recount" | "close" | "invoice" | "driver"; label: string; detail: string }[] = [
-  { id: "recount", label: "Recount the crates physically", detail: "Somebody counts what is on the dock." },
-  { id: "close", label: "Close the count at 238", detail: "Raise a shortage note (DN) to the vendor for 2 crates." },
-  { id: "invoice", label: "Accept 240, as the invoice says", detail: "Go with the vendor's paperwork." },
-  { id: "driver", label: "Ask the driver", detail: "He was there when it was loaded." },
+  { id: "recount", label: "Get the crates recounted on the dock", detail: "Someone counts every crate by hand." },
+  { id: "close", label: "Close the count at 238 and raise a DN", detail: "The vendor is credited for 2 crates." },
+  { id: "invoice", label: "Accept 240, matching the invoice and ASN", detail: "Both vendor documents say 240." },
+  { id: "driver", label: "Ask the driver what was loaded", detail: "He watched the truck being loaded." },
 ];
 
 export const QC_RESULT = [
@@ -291,17 +301,17 @@ export const QC_RESULT = [
 ];
 
 export const QC_DECISIONS: { id: "rejectNoted" | "reject" | "acceptAll" | "holdAll"; label: string; detail: string }[] = [
-  { id: "rejectNoted", label: "Reject the 12 crates and write down why", detail: "Reason: 60% shelf life, below the 70% rule." },
-  { id: "reject", label: "Reject the 12 crates", detail: "Set them aside." },
-  { id: "acceptAll", label: "Accept all 240", detail: "Dark stores need curd tonight. It will sell in 4 days." },
-  { id: "holdAll", label: "Hold the whole truck", detail: "Accept nothing until the vendor calls back." },
+  { id: "rejectNoted", label: "Reject the 12 crates, recording the shelf-life reason", detail: "Logged: 60% life left, below the 70% rule." },
+  { id: "reject", label: "Reject the 12 crates and set them aside", detail: "They wait by the cold dock for now." },
+  { id: "acceptAll", label: "Accept all 240 crates for tonight's orders", detail: "Stores need curd; it will sell within 4 days." },
+  { id: "holdAll", label: "Hold the whole truck until the vendor replies", detail: "Nothing is accepted until FreshFarm calls back about the batch." },
 ];
 
 export const PUTAWAY_OPTIONS: { id: "split" | "allCold" | "dockAside" | "ambient"; label: string; detail: string }[] = [
-  { id: "split", label: "Good stock to the cold room. Rejected crates to cold quarantine with an RTV note.", detail: "RTV = return to vendor." },
-  { id: "allCold", label: "Everything to the cold room. Sort it out later.", detail: "Fastest way off the dock." },
-  { id: "dockAside", label: "Good stock to the cold room. Leave rejected crates by the dock.", detail: "Decide about them later." },
-  { id: "ambient", label: "Everything to normal storage for now.", detail: "The cold room is busy." },
+  { id: "split", label: "Good crates to the cold room; rejects to cold quarantine", detail: "An RTV note is raised for the 12 rejected crates." },
+  { id: "allCold", label: "All 240 crates to the cold room straight away", detail: "QC separates the rejects inside later today." },
+  { id: "dockAside", label: "Good crates to the cold room; rejects stay on the dock", detail: "The vendor's driver can take them back on his return trip later." },
+  { id: "ambient", label: "All crates to ambient staging for now", detail: "Moved to the cold room once a bay is free." },
 ];
 
 /* ── 10:00 Discrepancy: Crunchy Snacks ────────────────────────────────── */
@@ -327,29 +337,29 @@ export const RECOUNT_RESULT = [
 ];
 
 export const DAMAGED_FATES: { id: "rtv" | "scrap" | "accept"; label: string; detail: string }[] = [
-  { id: "rtv", label: "Quarantine and return to vendor (RTV)", detail: "Kept out of stock. Vendor gets a credit claim." },
-  { id: "scrap", label: "Throw them away now", detail: "Clears the dock." },
-  { id: "accept", label: "Accept into stock", detail: "Only the outer cartons look bad." },
+  { id: "rtv", label: "Quarantine them and return to the vendor", detail: "Kept out of stock; the vendor gets a credit claim." },
+  { id: "scrap", label: "Scrap them today to clear the dock", detail: "Written off as damaged; the dock stays clear." },
+  { id: "accept", label: "Accept them into stock as they are", detail: "Only the outer cartons look badly damaged." },
 ];
 
 export const UNSCANNABLE_FATES: { id: "relabel" | "reject" | "short"; label: string; detail: string }[] = [
-  { id: "relabel", label: "Check product and MRP, relabel, then accept", detail: "They are good stock with bad labels." },
-  { id: "reject", label: "Reject them to the vendor", detail: "Unreadable labels are not accepted." },
-  { id: "short", label: "Count them as short", detail: "If it can't be scanned, it isn't received." },
+  { id: "relabel", label: "Check product and MRP, relabel, then accept", detail: "Good stock with labels that won't scan." },
+  { id: "reject", label: "Reject them back to the vendor", detail: "Unreadable labels fail our receiving rule." },
+  { id: "short", label: "Count them as short on the DN", detail: "If it can't be scanned, it isn't received." },
 ];
 
 export const CAUSE_OPTIONS: { id: "vendorStacking" | "ourUnloading" | "transport" | "unsure"; label: string }[] = [
-  { id: "vendorStacking", label: "The vendor loaded pallets two high, and the bottom one was crushed" },
-  { id: "ourUnloading", label: "Our team dropped them while unloading" },
-  { id: "transport", label: "Bad roads on the way" },
-  { id: "unsure", label: "Not sure yet" },
+  { id: "vendorStacking", label: "The vendor stacked pallets two high in the truck" },
+  { id: "ourUnloading", label: "Our team dropped cartons while unloading" },
+  { id: "transport", label: "Rough roads on the way crushed the bottom layer of pallet 3" },
+  { id: "unsure", label: "There isn't enough evidence to say yet" },
 ];
 
 export const PREVENT_OPTIONS: { id: "gateCheck" | "review" | "remind" | "nothing"; label: string }[] = [
-  { id: "gateCheck", label: "Ask Crunchy Snacks to stop stacking pallets two high, and check pallets at the truck door before unloading" },
-  { id: "review", label: "Raise it with the vendor at the monthly review" },
-  { id: "remind", label: "Remind the team to unload carefully" },
-  { id: "nothing", label: "Nothing — it was a one-off" },
+  { id: "gateCheck", label: "Ask the vendor to stop double-stacking; check pallets at the door" },
+  { id: "review", label: "Raise the damage at the monthly vendor review meeting" },
+  { id: "remind", label: "Brief the unloading team to handle snack pallets gently" },
+  { id: "nothing", label: "Treat it as a one-off and watch the next deliveries" },
 ];
 
 /* ── 11:00 Data ───────────────────────────────────────────────────────── */
@@ -412,22 +422,22 @@ export const DRIVER_OPTIONS: { id: "spice" | "grocery" | "spread" | "crunchy" | 
 ];
 
 export const REPORT_LINES: { id: string; text: string; kind: "volume" | "exceptions" | "status" | "action" | "misleading" | "filler" }[] = [
-  { id: "volume", text: "Inbound: 5 vendors. 3,330 units accepted of 3,370 planned (98.8%).", kind: "volume" },
-  { id: "volumeWrong", text: "Inbound: 4,510 units accepted of 4,570 planned.", kind: "misleading" },
-  { id: "exceptions", text: "Exceptions: 26 damaged or rejected and 14 short — Spice Route 8 + 12, Crunchy Snacks 6 + 2, FreshFarm 12 rejected for shelf life.", kind: "exceptions" },
+  { id: "volume", text: "Inbound: 5 vendors, 3,330 units accepted of 3,370 planned (98.8%).", kind: "volume" },
+  { id: "volumeWrong", text: "Inbound: 6 vendors, 4,510 units accepted of 4,570 planned (98.7%).", kind: "misleading" },
+  { id: "exceptions", text: "Exceptions: 26 damaged or rejected, 14 short — Spice Route 8 + 12, Crunchy 6 + 2, FreshFarm 12 (shelf life).", kind: "exceptions" },
   { id: "grnPending", text: "GRN pending: BrightHome (850 units) and Crunchy Snacks (472 units).", kind: "status" },
-  { id: "dockDelay", text: "Dock delay: BrightHome at the dock for 140 minutes; GRN still pending.", kind: "status" },
-  { id: "actions", text: "Action: Procurement to take up Spice Route shortages. DN raised for Crunchy Snacks (2). RTV for the 26 damaged or rejected units.", kind: "action" },
-  { id: "allGood", text: "All vendors delivered well today.", kind: "misleading" },
-  { id: "teamWell", text: "The team worked hard and the morning went smoothly.", kind: "filler" },
+  { id: "dockDelay", text: "Dock delay: BrightHome 140 minutes at the dock, GRN still pending.", kind: "status" },
+  { id: "actions", text: "Action: Procurement to chase Spice Route; DN for Crunchy (2); RTV for 26 units.", kind: "action" },
+  { id: "allGood", text: "Vendors: all five delivered on their booked slots this morning.", kind: "misleading" },
+  { id: "teamWell", text: "Team: 13 of 14 present; no overtime needed this morning.", kind: "filler" },
 ];
 
 export const ESCALATIONS: { id: "evidence" | "partial" | "vague" | "hide" | "wrong"; text: string }[] = [
-  { id: "evidence", text: "Spice Route: 20 of 1,200 cartons short or damaged today (1.7%) — half of today's losses. Please ask Procurement to raise it at this week's vendor review." },
-  { id: "partial", text: "Spice Route had 12 cartons short today. Please check." },
-  { id: "vague", text: "Some vendors are giving us problems. Please look into it." },
-  { id: "wrong", text: "Spice Route was short 40 cartons today. This has to stop." },
-  { id: "hide", text: "Nothing to raise today — the losses are small." },
+  { id: "evidence", text: "Spice Route: 20 of 1,200 cartons short or damaged today (1.7%), half of all losses. Please ask Procurement to raise it at this week's vendor review." },
+  { id: "partial", text: "Spice Route was short 12 cartons today and had some damage as well. Please ask Procurement to look into it with the vendor before this week's review." },
+  { id: "vague", text: "Spice Route keeps having problems with short and damaged deliveries. I think Procurement should talk to them about it soon." },
+  { id: "wrong", text: "Spice Route: 40 cartons short or damaged today, the most of any vendor. Please ask Procurement to raise it at this week's vendor review." },
+  { id: "hide", text: "Losses today are under 2% for every vendor, which is within normal limits, so I don't think there is anything to raise this week." },
 ];
 
 /* ── 11:30 Peak ───────────────────────────────────────────────────────── */
@@ -462,10 +472,10 @@ export const PEAK_ITEMS: { id: PeakItemId; title: string; text: string; delegate
 export const VENDOR_LINE = "“Those 6 cartons were fine when they left our warehouse. Accept them, or we will stop sending trucks to you.”";
 
 export const VENDOR_REPLIES: { id: "facts" | "later" | "angry" | "threat"; text: string }[] = [
-  { id: "facts", text: "The dock camera shows pallet 3 already crushed when your truck door opened — the pallets were stacked two high. The 6 cartons go back on an RTV with photos. Can your team confirm the credit note by tomorrow?" },
-  { id: "later", text: "There is a problem with 6 cartons. We will send you the details later." },
-  { id: "angry", text: "Your deliveries are always a problem. Sort it out on your side." },
-  { id: "threat", text: "Your driver must have damaged them. Accept it, or we stop your bookings." },
+  { id: "facts", text: "Our dock camera shows pallet 3 already crushed when your truck door opened — the pallets were stacked two high. We are returning the 6 cartons on an RTV with photos. Can you confirm the credit note by tomorrow?" },
+  { id: "later", text: "I understand your concern. Our QC team found 6 crushed cartons in this morning's delivery, so we cannot take them into stock. We will look into it further and get back to you with the full details and photos soon." },
+  { id: "angry", text: "This is not the first time we have had damage from your side. Please make sure your team loads the trucks properly from now on, because we cannot keep accepting deliveries in this condition." },
+  { id: "threat", text: "Our team says your driver handled the cartons roughly while unloading. If you do not accept these 6 cartons as your loss, we will have to stop giving you delivery slots at this FC." },
 ];
 
 export const PROCUREMENT_LINE = "“Will FreshFarm's milk and curd be ready for tonight's dark-store orders? And what happened with Crunchy Snacks?”";
@@ -474,11 +484,23 @@ export const PROCUREMENT_MESSAGES: { id: "full" | "brief" | "broadcast" | "allFi
   {
     id: "full",
     to: "Pooja (Procurement), copy Sanjay (Inventory)",
-    text: "FreshFarm: 228 crates accepted, GRN done, in the cold room — ready for tonight. 12 crates rejected (shelf life below 70%), RTV raised. Crunchy Snacks: DN for 2 short; 6 crushed cartons on RTV with camera proof. Pooja, please follow up the credit note.",
+    text: "FreshFarm: 228 crates accepted and in the cold room, ready for tonight; 12 rejected for shelf life, RTV raised. Crunchy Snacks: DN for 2 short, 6 crushed on RTV with camera proof. Pooja, please chase the credit note.",
   },
-  { id: "brief", to: "Pooja (Procurement)", text: "Milk is received. Some issues with snacks." },
-  { id: "broadcast", to: "All FC staff group", text: "Lots of problems today with vendors. Please help." },
-  { id: "allFine", to: "Pooja (Procurement)", text: "All fine. Everything was received in full." },
+  {
+    id: "brief",
+    to: "Pooja (Procurement)",
+    text: "FreshFarm's milk and curd are received and in the cold room, so tonight's orders should be fine. Crunchy Snacks had a few short and damaged cartons this morning, which we are sorting out with the vendor on our side today.",
+  },
+  {
+    id: "broadcast",
+    to: "All FC staff group",
+    text: "FreshFarm is received; 12 crates were rejected for shelf life. Crunchy Snacks was short 2 and had 6 damaged. Could someone please take these up with the vendors today?",
+  },
+  {
+    id: "allFine",
+    to: "Pooja (Procurement)",
+    text: "FreshFarm's milk and curd are received in full and in the cold room, ready for tonight. Crunchy Snacks is fully received too, so there is nothing for you to follow up.",
+  },
 ];
 
 /* ── Before and after ─────────────────────────────────────────────────── */

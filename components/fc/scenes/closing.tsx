@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AlertTriangle, ArrowRight, Check, Send } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, Flag, Send } from "lucide-react";
 
 import { ActionBar, Card, Choice, Eyebrow, Notice, PrimaryButton, QuietButton, SceneHeading, Speech } from "@/components/hiring/ui";
 import {
@@ -37,7 +37,9 @@ function Tracker({ state, act }: SceneProps) {
   const d = state.data;
   const toolOrder = useFcShuffle("sheetTools");
   const rows = SHEET.filter((row) => !(row.duplicate && d.deduped));
-  const found = d.tools.includes("duplicates");
+  const spotted = d.flags.some((id) => id === "spice" || id === "spice2");
+  const found = d.tools.includes("duplicates") || spotted;
+  const checksLeft = SHEET_TOOL_LIMIT - d.tools.length - d.flags.length;
   const sum = (key: "plan" | "accepted" | "damaged" | "short") => rows.reduce((total, row) => total + row[key], 0);
   return (
     <div>
@@ -59,7 +61,16 @@ function Tracker({ state, act }: SceneProps) {
               return (
                 <tr key={row.id} className={cn("text-hi", flagged ? "bg-warn-500/15" : "bg-white/[0.02]")}>
                   <td className={cn("sticky left-0 z-10 border border-line px-2 py-1.5 font-sans text-[13px]", flagged ? "bg-[#2b2414]" : "bg-[#161616]")}>
-                    {row.vendor}
+                    <button
+                      type="button"
+                      disabled={d.flags.includes(row.id) || checksLeft <= 0 || d.deduped}
+                      onClick={() => act({ t: "flagRow", id: row.id })}
+                      aria-label={`Flag the ${row.vendor} row as wrong`}
+                      className="group inline-flex items-center gap-1.5 text-left disabled:cursor-default"
+                    >
+                      <Flag className={cn("size-3 shrink-0", d.flags.includes(row.id) ? "fill-warn-500 text-warn-500" : "text-faint group-hover:text-ember-500 group-disabled:text-faint")} aria-hidden />
+                      {row.vendor}
+                    </button>
                     {flagged ? <span className="ml-1.5 font-sans text-[11px] font-semibold text-warn-500">repeated</span> : null}
                   </td>
                   <td className="tabular border border-line px-2 py-1.5 text-right">{fmt(row.plan)}</td>
@@ -87,16 +98,36 @@ function Tracker({ state, act }: SceneProps) {
       <div className="mt-4 flex items-baseline justify-between gap-3">
         <p className="text-[13.5px] font-semibold text-hi">Check the sheet</p>
         <p className="tabular text-[12.5px] text-lo">
-          Checks left: {SHEET_TOOL_LIMIT - d.tools.length} of {SHEET_TOOL_LIMIT}
+          Checks left: {checksLeft} of {SHEET_TOOL_LIMIT}
         </p>
       </div>
-      <p className="mt-0.5 text-[12.5px] text-lo">You have time for {SHEET_TOOL_LIMIT} checks before the update is due. Choose the ones that matter.</p>
+      <p className="mt-0.5 text-[12.5px] text-lo">
+        You have time for {SHEET_TOOL_LIMIT} checks before the update is due. Run one below, or tap a vendor’s name in the sheet to flag a row that looks wrong — each uses one check.
+      </p>
+      {d.flags.length ? (
+        <ul className="mt-2 space-y-1">
+          {d.flags.map((id) => {
+            const row = SHEET.find((r) => r.id === id);
+            const dup = id === "spice" || id === "spice2";
+            return (
+              <li key={id} className="border-l-2 border-line-strong pl-3 text-[13px] leading-snug text-mid">
+                Flagged {row?.vendor}:{" "}
+                {dup
+                  ? d.deduped
+                    ? "the repeated row has been removed."
+                    : "Spice Route Foods is on the sheet twice, with the same numbers. Only one Spice Route truck came in today."
+                  : "this row matches a truck that came in, and its numbers add up."}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
       <div className="mt-2 space-y-1.5">
         {toolOrder(SHEET_TOOLS).map((tool) => {
           const used = d.tools.includes(tool.id);
           return (
             <div key={tool.id}>
-              <Choice go={!used} selected={used} disabled={!used && d.tools.length >= SHEET_TOOL_LIMIT} onClick={used ? undefined : () => act({ t: "sheetTool", id: tool.id })}>
+              <Choice go={!used} selected={used} disabled={!used && checksLeft <= 0} onClick={used ? undefined : () => act({ t: "sheetTool", id: tool.id })}>
                 {tool.label}
               </Choice>
               {used ? (

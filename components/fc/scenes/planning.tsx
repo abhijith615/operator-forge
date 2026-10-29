@@ -11,6 +11,7 @@ import {
   HANDOVER_PANELS,
   NIGHT_LEAD,
   NIGHT_LEAD_LINES,
+  NOTICE_OPTIONS,
   QUICKBEV_OPTIONS,
   REPLAN_UPDATES,
   TASK_LABEL,
@@ -196,6 +197,7 @@ const UPDATE_ICON: Record<string, React.ReactNode> = {
 
 export function Replan({ state, act }: SceneProps) {
   const order = useFcShuffle("quickbev");
+  const noticeOrder = useFcShuffle("notice");
   const crews = crewsOf(state.team);
   const missing = BOOKED.filter((v) => !state.board[v]);
   const qbOpen = state.quickbev === "board" && !state.board.quickbev;
@@ -242,10 +244,13 @@ export function Replan({ state, act }: SceneProps) {
       </Eyebrow>
       <DockBoard state={state} act={act} crews={crews} />
 
-      <div className="mt-4">
-        <Choice selected={state.notified} onClick={() => act({ t: "notify", on: !state.notified })} detail="A message to each vendor whose time or dock changed.">
-          Send the vendors their new times
-        </Choice>
+      <Eyebrow className="mt-5 mb-2">Telling the vendors</Eyebrow>
+      <div className="space-y-1.5">
+        {noticeOrder(NOTICE_OPTIONS).map((o) => (
+          <Choice key={o.id} selected={state.notice === o.id} onClick={() => act({ t: "notice", choice: o.id })} detail={o.detail}>
+            {o.label}
+          </Choice>
+        ))}
       </div>
 
       <ActionBar note={missing.length ? `Not on the board: ${missing.map((v) => VEHICLES[v].vendor).join(", ")}` : undefined}>

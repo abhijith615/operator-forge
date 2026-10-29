@@ -222,7 +222,7 @@ function evaluate(state: FcState, id: string): Eval {
       const qbText = { board: "gave QuickBev a slot", offpeak: "asked QuickBev to wait for a quiet slot", turnaway: "turned QuickBev away" }[qb ?? "turnaway"];
       return {
         score,
-        did: `${qb ? qbText[0]!.toUpperCase() + qbText.slice(1) : "Left QuickBev waiting at the gate with no decision"}; ${delayed.length ? `pushed back ${delayed.map((v) => VEHICLES[v].vendor).join(", ")}` : "kept every confirmed booking on time"}; ${state.notified ? "sent vendors their new times" : "did not tell vendors the new times"}.`,
+        did: `${qb ? qbText[0]!.toUpperCase() + qbText.slice(1) : "Left QuickBev waiting at the gate with no decision"}; ${delayed.length ? `pushed back ${delayed.map((v) => VEHICLES[v].vendor).join(", ")}` : "kept every confirmed booking on time"}; ${state.notified ? "sent vendors their new times" : state.notice === "dairy" ? "told only FreshFarm its new time" : state.notice === "board" ? "only updated the gate board" : "did not tell vendors the new times"}.`,
       };
     }
 
@@ -371,7 +371,8 @@ function evaluate(state: FcState, id: string): Eval {
     case "DR2": {
       if (!data.report) return null;
       if (data.report.inconsistent) return { score: 0, did: "Sent the update with a repeated row in the totals." };
-      if (data.dedupedAfterPrompt) return { score: data.tools.some((t) => t === "totals" || t === "duplicates") ? 2 : 1, did: "Fixed the repeated row only after the system warned the totals did not match." };
+      const looked = data.tools.some((t) => t === "totals" || t === "duplicates") || data.flags.some((id) => id === "spice" || id === "spice2");
+      if (data.dedupedAfterPrompt) return { score: looked ? 2 : 1, did: "Fixed the repeated row only after the system warned the totals did not match." };
       return { score: 3, did: "Found and removed the repeated row before sending." };
     }
 
