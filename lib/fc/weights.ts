@@ -6,7 +6,7 @@
  * scoring.
  */
 
-export const FC_VERSION = "fc-1.0";
+export const FC_VERSION = "fc-1.1";
 /** Stored in `hiring_assessments.role_id`; how an FC attempt is told apart from a store-manager one. */
 export const FC_ROLE_ID = "fc_exec";
 export const FC_SECONDS = 30 * 60;

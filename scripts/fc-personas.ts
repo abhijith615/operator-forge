@@ -40,9 +40,13 @@ const IDEAL: Action[] = [
   { t: "place", v: "crunchy", dock: "D1", start: 3 },
   { t: "place", v: "mega", dock: "D4", start: 6 },
   { t: "lockPlan" },
+  // The night shift left nobody on QC or GRN, a receiver unloading and loaders on putaway.
   { t: "assign", p: "meena", task: "qc" },
+  { t: "assign", p: "neha", task: "grn" },
+  { t: "assign", p: "divya", task: "scan" },
   { t: "assign", p: "ajay", task: "scan" },
-  { t: "assign", p: "arif", task: "unload" },
+  { t: "assign", p: "ravi", task: "unload" },
+  { t: "assign", p: "ganesh", task: "unload" },
   { t: "lockTeam" },
   { t: "place", v: "bright", dock: "D4", start: 2 },
   { t: "place", v: "dairy", dock: "D3", start: 3 },
@@ -157,6 +161,33 @@ show("hero", heroResult);
 check("hero: delegation scores 0", heroResult.evidence.find((e) => e.id === "TL3")?.score === 0, heroResult.evidence.find((e) => e.id === "TL3")?.did);
 check("hero: everything else still strong", heroResult.overall >= 85 && heroResult.overall < 100, `got ${heroResult.overall}`);
 check("hero: a zero on delegation rules out Strong", heroResult.indication === "PROMISING", heroResult.indication);
+
+// Only three checks fit before the update is due.
+{
+  const upTo = run(IDEAL.slice(0, IDEAL.findIndex((a) => a.t === "sheetTool"))).state;
+  let s = upTo;
+  for (const id of ["format", "percent", "vendorCodes"] as const) s = reduce(s, { a: { t: "sheetTool", id }, at: 1 });
+  check("data: three checks allowed", s.data.tools.length === 3);
+  check("data: a fourth is refused", reduce(s, { a: { t: "sheetTool", id: "duplicates" }, at: 1 }) === s);
+  // Spent the checks on the wrong things, then fixed the row only when warned.
+  const after = [
+    { t: "signals", picks: ["brightGrn", "spiceLoss", "crunchyOpen"] },
+    { t: "driver", id: "spice" },
+    { t: "report", lines: ["volume", "exceptions", "grnPending", "actions"] },
+    { t: "removeDuplicate" },
+    { t: "report", lines: ["volume", "exceptions", "grnPending", "actions"] },
+    { t: "escalate", id: "evidence" },
+  ] as Action[];
+  for (const a of after) s = reduce(s, { a, at: 1 });
+  const dr2 = scoreFc(expire(s)).evidence.find((e) => e.id === "DR2");
+  check("data: wrong checks, fixed only when warned, scores 1", dr2?.score === 1, `${dr2?.score} ${dr2?.did}`);
+}
+
+// Nobody starts where they should be: the handover floor scores 0 on staffing if left alone.
+{
+  const lazy = run([...IDEAL.slice(0, IDEAL.findIndex((a) => a.t === "assign")), { t: "lockTeam" }]).state;
+  check("team: the handover floor left alone leaves QC and GRN empty", scoreFc(expire(lazy)).evidence.find((e) => e.id === "TL1")?.score === 0);
+}
 
 // Replaying the stored actions gives the same result.
 const replayed = scoreFc(replay(ideal.stamped));

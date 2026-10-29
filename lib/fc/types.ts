@@ -1,5 +1,6 @@
 import type {
   Bucket,
+  SheetToolId,
   DockId,
   EvidenceId,
   GateCheckId,
@@ -80,7 +81,7 @@ export type Action =
       cause: "vendorStacking" | "ourUnloading" | "transport" | "unsure";
       prevent: "gateCheck" | "review" | "remind" | "nothing";
     }
-  | { t: "sheetTool"; id: "totals" | "duplicates" }
+  | { t: "sheetTool"; id: SheetToolId }
   | { t: "removeDuplicate" }
   | { t: "signals"; picks: string[] }
   | { t: "driver"; id: string }
@@ -168,7 +169,7 @@ export interface FcState {
   };
 
   data: {
-    tools: ("totals" | "duplicates")[];
+    tools: SheetToolId[];
     deduped: boolean;
     /** The duplicate was removed only after the send-time warning. */
     dedupedAfterPrompt: boolean;

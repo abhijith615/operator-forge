@@ -5,6 +5,8 @@ import {
   DOCKS,
   HANDOVER_TEAM,
   PERSON,
+  SHEET_TOOLS,
+  SHEET_TOOL_LIMIT,
   SLOTS,
   SUITED,
   VEHICLES,
@@ -314,7 +316,8 @@ function apply(state: FcState, action: Action, at: number): FcState | null {
     /* ── Data ── */
 
     case "sheetTool":
-      if (s.scene !== "data" || s.data.tools.includes(action.id)) return null;
+      if (s.scene !== "data" || s.data.tools.includes(action.id) || s.data.tools.length >= SHEET_TOOL_LIMIT) return null;
+      if (!SHEET_TOOLS.some((tool) => tool.id === action.id)) return null;
       return { ...s, data: { ...s.data, tools: [...s.data.tools, action.id] } };
 
     case "removeDuplicate":

@@ -128,11 +128,16 @@ export const TEAM: Person[] = [
 export const PERSON = Object.fromEntries(TEAM.map((p) => [p.id, p])) as Record<PersonId, Person>;
 export const nameOf = (id: string) => (id === "me" ? "you" : (PERSON[id as PersonId]?.name ?? id));
 
-/** How the night shift left the floor. Meena is still on scanning from last night, so nobody is on QC. */
+/**
+ * How the night shift left the floor: people moved around to cover gaps, so
+ * several are on work that is not their main job, and nobody is on QC or the
+ * GRN desk. Everyone is on something they are trained for — what needs fixing
+ * has to be worked out from the counts and the roles, not spotted by colour.
+ */
 export const HANDOVER_TEAM: Record<PersonId, TaskId> = {
-  ravi: "unload", salim: "unload", ganesh: "unload", mohan: "unload", pradeep: "unload", ajay: "unload",
-  divya: "scan", imran: "scan", meena: "scan", neha: "grn",
-  babu: "putaway", suresh: "putaway", arif: "putaway",
+  ravi: "putaway", salim: "unload", ganesh: "putaway", mohan: "unload", pradeep: "unload", ajay: "unload",
+  divya: "unload", imran: "scan", meena: "scan", neha: "scan",
+  babu: "unload", suresh: "putaway", arif: "putaway",
 };
 
 /** Work that somebody on the team can do. "Fit" is for the candidate's eye; the scorer reads `suited`. */
@@ -203,7 +208,7 @@ export const HANDOVER_PANELS: { id: string; title: string; detail: string; rows:
     detail: "13 present · 1 absent",
     rows: [
       "Kavitha (receiver) is off sick today.",
-      "Meena is still on scanning. Night shift moved her there to cover.",
+      "Night shift moved people around to cover gaps. Check who is on what before you start.",
       "Ajay was trained on the handheld scanner last month.",
       "Babu, Suresh and Arif hold MHE licences (reach truck, pallet truck, forklift).",
     ],
@@ -366,18 +371,28 @@ export const SHEET: SheetRow[] = [
   { id: "spice", vendor: "Spice Route Foods", plan: 1200, accepted: 1180, damaged: 8, short: 12, grn: "Done", dockMinutes: 75 },
   { id: "quickbev", vendor: "QuickBev Drinks", plan: 600, accepted: 600, damaged: 0, short: 0, grn: "Done", dockMinutes: 60 },
   { id: "bright", vendor: "BrightHome Cleaning", plan: 850, accepted: 850, damaged: 0, short: 0, grn: "Pending", dockMinutes: 140 },
+  { id: "spice2", vendor: "Spice Route Foods", plan: 1200, accepted: 1180, damaged: 8, short: 12, grn: "Done", dockMinutes: 75, duplicate: true },
   { id: "dairy", vendor: "FreshFarm Dairy", plan: 240, accepted: 228, damaged: 12, short: 0, grn: "Done", dockMinutes: 70 },
   { id: "crunchy", vendor: "Crunchy Snacks", plan: 480, accepted: 472, damaged: 6, short: 2, grn: "Pending", dockMinutes: 95 },
-  { id: "spice2", vendor: "Spice Route Foods", plan: 1200, accepted: 1180, damaged: 8, short: 12, grn: "Done", dockMinutes: 75, duplicate: true },
 ];
 
 /** What was booked and arrived today, from the dock schedule: the number the totals must match. */
 export const SCHEDULE_PLAN_TOTAL = 3370;
 
-export const SHEET_TOOLS: { id: "totals" | "duplicates"; label: string; detail: string }[] = [
-  { id: "totals", label: "Check totals against the dock schedule", detail: "Does the plan total match today's trucks?" },
-  { id: "duplicates", label: "Check for repeated rows", detail: "Is any vendor listed twice?" },
+export type SheetToolId = "totals" | "duplicates" | "grnStatus" | "dockYesterday" | "percent" | "vendorCodes" | "format";
+
+/** Checks the candidate can run on the sheet. Only two find what is wrong with it; there is time for three. */
+export const SHEET_TOOLS: { id: SheetToolId; label: string; result: string }[] = [
+  { id: "totals", label: "Compare the totals with the dock schedule", result: "" },
+  { id: "duplicates", label: "Match each row to a truck that came in", result: "" },
+  { id: "grnStatus", label: "Ask Neha to confirm the GRN column", result: "Neha: the GRN column is right. BrightHome and Crunchy Snacks are still pending." },
+  { id: "dockYesterday", label: "Compare dock minutes with yesterday", result: "Yesterday's average was 80 minutes a truck." },
+  { id: "percent", label: "Add a % accepted column", result: "Every vendor is between 95% and 100% accepted." },
+  { id: "vendorCodes", label: "Check vendor codes against the vendor list", result: "All vendor codes are valid." },
+  { id: "format", label: "Tidy the column widths and number format", result: "The sheet looks tidier. No numbers changed." },
 ];
+
+export const SHEET_TOOL_LIMIT = 3;
 
 export const SIGNALS: { id: string; label: string; real: boolean }[] = [
   { id: "brightGrn", label: "BrightHome: GRN still pending after 140 minutes at the dock", real: true },

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { isAdmin } from "@/lib/admin/queries";
-import { fcResultFrom, readFcAttempts } from "@/lib/fc/server";
+import { fcResultFrom, isCurrentFc, readFcAttempts } from "@/lib/fc/server";
 import { formatWhatsapp } from "@/lib/hiring/phone";
 
 export const metadata: Metadata = { title: "FC Executive candidates", robots: { index: false, follow: false } };
@@ -18,7 +18,8 @@ export default async function FcResultsPage() {
   if (!(await isAdmin())) notFound();
   const rows = (await readFcAttempts()).map((attempt) => ({
     attempt,
-    result: attempt.status === "in_progress" ? null : fcResultFrom(attempt.actions).result,
+    current: isCurrentFc(attempt),
+    result: attempt.status === "in_progress" || !isCurrentFc(attempt) ? null : fcResultFrom(attempt.actions).result,
   }));
 
   return (
@@ -38,7 +39,7 @@ export default async function FcResultsPage() {
           <p className="mt-6 rounded-[18px] border border-line bg-surface p-6 text-[14.5px] text-mid">Nobody has sat the FC Executive test yet.</p>
         ) : (
           <ul className="mt-6 space-y-2">
-            {rows.map(({ attempt, result }) => (
+            {rows.map(({ attempt, current, result }) => (
               <li key={attempt.id}>
                 <Link
                   href={`/hiring-test/fc-executive/results/${attempt.id}`}
@@ -54,7 +55,7 @@ export default async function FcResultsPage() {
                     </p>
                   </div>
                   <p className="text-[13px] text-mid sm:text-right">
-                    {result ? result.indicationLabel : "In progress"}
+                    {!current ? `Earlier version (${attempt.assessment_version}) · not re-scored` : result ? result.indicationLabel : "In progress"}
                     {result?.flags.length ? (
                       <span className="ml-2 rounded-full border border-alert-500/45 px-2 py-0.5 font-mono text-[10.5px] tracking-[0.1em] text-alert-500">
                         {result.flags.length} FLAG{result.flags.length > 1 ? "S" : ""}

@@ -54,6 +54,9 @@ const first = <T,>(data: unknown): T | null => ((Array.isArray(data) ? data[0] :
 export const isFcRow = (row: { role_id?: string | null; assessment_version?: string | null }) =>
   row.role_id === FC_ROLE_ID || (row.assessment_version ?? "").startsWith("fc-");
 
+/** Sat on this version of the shift. An attempt can only be replayed by the engine it was played on. */
+export const isCurrentFc = (row: { assessment_version?: string | null }) => row.assessment_version === FC_VERSION;
+
 export function fcResultFrom(actions: unknown): { result: FcResult; incomplete: boolean } {
   const state = replay(asActions(actions));
   const finished = state.scene === "done" && state.expiredIn === null;

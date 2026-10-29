@@ -22,6 +22,9 @@ import {
 import { crewsOf, peakOf, trayOf } from "@/lib/fc/engine";
 import { cn } from "@/lib/utils";
 
+import { shuffledBy } from "@/components/hiring/shuffle";
+import { useFcStore } from "@/stores/fc-store";
+
 import { DockBoard } from "../dock-board";
 import { Avatar, Lines, useFcShuffle, type SceneProps } from "../shared";
 
@@ -106,6 +109,9 @@ function BoardStep({ state, act }: SceneProps) {
 const TASK_ORDER: TaskId[] = ["unload", "scan", "qc", "putaway", "grn"];
 
 function TeamStep({ state, act }: SceneProps) {
+  const attempt = useFcStore((store) => store.attempt?.id ?? "");
+  // Each person's jobs in an order of their own, so the first button is not always their main job.
+  const skillOrder = (skills: TaskId[], who: string) => shuffledBy(skills.map((id) => ({ id })), `${attempt}:skills:${who}`).map((item) => item.id);
   const peak = peakOf(state.board);
   const counts = Object.fromEntries(TASK_ORDER.map((t) => [t, Object.values(state.team).filter((x) => x === t).length])) as Record<TaskId, number>;
   const crews = crewsOf(state.team);
@@ -144,7 +150,7 @@ function TeamStep({ state, act }: SceneProps) {
               </div>
             </div>
             <div role="group" aria-label={`${person.name}'s job`} className="mt-2 flex flex-wrap gap-1.5 pl-12">
-              {person.skills.map((task) => {
+              {skillOrder(person.skills, person.id).map((task) => {
                 const on = state.team[person.id] === task;
                 return (
                   <button

@@ -5,7 +5,7 @@ import { Check, UserRound } from "lucide-react";
 
 import { shuffledBy } from "@/components/hiring/shuffle";
 import { Eyebrow, Sheet } from "@/components/hiring/ui";
-import { JOB_LABEL, OFFERED, PERSON, SUITED, TASK_LABEL, type JobId } from "@/lib/fc/content";
+import { JOB_LABEL, OFFERED, PERSON, TASK_LABEL, type JobId } from "@/lib/fc/content";
 import type { Action, FcState, Owner } from "@/lib/fc/types";
 import { cn } from "@/lib/utils";
 import { useFcStore } from "@/stores/fc-store";
@@ -60,7 +60,6 @@ export function OwnerPicker({
       <Eyebrow className="mt-5 mb-2">Give it to</Eyebrow>
       <ul className="space-y-1.5">
         {people.map((person) => {
-          const trained = SUITED[job].includes(person.id);
           return (
             <li key={person.id}>
               <button
@@ -75,11 +74,8 @@ export function OwnerPicker({
                     <span className="text-[12.5px] text-lo">{person.role}</span>
                   </span>
                   <span className="mt-0.5 block text-[12.5px] leading-snug text-lo">
-                    Now on {TASK_LABEL[state.team[person.id]].toLowerCase()} · {person.note}
+                    Now on {TASK_LABEL[state.team[person.id]].toLowerCase().replace("grn", "GRN")} · {person.note}
                   </span>
-                </span>
-                <span className={cn("shrink-0 text-right text-[12px] font-semibold", trained ? "text-ion-400" : "text-mid")}>
-                  {trained ? "Trained for this" : "Not trained for this"}
                 </span>
               </button>
             </li>

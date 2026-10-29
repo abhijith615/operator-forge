@@ -16,7 +16,7 @@ import {
 } from "./content";
 import { arrivesAt, busyAt, canPlace, crewsOf, outcomeOf } from "./engine";
 import { SCENES, type FcState, type Placement, type SceneId } from "./types";
-import { FC_COMPETENCIES, FC_COMPETENCY_LABEL, FC_COMPETENCY_PLAIN, FC_WEIGHTS, type FcCompetencyId } from "./weights";
+import { FC_COMPETENCIES, FC_COMPETENCY_LABEL, FC_COMPETENCY_PLAIN, FC_VERSION, FC_WEIGHTS, type FcCompetencyId } from "./weights";
 
 /**
  * FC Executive scoring.
@@ -371,7 +371,7 @@ function evaluate(state: FcState, id: string): Eval {
     case "DR2": {
       if (!data.report) return null;
       if (data.report.inconsistent) return { score: 0, did: "Sent the update with a repeated row in the totals." };
-      if (data.dedupedAfterPrompt) return { score: data.tools.length ? 2 : 1, did: "Fixed the repeated row only after the system warned the totals did not match." };
+      if (data.dedupedAfterPrompt) return { score: data.tools.some((t) => t === "totals" || t === "duplicates") ? 2 : 1, did: "Fixed the repeated row only after the system warned the totals did not match." };
       return { score: 3, did: "Found and removed the repeated row before sending." };
     }
 
@@ -548,7 +548,7 @@ export function scoreFc(state: FcState): FcResult {
   const development = weakest && weakestBehaviour && weakestBehaviour.score < 3 ? { title: FC_COMPETENCY_PLAIN[weakest.id].name, text: DEF[weakestBehaviour.id]!.weakness } : null;
 
   return {
-    version: "fc-1.0",
+    version: FC_VERSION,
     overall,
     incomplete,
     observed,

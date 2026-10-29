@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { AlertTriangle, ArrowRight, Check, Copy, Sigma, Send } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, Send } from "lucide-react";
 
 import { ActionBar, Card, Choice, Eyebrow, Notice, PrimaryButton, QuietButton, SceneHeading, Speech } from "@/components/hiring/ui";
 import {
@@ -17,6 +17,7 @@ import {
   SCHEDULE_PLAN_TOTAL,
   SHEET,
   SHEET_TOOLS,
+  SHEET_TOOL_LIMIT,
   SIGNALS,
   VENDOR_LINE,
   VENDOR_REPLIES,
@@ -34,6 +35,7 @@ const fmt = (n: number) => n.toLocaleString("en-IN");
 
 function Tracker({ state, act }: SceneProps) {
   const d = state.data;
+  const toolOrder = useFcShuffle("sheetTools");
   const rows = SHEET.filter((row) => !(row.duplicate && d.deduped));
   const found = d.tools.includes("duplicates");
   const sum = (key: "plan" | "accepted" | "damaged" | "short") => rows.reduce((total, row) => total + row[key], 0);
@@ -82,23 +84,39 @@ function Tracker({ state, act }: SceneProps) {
         </table>
       </div>
 
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        {SHEET_TOOLS.map((tool) => (
-          <QuietButton key={tool.id} className="sm:w-full" disabled={d.tools.includes(tool.id)} onClick={() => act({ t: "sheetTool", id: tool.id })}>
-            {tool.id === "totals" ? <Sigma className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
-            {tool.label}
-          </QuietButton>
-        ))}
+      <div className="mt-4 flex items-baseline justify-between gap-3">
+        <p className="text-[13.5px] font-semibold text-hi">Check the sheet</p>
+        <p className="tabular text-[12.5px] text-lo">
+          Checks left: {SHEET_TOOL_LIMIT - d.tools.length} of {SHEET_TOOL_LIMIT}
+        </p>
       </div>
-      {d.tools.includes("totals") ? (
-        <Notice tone={sum("plan") === SCHEDULE_PLAN_TOTAL ? "good" : "caution"} className="mt-2">
-          Plan total on the sheet: <span className="font-semibold">{fmt(sum("plan"))}</span>. Today’s trucks on the dock schedule: <span className="font-semibold">{fmt(SCHEDULE_PLAN_TOTAL)}</span>.
-          {sum("plan") === SCHEDULE_PLAN_TOTAL ? " They match." : " They don’t match."}
-        </Notice>
-      ) : null}
-      {found ? (
-        <Notice tone={d.deduped ? "good" : "caution"} className="mt-2">
-          {d.deduped ? "The repeated Spice Route row has been removed." : "Spice Route Foods is listed twice, with the same numbers."}
+      <p className="mt-0.5 text-[12.5px] text-lo">You have time for {SHEET_TOOL_LIMIT} checks before the update is due. Choose the ones that matter.</p>
+      <div className="mt-2 space-y-1.5">
+        {toolOrder(SHEET_TOOLS).map((tool) => {
+          const used = d.tools.includes(tool.id);
+          return (
+            <div key={tool.id}>
+              <Choice go={!used} selected={used} disabled={!used && d.tools.length >= SHEET_TOOL_LIMIT} onClick={used ? undefined : () => act({ t: "sheetTool", id: tool.id })}>
+                {tool.label}
+              </Choice>
+              {used ? (
+                <p className="mt-1 mb-2 ml-1 border-l-2 border-line-strong pl-3 text-[13px] leading-snug text-mid">
+                  {tool.id === "totals"
+                    ? `Plan total on the sheet: ${fmt(sum("plan"))}. Today’s trucks on the dock schedule: ${fmt(SCHEDULE_PLAN_TOTAL)}. ${sum("plan") === SCHEDULE_PLAN_TOTAL ? "They match." : "They don’t match."}`
+                    : tool.id === "duplicates"
+                      ? d.deduped
+                        ? "Every row now matches one truck."
+                        : "Spice Route Foods is on the sheet twice, with the same numbers. Only one Spice Route truck came in today."
+                      : tool.result}
+                </p>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+      {d.deduped ? (
+        <Notice tone="good" className="mt-2">
+          The repeated Spice Route row has been removed.
         </Notice>
       ) : null}
       {(found || d.prompted) && !d.deduped ? (
