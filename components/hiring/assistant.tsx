@@ -75,7 +75,7 @@ export function HiringAssistant() {
         open={open}
         onOpenChange={setOpen}
         title="Assistant"
-        description="Explains what is on the screen. It will not tell you what to decide."
+        description="Explains what is on the screen. It will not tell you what to choose."
       >
         <div className="space-y-2.5" aria-live="polite">
           {lines.map((line) => (
@@ -126,7 +126,7 @@ export function HiringAssistant() {
             maxLength={240}
             autoComplete="off"
             onChange={(event) => setDraft(event.target.value)}
-            placeholder="What does CTD mean?"
+            placeholder="What is dispatch time?"
             className="min-h-[46px] flex-1 rounded-full border border-line-strong bg-void px-4 text-[14.5px] text-hi placeholder:text-faint focus:border-ember-500/60 focus:outline-none"
           />
           <button

@@ -101,30 +101,30 @@ export function HighValueCase({ state, act }: SceneProps) {
   return (
     <>
       <SceneHeading
-        eyebrow={`${clockLabel(k.openedAt)} · High-value alert`}
+        eyebrow={`${clockLabel(k.openedAt)} · Expensive item missing`}
         title={hv.item}
         media={<ItemPhoto id={hv.photo} alt={hv.item} />}
       />
 
       <div className="grid grid-cols-3 gap-2">
-        <Stat label="System" value={hv.system} />
-        <Stat label="Physical" value={known ? hv.physical : "?"} tone={known ? "caution" : "neutral"} />
-        <Stat label="Unit value" value={inr(hv.unitValue)} />
+        <Stat label="In the system" value={hv.system} />
+        <Stat label="In the cage" value={known ? hv.physical : "?"} tone={known ? "caution" : "neutral"} />
+        <Stat label="Price of one" value={inr(hv.unitValue)} />
       </div>
       {known ? (
         <div className="mt-2 grid grid-cols-2 gap-2">
-          <Stat label="Variance" value={`−${hv.system - hv.physical}`} tone="caution" />
-          <Stat label="Exposure" value={inr((hv.system - hv.physical) * hv.unitValue)} tone="caution" />
+          <Stat label="Missing" value={`−${hv.system - hv.physical}`} tone="caution" />
+          <Stat label="Value missing" value={inr((hv.system - hv.physical) * hv.unitValue)} tone="caution" />
         </div>
       ) : null}
 
       <Card className="mt-3">
-        <Eyebrow className="mb-2">Physical count</Eyebrow>
+        <Eyebrow className="mb-2">Count the cage</Eyebrow>
         {k.countOwner === null ? (
-          <QuietButton onClick={() => setSheet("count")}>Start a count</QuietButton>
+          <QuietButton onClick={() => setSheet("count")}>Choose who counts</QuietButton>
         ) : known ? (
           <p className="text-[14.5px] text-hi">
-            Counted by {k.countOwner === "me" ? "you" : nameOf(k.countOwner)} at {clockLabel(k.countDoneAt!)}: <span className="font-semibold">{hv.physical}</span> in the cage.
+            {k.countOwner === "me" ? "You" : nameOf(k.countOwner)} counted at {clockLabel(k.countDoneAt!)}: <span className="font-semibold">{hv.physical}</span> in the cage.
           </p>
         ) : (
           <>
@@ -136,10 +136,10 @@ export function HighValueCase({ state, act }: SceneProps) {
         )}
       </Card>
 
-      <Eyebrow className="mt-5 mb-2">Records</Eyebrow>
+      <Eyebrow className="mt-5 mb-2">Records · tap to read</Eyebrow>
       {k.recordsOwner && !seen.includes("exception") ? (
         <Notice className="mb-2">
-          {nameOf(k.recordsOwner)} is pulling the records. Back at {clockLabel(k.recordsDoneAt!)}.
+          {nameOf(k.recordsOwner)} is getting the records. Back at {clockLabel(k.recordsDoneAt!)}.
           {countKnown(state) || k.countOwner === null ? <ClockNote until={k.recordsDoneAt!} /> : null}
         </Notice>
       ) : null}
@@ -150,13 +150,13 @@ export function HighValueCase({ state, act }: SceneProps) {
       </div>
       {!k.recordsOwner && seen.length < CASE_TOOLS.length ? (
         <QuietButton className="mt-2" onClick={() => setSheet("records")}>
-          Assign the record pull
+          Ask someone to get all the records
         </QuietButton>
       ) : null}
 
       <ActionBar>
         {k.countOwner === null ? (
-          <QuietButton onClick={() => act({ t: "deferCase" })}>Defer to audit</QuietButton>
+          <QuietButton onClick={() => act({ t: "deferCase" })}>Leave it for the stock check team</QuietButton>
         ) : waitingOn !== null ? (
           <QuietButton onClick={() => act({ t: "wait" })}>Wait until {clockLabel(waitingOn)}</QuietButton>
         ) : null}
@@ -168,7 +168,7 @@ export function HighValueCase({ state, act }: SceneProps) {
       <OwnerSheet
         open={sheet === "count"}
         onOpenChange={() => setSheet(null)}
-        title={`${hv.item} recount`}
+        title={`Count the ${hv.item}`}
         description="Who counts the cage?"
         options={ownerOptions(state, "count")}
         self={{ note: PERSONAL_COST.count }}
@@ -177,8 +177,8 @@ export function HighValueCase({ state, act }: SceneProps) {
       <OwnerSheet
         open={sheet === "records"}
         onOpenChange={() => setSheet(null)}
-        title="Record pull"
-        description="Who pulls all five records for you?"
+        title="Get the records"
+        description="Who gets all five records for you?"
         options={ownerOptions(state, "records")}
         onPick={(owner) => act({ t: "pullRecords", owner })}
       />
@@ -202,33 +202,33 @@ export function HighValueCase({ state, act }: SceneProps) {
       >
         <div className="grid grid-cols-2 gap-2">
           <Stat label="Orders waiting" value={now.ordersWaiting} tone="caution" />
-          <Stat label="CTD" value={now.ctd} unit="sec" tone={now.ctd > 180 ? "caution" : "neutral"} />
+          <Stat label="Dispatch time" value={now.ctd} unit="sec" tone={now.ctd > 180 ? "caution" : "neutral"} />
         </div>
         <p className="mt-3 text-[13px] text-lo">Choose one to carry on.</p>
         <div className="mt-2 grid gap-2">
-          <Choice go onClick={() => act({ t: "caseInterrupt", choice: "stay" })}>Continue the investigation personally</Choice>
+          <Choice go onClick={() => act({ t: "caseInterrupt", choice: "stay" })}>Keep checking the missing items yourself</Choice>
           {!k.recordsOwner ? (
-            <Choice go onClick={() => setSheet("handOver")} detail="Somebody else finishes the records. You stay available.">
-              Hand the record pull to…
+            <Choice go onClick={() => setSheet("handOver")} detail="Someone else finishes the records. You stay free.">
+              Give the records to…
             </Choice>
           ) : null}
-          <Choice go onClick={() => setSheet("stepOut")} detail={form.constraint === "riders" ? "Step out and put somebody on the rider handover." : `Step out and put somebody on ${STATION_LABEL[form.constraint].toLowerCase()}.`}>
-            Return to the floor
+          <Choice go onClick={() => setSheet("stepOut")} detail={form.constraint === "riders" ? "Go out and put someone at the rider pickup point." : `Go out and put someone on ${STATION_LABEL[form.constraint].toLowerCase()}.`}>
+            Go back to the floor
           </Choice>
         </div>
       </Sheet>
       <OwnerSheet
         open={sheet === "handOver"}
         onOpenChange={() => setSheet(null)}
-        title="Hand over the record pull"
+        title="Give the records to someone"
         options={ownerOptions(state, "records")}
         onPick={(owner) => act({ t: "caseInterrupt", choice: "handOver", owner })}
       />
       <OwnerSheet
         open={sheet === "stepOut"}
         onOpenChange={() => setSheet(null)}
-        title={form.constraint === "riders" ? "Rider handover" : `Send to ${STATION_LABEL[form.constraint].toLowerCase()}`}
-        description={form.constraint === "riders" ? "Who goes to the handover point?" : "Who do you send? They stay on it."}
+        title={form.constraint === "riders" ? "Rider pickup point" : `Send to ${STATION_LABEL[form.constraint].toLowerCase()}`}
+        description={form.constraint === "riders" ? "Who goes to the rider pickup point?" : "Who do you send? They will stay there."}
         options={form.constraint === "riders" ? ownerOptions(state, "riders") : moverOptions(state, form.constraint)}
         onPick={(move) => act({ t: "caseInterrupt", choice: "stepOut", move })}
       />
@@ -263,13 +263,13 @@ function Disposition({ state, act, onBack }: SceneProps & { onBack: () => void }
 
   return (
     <>
-      <SceneHeading eyebrow="Close the case" title={`${short} units short. How do you account for them?`} />
+      <SceneHeading eyebrow="Close the case" title={`${short} items are missing. What happened to each one?`} />
 
       <Card>
         <div className="mb-3 flex items-baseline justify-between">
-          <Eyebrow>Place each unit</Eyebrow>
+          <Eyebrow>Put each missing item in one group</Eyebrow>
           <span className="tabular text-[13px] text-mid">
-            {placed} of {short} placed
+            {placed} of {short} done
           </span>
         </div>
         <ul className="space-y-1.5">
@@ -300,7 +300,7 @@ function Disposition({ state, act, onBack }: SceneProps & { onBack: () => void }
         </ul>
       </Card>
 
-      <Eyebrow className="mt-5 mb-2">What happens next</Eyebrow>
+      <Eyebrow className="mt-5 mb-2">What do you do now? Pick any.</Eyebrow>
       <div className="grid gap-2 sm:grid-cols-2">
         {order(CASE_STEPS).map((step) => (
           <Choice key={step.id} selected={steps.includes(step.id)} onClick={() => setSteps((current) => flip(current, step.id))}>
@@ -309,7 +309,7 @@ function Disposition({ state, act, onBack }: SceneProps & { onBack: () => void }
         ))}
       </div>
 
-      <Eyebrow className="mt-5 mb-2">Change to the process · up to two</Eyebrow>
+      <Eyebrow className="mt-5 mb-2">How to stop it happening again · pick up to two</Eyebrow>
       <div className="grid gap-2">
         {order(CONTROL_FIXES).map((fix) => (
           <Choice
@@ -361,18 +361,18 @@ export function NilPick({ state, act }: SceneProps) {
   return (
     <>
       <SceneHeading
-        eyebrow={`${clockLabel(state.arrivals.nilpick ?? state.clock)} · Nil pick reported`}
+        eyebrow={`${clockLabel(state.arrivals.nilpick ?? state.clock)} · Item not found`}
         title={nil.item}
-        sub={`Order ${nil.order} is waiting on it.`}
+        sub={`A picker cannot find it on the shelf. Order ${nil.order} is waiting for it.`}
         media={<ItemPhoto id={nil.photo} alt={nil.item} />}
       />
 
       <div className="grid grid-cols-2 gap-2">
-        <Stat label="System" value={nil.system} />
-        <Stat label="In the bin" value={0} tone="caution" />
+        <Stat label="In the system" value={nil.system} />
+        <Stat label="In the shelf bin" value={0} tone="caution" />
       </div>
 
-      <Eyebrow className="mt-5 mb-2">Look for it</Eyebrow>
+      <Eyebrow className="mt-5 mb-2">Look for it · tap to check</Eyebrow>
       <div className="grid gap-2 sm:grid-cols-2">
         {NIL_SOURCES.map((source) => (
           <Tile key={source} label={NIL_SOURCE_LABEL[source]!} opened={n.viewed.includes(source)} onClick={() => openSource(source)} />
@@ -393,17 +393,17 @@ export function NilPick({ state, act }: SceneProps) {
 
       {found && (searched || n.viewed.includes("replenArea")) ? (
         <Notice tone="good" className="mt-2">
-          {nil.system} units are in a crate on the inward dock, received at 04:30 and not put away.
+          {nil.system} units are in a crate in the receiving area. They came at 04:30 and were not put on the shelf.
         </Notice>
       ) : null}
 
-      <Eyebrow className="mt-5 mb-2">Decide</Eyebrow>
+      <Eyebrow className="mt-5 mb-2">What do you do?</Eyebrow>
       <div className="grid gap-2 sm:grid-cols-2">
         {order([
-          { id: "replenish", label: "Put the crate away", detail: found ? "Fill the bin and ship the order complete." : "Nothing found to put away yet.", disabled: !found, go: () => setSheet("restock") },
-          { id: "authorise", label: "Authorise the nil pick", detail: "Ship the order without it. Refund the line.", disabled: false, go: () => act({ t: "nilResolve", how: "authorise" }) },
-          { id: "delist", label: "De-list the item", detail: "Take the item off sale in the app.", disabled: false, go: () => act({ t: "nilResolve", how: "delist" }) },
-          { id: "ignore", label: "Ignore", detail: "Leave it with the picker.", disabled: false, go: () => act({ t: "nilResolve", how: "ignore" }) },
+          { id: "replenish", label: "Put the crate on the shelf", detail: found ? "Fill the bin and send the order with everything." : "Nothing found to put on the shelf yet.", disabled: !found, go: () => setSheet("restock") },
+          { id: "authorise", label: "Mark it as not available", detail: "Send the order without it. Refund that item.", disabled: false, go: () => act({ t: "nilResolve", how: "authorise" }) },
+          { id: "delist", label: "Stop selling the item", detail: "Take the item off sale in the app.", disabled: false, go: () => act({ t: "nilResolve", how: "delist" }) },
+          { id: "ignore", label: "Do nothing", detail: "Leave it to the picker.", disabled: false, go: () => act({ t: "nilResolve", how: "ignore" }) },
         ]).map((choice) => (
           <Choice go key={choice.id} disabled={choice.disabled} onClick={choice.go} detail={choice.detail}>
             {choice.label}
@@ -429,8 +429,8 @@ export function NilPick({ state, act }: SceneProps) {
       <OwnerSheet
         open={sheet === "restock"}
         onOpenChange={() => setSheet(null)}
-        title={`Put away the ${nil.item}`}
-        description="Who gets it into the bin?"
+        title={`Put the ${nil.item} on the shelf`}
+        description="Who puts it in the bin?"
         options={ownerOptions(state, "replenish")}
         self={{ note: PERSONAL_COST.replenish }}
         onPick={(owner) => act({ t: "nilResolve", how: "replenish", owner })}

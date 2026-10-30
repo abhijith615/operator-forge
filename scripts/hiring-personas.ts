@@ -420,6 +420,14 @@ const TERMS: [string, string][] = [
   ["what if my internet drops", "connection"],
   ["how am i scored", "scoring"],
   ["what is a dark store", "dark_store"],
+  // The plain words on screen since the wording was simplified.
+  ["what is dispatch time", "ctd"],
+  ["what is the problem box", "exception"],
+  ["what does item not found mean", "nil_pick"],
+  ["what are backup people", "reserve"],
+  ["what is the rider pickup point", "riders"],
+  ["what is the fresh food check", "auditing"],
+  ["why can i do only one myself", "attention_slot"],
 ];
 const wrong = TERMS.filter(([question, topic]) => answer(question).topic !== topic).map(([question]) => `${question} → ${answer(question).topic}`);
 check("terms on the screen are explained", wrong.length === 0, wrong.join(" | "));

@@ -59,18 +59,18 @@ export function Handover({ state, act }: SceneProps) {
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         <Stat label="Orders waiting" value={now.ordersWaiting} />
-        <Stat label="CTD" value={now.ctd} unit={`sec · target ${CTD_TARGET}`} />
-        <Stat label="Pick speed" value={now.ppi.toFixed(1)} unit={`sec an item · target ${PPI_TARGET}`} />
+        <Stat label="Dispatch time" value={now.ctd} unit={`sec · target ${CTD_TARGET}`} />
+        <Stat label="Pick speed" value={now.ppi.toFixed(1)} unit={`sec per item · target ${PPI_TARGET}`} />
         <Stat label="Riders" value={state.riders.on} unit={`of ${RIDERS_ROSTERED} logged in`} tone={absent ? "caution" : undefined} />
-        <Stat label="Expected demand" value="+38%" unit="at 06:30" tone="caution" />
-        <Stat label="Staff present" value="12" unit="of 14 rostered" tone="caution" />
+        <Stat label="Orders expected" value="+38%" unit="more at 06:30" tone="caution" />
+        <Stat label="Staff here" value="12" unit="of 14 planned" tone="caution" />
       </div>
 
       <Card className="mt-3">
         <Speech who="Assistant Store Manager" role="night shift" lines={HANDOVER_LINES} />
       </Card>
 
-      <Eyebrow className="mt-5 mb-2">Before you take it</Eyebrow>
+      <Eyebrow className="mt-5 mb-2">Before you take over, you can check</Eyebrow>
       <div className="grid gap-2 sm:grid-cols-2">
         {HANDOVER_PANELS.map((panel) => (
           <Tile
@@ -86,8 +86,8 @@ export function Handover({ state, act }: SceneProps) {
       <Sheet
         open={open === "team"}
         onOpenChange={() => setOpen(null)}
-        title="Team & devices"
-        description="Twelve present. Two rostered associates have not reported. Each handheld is either locked to a role, or unlocked."
+        title="Team and devices"
+        description="12 people are here. 2 people have not come. Each person has a handheld device. It is either locked to one job, or unlocked."
       >
         <ul className="divide-y divide-line">
           {ROSTER.map((employee) => {
@@ -108,27 +108,27 @@ export function Handover({ state, act }: SceneProps) {
           })}
         </ul>
         <p className="mt-4 text-[12.5px] leading-snug text-lo">
-          An unlocked device on putaway or auditing is sent orders by the app when volume spikes. A locked device never is.
+          When orders suddenly go up, the app sends orders to unlocked devices on putaway or checking. It never sends orders to a locked device.
         </p>
       </Sheet>
 
-      <Sheet open={open === "riders"} onOpenChange={() => setOpen(null)} title="Rider attendance" description="Who has logged in, and how bags are being given out.">
+      <Sheet open={open === "riders"} onOpenChange={() => setOpen(null)} title="Riders present" description="Who has logged in, and how bags are given to riders.">
         <Facts
           rows={[
-            { label: "Rostered this morning", value: String(RIDERS_ROSTERED) },
+            { label: "Planned this morning", value: String(RIDERS_ROSTERED) },
             { label: "Logged in", value: String(state.riders.on) },
-            { label: "Not logged in", value: absent ? `${absent} · no message from either` : "None" },
-            { label: "Standby with the rider partner", value: `${STANDBY_RIDERS} · on call, ₹150 each` },
-            { label: "Allocation", value: "One order to a rider, in the order packed" },
-            { label: "Riders against the 06:30 forecast", value: pct(forecast.riders) },
+            { label: "Not logged in", value: absent ? `${absent} · no message from them` : "None" },
+            { label: "Extra riders you can call", value: `${STANDBY_RIDERS} · ₹150 each` },
+            { label: "How bags are given", value: "One order per rider, in the order they were packed" },
+            { label: "Riders compared to what 06:30 needs", value: pct(forecast.riders) },
           ]}
         />
         <p className="mt-4 text-[12.5px] leading-snug text-lo">
-          100% is exactly enough riders for the forecast. Delivery is promised in about ten minutes: pick and pack, then the ride.
+          100% means just enough riders. Customers are promised delivery in about 10 minutes. That covers picking, packing and the ride.
         </p>
       </Sheet>
 
-      <Sheet open={open === "floorwalk"} onOpenChange={() => setOpen(null)} title="Floor walk" description="What the night shift left on the floor.">
+      <Sheet open={open === "floorwalk"} onOpenChange={() => setOpen(null)} title="Walk the store" description="How the night shift left the store.">
         <ul className="space-y-2">
           {FLOOR_WALK.map((item) => (
             <li key={item.title} className="rounded-[14px] border border-line bg-white/[0.02] px-3.5 py-3">
@@ -139,7 +139,7 @@ export function Handover({ state, act }: SceneProps) {
         </ul>
       </Sheet>
 
-      <Sheet open={open === "perishables"} onOpenChange={() => setOpen(null)} title="Perishables" description="The fresh lines, as they stand. This morning’s date and quality check has not been done.">
+      <Sheet open={open === "perishables"} onOpenChange={() => setOpen(null)} title="Fresh food" description="How the fresh food is now. This morning’s date and quality check is not done yet.">
         <ul className="space-y-2">
           {PERISHABLES.map((item) => (
             <li key={item.item} className="rounded-[14px] border border-line bg-white/[0.02] px-3.5 py-3">
@@ -148,10 +148,10 @@ export function Handover({ state, act }: SceneProps) {
             </li>
           ))}
         </ul>
-        <p className="mt-4 text-[12.5px] leading-snug text-lo">The check is done by whoever is on auditing, before anything else they have.</p>
+        <p className="mt-4 text-[12.5px] leading-snug text-lo">The person on checking does this check first, before any other work.</p>
       </Sheet>
 
-      <Sheet open={open === "audits"} onOpenChange={() => setOpen(null)} title="Audits assigned" description="What auditing has to get through today.">
+      <Sheet open={open === "audits"} onOpenChange={() => setOpen(null)} title="Checks to do" description="What the checking team has to finish today.">
         <ul className="space-y-2">
           {AUDITS.map((item) => (
             <li key={item.title} className="rounded-[14px] border border-line bg-white/[0.02] px-3.5 py-3">
@@ -162,7 +162,7 @@ export function Handover({ state, act }: SceneProps) {
         </ul>
       </Sheet>
 
-      <Sheet open={open === "demand"} onOpenChange={() => setOpen(null)} title="Demand outlook" description="Orders against a normal morning. 100 is normal.">
+      <Sheet open={open === "demand"} onOpenChange={() => setOpen(null)} title="Orders expected" description="Orders compared to a normal morning. 100 is normal.">
         <ul className="space-y-2">
           {DEMAND_OUTLOOK.map((point) => (
             <li key={point.hour} className="flex items-center gap-3">
@@ -177,7 +177,7 @@ export function Handover({ state, act }: SceneProps) {
             </li>
           ))}
         </ul>
-        <p className="mt-4 text-[12.5px] leading-snug text-lo">The breakfast peak holds from 06:30 for about half an hour, then eases.</p>
+        <p className="mt-4 text-[12.5px] leading-snug text-lo">The breakfast rush is highest from 06:30 for about 30 minutes. Then it slows down.</p>
       </Sheet>
 
       <ActionBar>

@@ -35,9 +35,9 @@ const SKILL_TONE: Record<string, string> = {
 };
 
 const WORK: Record<Station, string> = {
-  picking: "Pick, pack and stage for the rider",
-  putaway: "Crates from the dock into bins",
-  auditing: "Perishables check, then cycle counts",
+  picking: "Pick the items, pack the bag, put it out for the rider",
+  putaway: "Move new stock from crates into the shelf bins",
+  auditing: "Fresh food check first, then stock counts",
 };
 
 const people = (count: number) => `${count} ${count === 1 ? "person" : "people"}`;
@@ -56,23 +56,23 @@ function makeUp(workflow: Station, parts: ForecastParts, forecast: number): stri
   const onOrders = pct(parts.pull);
   if (workflow === "picking") {
     const { people: count, own } = parts.picking;
-    if (own >= 1) return `${people(count)} picking cover the forecast on their own.`;
+    if (own >= 1) return `${people(count)} picking are enough on their own.`;
     const open = parts.putaway.unlocked + parts.auditing.unlocked;
     return open === 0
-      ? `${people(count)} picking cover ${pct(own)}. No unlocked device for the app to send the rest to.`
-      : `${people(count)} picking cover ${pct(own)}. The app sends the rest to ${open} unlocked ${open === 1 ? "device" : "devices"}: ${onOrders} of their time.`;
+      ? `${people(count)} picking cover ${pct(own)}. There is no unlocked device to send the extra orders to.`
+      : `${people(count)} picking cover ${pct(own)}. The app sends the extra orders to ${open} unlocked ${open === 1 ? "device" : "devices"}. That uses ${onOrders} of their time.`;
   }
   const { people: count, unlocked } = workflow === "putaway" ? parts.putaway : parts.auditing;
-  if (count === 0) return "Nobody on it.";
+  if (count === 0) return "Nobody is doing this.";
   const locked = count - unlocked;
   const whose = unlocked === count ? "all unlocked" : locked === count ? "all locked" : `${locked} locked, ${unlocked} unlocked`;
   if (unlocked === 0 || parts.pull < 0.005) {
     const full = workflow === "putaway" ? ` They cover ${pct(parts.putaway.own)}.` : "";
-    return `${people(count)}, ${whose}.${full} ${unlocked === 0 ? "None is sent orders in the rush." : "The pickers cover the forecast, so none is sent orders."}`;
+    return `${people(count)}, ${whose}.${full} ${unlocked === 0 ? "None of them gets orders in the rush." : "The pickers are enough, so none of them gets orders."}`;
   }
   return workflow === "putaway"
-    ? `${people(count)}, ${whose}. Left to it they would cover ${pct(parts.putaway.own)}. In the rush the app has the unlocked on orders ${onOrders} of the time, which leaves ${pct(forecast)}.`
-    : `${people(count)}, ${whose}. In the rush the app has the unlocked on orders ${onOrders} of the time.`;
+    ? `${people(count)}, ${whose}. On their own they would cover ${pct(parts.putaway.own)}. In the rush, the app gives orders to the unlocked ones ${onOrders} of the time. That leaves ${pct(forecast)}.`
+    : `${people(count)}, ${whose}. In the rush, the app gives orders to the unlocked ones ${onOrders} of the time.`;
 }
 
 /**
@@ -127,16 +127,16 @@ export function FloorBoard({
                   <p className="text-[14px] font-semibold text-hi">{STATION_LABEL[workflow]}</p>
                   <p className={cn("mt-1 text-[12.5px] leading-snug", eta !== null && eta <= PEAK_AT ? "text-mid" : "text-warn-500")}>
                     {state.audit.doneAt !== null
-                      ? `Perishables check finished ${clockLabel(state.audit.doneAt)}.`
+                      ? `Fresh food check finished at ${clockLabel(state.audit.doneAt)}.`
                       : eta === null
-                        ? "Perishables check: nobody on it."
+                        ? "Fresh food check: nobody is doing it."
                         : eta <= PEAK_AT
-                          ? `Perishables check done by about ${clockLabel(eta)}.`
-                          : "Perishables check will not be done before the rush."}
+                          ? `Fresh food check done by about ${clockLabel(eta)}.`
+                          : "Fresh food check will not be done before the rush."}
                   </p>
                 </div>
               ) : (
-                <Meter label={STATION_LABEL[workflow]} value={forecast[workflow]} hint="of the 06:30 forecast" />
+                <Meter label={STATION_LABEL[workflow]} value={forecast[workflow]} hint="of what 06:30 needs" />
               )}
               <p className="mt-1 text-[11.5px] text-lo">{WORK[workflow]}</p>
               <p className="mt-2 text-[12.5px] leading-snug text-mid">{makeUp(workflow, parts, forecast[workflow])}</p>
@@ -174,25 +174,25 @@ export function FloorBoard({
                     Agency picker · from 06:20
                   </li>
                 ))}
-                {here.length === 0 && !booked ? <li className="py-2 text-[13px] text-lo">Nobody assigned</li> : null}
+                {here.length === 0 && !booked ? <li className="py-2 text-[13px] text-lo">Nobody here</li> : null}
               </ul>
             </Card>
           );
         })}
 
         <Card className="p-3.5 sm:p-4">
-          <Meter label="Riders" value={forecast.riders} hint="of the 06:30 forecast" />
+          <Meter label="Riders" value={forecast.riders} hint="of what 06:30 needs" />
           <p className="mt-1 flex items-center gap-1.5 text-[11.5px] text-lo">
             <Bike className="size-3.5" aria-hidden />
             {view.riders.on} of {RIDERS_ROSTERED} logged in
-            {view.riders.standby ? ` · ${STANDBY_RIDERS} standby called, in by 06:08` : ""}
+            {view.riders.standby ? ` · ${STANDBY_RIDERS} extra riders called, here by 06:08` : ""}
           </p>
           <button
             type="button"
             onClick={() => act({ t: "standby", on: !state.riders.standby })}
             className="mt-3 min-h-[44px] w-full rounded-[12px] border border-line-strong bg-white/[0.03] px-3 text-[13.5px] font-semibold text-hi transition-colors hover:border-ember-500/60 hover:bg-ember-500/[0.08]"
           >
-            {state.riders.standby ? "Stand the standby riders down" : `Call the ${STANDBY_RIDERS} standby riders · ₹300`}
+            {state.riders.standby ? "Cancel the extra riders" : `Call the ${STANDBY_RIDERS} extra riders · ₹300`}
           </button>
         </Card>
 
@@ -202,11 +202,11 @@ export function FloorBoard({
               <div className="min-w-0 flex-1 basis-56">
                 <p className="flex items-center gap-2 text-[14px] font-semibold text-hi">
                   <UserPlus className="size-4 shrink-0 text-lo" aria-hidden />
-                  Call in agency staff
+                  Get agency workers
                 </p>
                 <p className="mt-1 text-[12.5px] leading-snug text-lo">
-                  Paid by the hour: ₹{AGENCY_RATE} an hour each, {AGENCY_HOURS}-hour minimum. They arrive at 06:20 and
-                  can only pick — they do not know the racks.
+                  ₹{AGENCY_RATE} an hour each, for at least {AGENCY_HOURS} hours. They come at 06:20. They can only pick.
+                  They do not know the racks.
                 </p>
               </div>
               <div role="group" aria-label="Agency staff to call in" className="flex shrink-0 gap-1.5">
@@ -230,8 +230,8 @@ export function FloorBoard({
             </div>
             <p className="mt-2 text-[12.5px] text-mid">
               {state.agency === 0
-                ? "Nobody called in."
-                : `${state.agency} called in · ₹${(state.agency * AGENCY_COST).toLocaleString("en-IN")} for the ${AGENCY_HOURS} hours.`}
+                ? "No agency workers."
+                : `${state.agency} called · ₹${(state.agency * AGENCY_COST).toLocaleString("en-IN")} for the ${AGENCY_HOURS} hours.`}
             </p>
           </Card>
         ) : null}
@@ -242,21 +242,21 @@ export function FloorBoard({
           {reserve.length}
         </span>
         <div className="min-w-0">
-          <p className="text-[14px] font-semibold text-hi">Flexible reserve</p>
+          <p className="text-[14px] font-semibold text-hi">Backup people</p>
           <p className="text-[12.5px] leading-snug text-lo">
             {reserve.length
-              ? `${reserve.map(nameOf).join(", ")}: unlocked, and on work that can spare them if the rush is bigger than forecast.`
-              : "No device is open to orders on work that could spare it."}
+              ? `${reserve.map(nameOf).join(", ")}: unlocked, and their own work can wait. The app can send them orders if the rush is bigger than expected.`
+              : "Nobody is unlocked on work that can wait."}
           </p>
         </div>
       </Card>
 
       <p className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-lo">
         <span className="flex items-center gap-1.5">
-          <Lock className="size-3.5" aria-hidden /> Locked to the role
+          <Lock className="size-3.5" aria-hidden /> Locked to one job
         </span>
         <span className="flex items-center gap-1.5">
-          <LockOpen className="size-3.5 text-ion-400" aria-hidden /> Unlocked: the app sends orders in a spike
+          <LockOpen className="size-3.5 text-ion-400" aria-hidden /> Unlocked: gets orders when it is busy
         </span>
       </p>
 
@@ -280,7 +280,7 @@ export function FloorBoard({
               </dl>
             ) : null}
 
-            <Eyebrow className="mt-5 mb-2">Trained for</Eyebrow>
+            <Eyebrow className="mt-5 mb-2">How good at each job</Eyebrow>
             <ul className="grid grid-cols-3 gap-1.5">
               {STATIONS.map((workflow) => {
                 const word = skillWord(person.skills[workflow]);
@@ -294,12 +294,12 @@ export function FloorBoard({
             </ul>
             {Object.values(person.auth).some(Boolean) ? (
               <p className="mt-3 text-[13px] text-mid">
-                Authorised:{" "}
+                Allowed to do:{" "}
                 {[
-                  person.auth.highValue && "high-value cage",
-                  person.auth.audit && "cycle counts",
-                  person.auth.riders && "rider handover",
-                  person.auth.inwarding && "inwarding",
+                  person.auth.highValue && "cage for expensive items",
+                  person.auth.audit && "stock counts",
+                  person.auth.riders && "rider pickup point",
+                  person.auth.inwarding && "receiving stock",
                 ]
                   .filter(Boolean)
                   .join(", ")}
@@ -309,7 +309,7 @@ export function FloorBoard({
             {fixed ? (
               <Notice className="mt-5 flex items-center gap-2">
                 <Lock className="size-4 shrink-0" aria-hidden />
-                New joiner on induction. The Floor Lead wants a word about her; she is not moved from this board.
+                New joiner in training. The Floor Lead wants to talk to you about her. You cannot move her from this board.
               </Notice>
             ) : (
               <>
@@ -351,7 +351,7 @@ export function FloorBoard({
                     </button>
                   ))}
                 </div>
-                <p className="mt-2 text-[12px] leading-snug text-lo">A device that changes role comes up unlocked.</p>
+                <p className="mt-2 text-[12px] leading-snug text-lo">When you move someone to a new job, their device becomes unlocked.</p>
               </>
             )}
           </>
@@ -365,13 +365,13 @@ export function Floor({ state, act }: SceneProps) {
   return (
     <>
       <SceneHeading
-        eyebrow="Build the floor"
+        eyebrow="Plan your team"
         title="Who does what this morning?"
-        sub="Tap a person to see what they can do, move them, and lock or unlock their device. The bars show 06:30 with the floor as it is now."
+        sub="Tap a person. You can see what they are good at, move them to another job, and lock or unlock their device. The bars show if you have enough people for 06:30."
       />
       <FloorBoard state={state} act={act} />
       <ActionBar>
-        <PrimaryButton onClick={() => act({ t: "lockFloor" })}>Set the floor</PrimaryButton>
+        <PrimaryButton onClick={() => act({ t: "lockFloor" })}>Confirm the team</PrimaryButton>
       </ActionBar>
     </>
   );
@@ -404,24 +404,24 @@ export function Absence({ state, act }: SceneProps) {
 
   return (
     <>
-      <SceneHeading eyebrow="06:00 · Absence" title="Two short for the morning." />
+      <SceneHeading eyebrow="06:00 · Missing staff" title="Two people are missing this morning." />
       <div className="grid gap-2 sm:grid-cols-2">
         <Notice tone="caution">
-          <span className="font-semibold">Associate 13</span> · Leave confirmed.
+          <span className="font-semibold">Worker 13</span> · On leave today.
         </Notice>
         <Notice tone="caution">
-          <span className="font-semibold">Associate 14</span> · Agency says not coming.
+          <span className="font-semibold">Worker 14</span> · The agency says this person is not coming.
         </Notice>
       </div>
 
-      <Eyebrow className="mt-5 mb-2">What do you do?</Eyebrow>
+      <Eyebrow className="mt-5 mb-2">What do you do? You can pick more than one.</Eyebrow>
       <div className="grid gap-2">
         {order(ABSENCE_OPTIONS).map((option) => (
           <Choice
             key={option.id}
             selected={chosen.includes(option.id)}
             onClick={() => toggle(option.id)}
-            detail={option.id === "onDemand" && state.agency > 0 ? `${option.detail} ${state.agency} already called in from the floor board.` : option.detail}
+            detail={option.id === "onDemand" && state.agency > 0 ? `${option.detail} You already called ${state.agency} from the team board.` : option.detail}
           >
             {option.label}
           </Choice>
@@ -429,27 +429,27 @@ export function Absence({ state, act }: SceneProps) {
       </div>
 
       <Card className="mt-3">
-        <Eyebrow className="mb-3">06:30 with this decision</Eyebrow>
+        <Eyebrow className="mb-3">At 06:30, with this choice</Eyebrow>
         <div className="grid gap-3.5 sm:grid-cols-3">
           {(["picking", "putaway", "riders"] as const).map((stage) => (
             <Meter key={stage} label={STATION_LABEL[stage]} value={withoutArjun[stage]} />
           ))}
         </div>
         {!chosen.includes("extend") ? (
-          <p className="mt-3 text-[12.5px] leading-snug text-lo">Arjun’s overnight shift ends at 06:30. This forecast is without him.</p>
+          <p className="mt-3 text-[12.5px] leading-snug text-lo">Arjun’s night shift ends at 06:30. These numbers do not include him.</p>
         ) : null}
       </Card>
 
       {chosen.includes("reallocate") ? (
         <div className="mt-5">
-          <Eyebrow className="mb-2">Reallocate</Eyebrow>
+          <Eyebrow className="mb-2">Move your people</Eyebrow>
           <FloorBoard state={state} act={act} preview={preview} staffing={false} />
         </div>
       ) : null}
 
       <ActionBar>
         <PrimaryButton disabled={chosen.length === 0} onClick={() => act({ t: "absence", choices: chosen })}>
-          Confirm staffing
+          Confirm
         </PrimaryButton>
       </ActionBar>
     </>

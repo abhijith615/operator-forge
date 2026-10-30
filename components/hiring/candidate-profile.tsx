@@ -62,15 +62,15 @@ export function CandidateProfile({
 
         {profile.timedOut ? (
           <p className="mt-4 rounded-[14px] border border-line-strong bg-white/[0.03] px-3.5 py-3 text-[13.5px] leading-snug text-mid">
-            The time ran out before the shift did. You reached {profile.observed} of {profile.opportunities}{" "}
-            assessed moments. Moments you did not reach count as zero in your readiness score; each competency below is
-            scored on the moments you reached.
+            Your time ended before the shift did. You reached {profile.observed} of {profile.opportunities}{" "}
+            moments. Moments you did not reach count as zero in your score. Each skill below is scored only on the
+            moments you reached.
           </p>
         ) : null}
 
         <section className="mt-6 grid gap-3 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <div className="rounded-[20px] border border-ember-500/30 bg-ember-500/[0.06] p-5">
-            <p className="font-mono text-[11.5px] tracking-[0.18em] text-lo uppercase">Readiness</p>
+            <p className="font-mono text-[11.5px] tracking-[0.18em] text-lo uppercase">Your score</p>
             <p className="tabular mt-2 text-[64px] leading-none font-bold tracking-[-0.04em] text-hi">
               {profile.overall}
               <span className="ml-1.5 text-[20px] font-semibold text-lo">/ 100</span>
@@ -80,14 +80,14 @@ export function CandidateProfile({
           </div>
 
           <div className="rounded-[20px] border border-line bg-surface p-5">
-            <p className="font-mono text-[11.5px] tracking-[0.18em] text-lo uppercase">Decision signature</p>
+            <p className="font-mono text-[11.5px] tracking-[0.18em] text-lo uppercase">How you work</p>
             <p className="mt-2 text-[20px] leading-tight font-bold tracking-[-0.02em] text-ember-500">{profile.signature.name}</p>
             <p className="mt-2 text-[14.5px] leading-relaxed text-mid">{profile.signature.blurb}</p>
           </div>
         </section>
 
         <section className="mt-3 rounded-[20px] border border-line bg-surface p-5">
-          <h2 className="font-mono text-[11.5px] tracking-[0.18em] text-lo uppercase">Five competencies</h2>
+          <h2 className="font-mono text-[11.5px] tracking-[0.18em] text-lo uppercase">Five skills</h2>
           <ul className="mt-4 space-y-3.5">
             {profile.competencies.map((competency) => (
               <li key={competency.id}>
@@ -120,7 +120,7 @@ export function CandidateProfile({
 
         {profile.strongest.length ? (
           <section className="mt-3 rounded-[20px] border border-line bg-surface p-5">
-            <h2 className="font-mono text-[11.5px] tracking-[0.18em] text-lo uppercase">Strongest operating evidence</h2>
+            <h2 className="font-mono text-[11.5px] tracking-[0.18em] text-lo uppercase">What you did best</h2>
             <ul className="mt-3 space-y-3">
               {profile.strongest.map((item) => (
                 <li key={item.title} className="border-l-2 border-ion-500/60 pl-3.5">
@@ -133,7 +133,7 @@ export function CandidateProfile({
         ) : null}
 
         <section className="mt-3 rounded-[20px] border border-line bg-surface p-5">
-          <h2 className="font-mono text-[11.5px] tracking-[0.18em] text-lo uppercase">Development area</h2>
+          <h2 className="font-mono text-[11.5px] tracking-[0.18em] text-lo uppercase">Area to improve</h2>
           <p className="mt-2 text-[18px] font-bold tracking-[-0.01em] text-hi">{profile.development.label}</p>
           <p className="mt-1 text-[13.5px] leading-snug text-mid">{profile.development.text}</p>
 
@@ -153,8 +153,8 @@ export function CandidateProfile({
         </section>
 
         <p className="mt-6 text-[12.5px] leading-relaxed text-lo">
-          This profile comes from what you did in one simulated shift. It is one input to a hiring decision, alongside
-          an interview, and it is not a job offer or a rejection. Your attempt has been saved and you can close this page.
+          This profile comes from what you did in one practice shift. It is one part of a hiring decision, along with an
+          interview. It is not a job offer and not a rejection. Your test is saved. You can close this page now.
         </p>
       </main>
     </div>

@@ -462,11 +462,11 @@ export function OwnerSheet({
           >
             <UserRound className="size-5 shrink-0 text-ember-500" aria-hidden />
             <span className="min-w-0 flex-1">
-              <span className="block text-[14px] font-bold tracking-[0.06em] text-hi uppercase">Handle myself</span>
-              <span className="mt-0.5 block text-[12.5px] text-mid">{self.note ?? "Accurate, and uses your attention while you do it"}</span>
+              <span className="block text-[14px] font-bold tracking-[0.06em] text-hi uppercase">Do it myself</span>
+              <span className="mt-0.5 block text-[12.5px] text-mid">{self.note ?? "Done right, but it takes your time"}</span>
             </span>
           </button>
-          <Eyebrow className="mt-5 mb-2">Assign to</Eyebrow>
+          <Eyebrow className="mt-5 mb-2">Or give it to</Eyebrow>
         </>
       ) : null}
       <ul className="space-y-1.5">

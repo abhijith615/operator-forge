@@ -36,15 +36,15 @@ export interface OwnerOption {
 
 const TASK_LABEL: Partial<Record<string, string>> = {
   count: "counting",
-  records: "pulling records",
+  records: "getting the records",
   search: "searching",
   replenish: "putting a crate away",
   aisle: "clearing Aisle C",
   repack: "repacking",
-  riders: "the rider handover",
-  followUp: "the evidence pack",
-  coaching: "a walk-through",
-  "plan:audit": "the wall-to-wall count",
+  riders: "the rider pickup point",
+  followUp: "putting the evidence together",
+  coaching: "showing someone around",
+  "plan:audit": "the full store count",
 };
 
 /** What somebody's own work drops to while they are away from it. */
@@ -58,14 +58,14 @@ function without(state: HiringState, id: string): string {
   // An unlocked device the app has already taken for orders is not doing its own work to begin with.
   const pull = pullOf(state);
   if (station !== "picking" && !isLocked(state, id) && pull >= 0.9) {
-    return `Unlocked · already on orders ${pct(pull)} of the time`;
+    return `Unlocked · already doing orders ${pct(pull)} of the time`;
   }
   // A picker's gap is filled by the app from unlocked devices, for as long as there are any.
   if (station === "picking" && Math.abs(after - before) < 0.005) {
     const later = pullOf(away);
     return later > pull + 0.005
-      ? `Unlocked devices cover it: on orders ${pct(pull)} → ${pct(later)} while away`
-      : `${STATION_LABEL[station]} holds at ${pct(after)} while away`;
+      ? `Unlocked devices fill the gap: orders ${pct(pull)} → ${pct(later)} while away`
+      : `${STATION_LABEL[station]} stays at ${pct(after)} while away`;
   }
   return `${STATION_LABEL[station]} ${pct(before)} → ${pct(after)} while away`;
 }
@@ -83,14 +83,14 @@ export function ownerOptions(state: HiringState, kind: TaskKind): OwnerOption[] 
         ? `Busy · ${TASK_LABEL[busy?.task ?? ""] ?? "another task"}`
         : leavesStation(state, candidate.id, kind)
           ? without(state, candidate.id)
-          : "Part of the job where they stand";
+          : "Part of their current job";
       return {
         id: candidate.id,
         name: employee.name,
         title: employee.title,
         station,
         fit,
-        fitLabel: fit === "strong" ? "Strong fit" : fit === "possible" ? "Possible, slower" : "Weak fit",
+        fitLabel: fit === "strong" ? "Good fit" : fit === "possible" ? "Can do it, slower" : "Poor fit",
         note,
         free: candidate.free,
       } satisfies OwnerOption;
@@ -122,11 +122,11 @@ export function moverOptions(state: HiringState, to: Station): OwnerOption[] {
 
 /** What it costs the manager to do a job with their own hands. */
 export const PERSONAL_COST: Partial<Record<TaskKind, string>> = {
-  count: "About 5 minutes off the floor",
-  search: "About 2½ minutes off the floor",
-  replenish: "About 2 minutes off the floor",
-  aisle: "About 4 minutes off the floor",
-  repack: "About 1½ minutes at the staging shelf",
+  count: "About 5 minutes away from the floor",
+  search: "About 2½ minutes away from the floor",
+  replenish: "About 2 minutes away from the floor",
+  aisle: "About 4 minutes away from the floor",
+  repack: "About 1½ minutes at the rider shelf",
 };
 
 export function deviceType(): "mobile" | "tablet" | "desktop" {

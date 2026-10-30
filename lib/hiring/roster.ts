@@ -35,10 +35,10 @@ export const ROSTER: Employee[] = [
     auth: { ...none, highValue: true },
     tenure: "14 months",
     fatigue: 0,
-    note: "Overnight shift, off at 06:30. Has been asked about staying on for the breakfast peak.",
+    note: "Night shift, ends at 06:30. He may be asked to stay for the breakfast rush.",
     stats: [
-      { label: "PPI", value: "12.8 sec" },
-      { label: "Accuracy", value: "99.3%" },
+      { label: "Seconds per item", value: "12.8" },
+      { label: "Correct picks", value: "99.3%" },
     ],
   },
   {
@@ -49,7 +49,7 @@ export const ROSTER: Employee[] = [
     auth: { ...none, inwarding: true },
     tenure: "2 years",
     fatigue: 0,
-    note: "Runs the inward dock. Knows every bin code in the store.",
+    note: "Runs the receiving area. Knows every bin in the store.",
   },
   {
     id: "rahul",
@@ -59,7 +59,7 @@ export const ROSTER: Employee[] = [
     auth: { ...none, riders: true },
     tenure: "19 months",
     fatigue: 0,
-    note: "Sequences riders at the handover point when it backs up. The riders answer to him.",
+    note: "Organises the riders at the pickup point when it gets busy. The riders listen to him.",
   },
   {
     id: "riya",
@@ -69,7 +69,7 @@ export const ROSTER: Employee[] = [
     auth: none,
     tenure: "Day 2",
     fatigue: 0,
-    note: "Joined through the agency yesterday. Induction: putaway only.",
+    note: "Joined yesterday through the agency. Training: putaway only.",
   },
   {
     id: "sneha",
@@ -79,17 +79,17 @@ export const ROSTER: Employee[] = [
     auth: { ...none, inwarding: true },
     tenure: "9 months",
     fatigue: 0,
-    note: "Putaway trained.",
+    note: "Trained for putaway.",
   },
   {
     id: "farhan",
     name: "Farhan",
-    title: "Picker · cycle counts",
+    title: "Picker · stock counts",
     skills: skills(1.0, 0.7, 1.1),
     auth: { ...none, audit: true, highValue: true },
     tenure: "11 months",
     fatigue: 0,
-    note: "Cycle-count trained. Cleared for the high-value cage.",
+    note: "Trained to count stock. Allowed into the cage for expensive items.",
   },
   {
     id: "deepa",
@@ -99,7 +99,7 @@ export const ROSTER: Employee[] = [
     auth: none,
     tenure: "8 months",
     fatigue: 0,
-    note: "Does the perishables check most mornings. Steady, rarely mis-picks.",
+    note: "Does the fresh food check most mornings. Steady. Rarely picks a wrong item.",
   },
   {
     id: "kiran",
@@ -109,17 +109,17 @@ export const ROSTER: Employee[] = [
     auth: { ...none, inwarding: true },
     tenure: "6 months",
     fatigue: 0.2,
-    note: "Picking and putaway, about evenly.",
+    note: "Does picking and putaway about equally well.",
   },
   {
     id: "lakshmi",
     name: "Lakshmi",
-    title: "Auditor",
+    title: "Stock checker",
     skills: skills(0.85, 0.6, 1.0),
     auth: { ...none, audit: true, riders: true },
     tenure: "13 months",
     fatigue: 0,
-    note: "Runs the cycle counts. Has covered the rider handover on Rahul's days off.",
+    note: "Runs the stock counts. Has run the rider pickup point on Rahul's days off.",
   },
   {
     id: "vishnu",
@@ -129,7 +129,7 @@ export const ROSTER: Employee[] = [
     auth: none,
     tenure: "16 months",
     fatigue: 0.5,
-    note: "Closed the store at midnight and is back for 06:00. Quick, and tired.",
+    note: "Closed the store at midnight and is back for 06:00. Quick, but tired.",
   },
   {
     id: "anjali",
@@ -139,7 +139,7 @@ export const ROSTER: Employee[] = [
     auth: { ...none, inwarding: true },
     tenure: "10 months",
     fatigue: 0,
-    note: "Knows where everything on the inward dock is.",
+    note: "Knows where everything in the receiving area is.",
   },
   {
     id: "joseph",
@@ -149,7 +149,7 @@ export const ROSTER: Employee[] = [
     auth: { ...none, riders: true },
     tenure: "5 months",
     fatigue: 0,
-    note: "Picking and putaway. Second on the rider handover.",
+    note: "Picking and putaway. Second in line for the rider pickup point.",
   },
 ];
 
@@ -162,7 +162,7 @@ export const TEMP: Employee = {
   auth: none,
   tenure: "First shift here",
   fatigue: 0,
-  note: "Sent by the staffing agency. Does not know the racks.",
+  note: "Sent by the agency. Does not know the racks.",
 };
 
 /**
@@ -205,22 +205,22 @@ export const HANDOVER_FLOOR: Record<string, Station> = {
 export const STATION_LABEL: Record<Stage, string> = {
   picking: "Picking",
   putaway: "Putaway",
-  auditing: "Auditing",
+  auditing: "Checking",
   riders: "Riders",
 };
 
 /** The place the work happens, for sentences. */
 export const STATION_PLACE: Record<Stage, string> = {
   picking: "picking floor",
-  putaway: "inward dock",
-  auditing: "audit round",
-  riders: "rider handover",
+  putaway: "receiving area",
+  auditing: "stock checks",
+  riders: "rider pickup point",
 };
 
 /** What one line of the device list says. */
 export const LOCK_LABEL = {
-  locked: "Locked to this role",
-  unlocked: "Unlocked · takes orders in a spike",
+  locked: "Locked to this job",
+  unlocked: "Unlocked · gets orders when it is busy",
 } as const;
 
 export const nameOf = (id: string): string => BY_ID[id]?.name ?? (id === "me" ? "You" : id);

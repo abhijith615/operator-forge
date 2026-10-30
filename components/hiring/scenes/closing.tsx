@@ -54,11 +54,11 @@ export function CustomerBag({ state, act }: SceneProps) {
 
   return (
     <>
-      <SceneHeading eyebrow={`${clockLabel(state.arrivals.customer ?? state.clock)} · Staging shelf`} title="This bag is next out." sub="Packed by the picker and waiting for its rider. Tap an item to move it between bags." />
+      <SceneHeading eyebrow={`${clockLabel(state.arrivals.customer ?? state.clock)} · Rider shelf`} title="This bag goes out next." sub="The picker packed it. It is waiting for a rider. Tap an item to move it to the other bag." />
 
       <div className="grid grid-cols-2 gap-2">
-        <Stat label="This order" value={now} unit={`sec · target ${CTD_TARGET}`} />
-        <Stat label="If repacked" value={changed ? now + penalty : "—"} unit={changed ? "sec" : undefined} tone={changed && now + penalty > CTD_TARGET ? "caution" : "neutral"} />
+        <Stat label="This order so far" value={now} unit={`sec · target ${CTD_TARGET}`} />
+        <Stat label="If packed again" value={changed ? now + penalty : "—"} unit={changed ? "sec" : undefined} tone={changed && now + penalty > CTD_TARGET ? "caution" : "neutral"} />
       </div>
 
       <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
@@ -80,7 +80,7 @@ export function CustomerBag({ state, act }: SceneProps) {
                     >
                       <span className="text-[14.5px] font-semibold text-hi">
                         {item.label}
-                        {item.id === "cleaner" && liner ? <span className="ml-2 text-[12px] font-medium text-mid">in liner</span> : null}
+                        {item.id === "cleaner" && liner ? <span className="ml-2 text-[12px] font-medium text-mid">in inner bag</span> : null}
                       </span>
                       <span className="text-[12px] text-lo">Move</span>
                     </button>
@@ -94,26 +94,26 @@ export function CustomerBag({ state, act }: SceneProps) {
       </div>
 
       <div className="mt-2.5">
-        <Choice selected={liner} onClick={() => setLiner((current) => !current)} detail="A sealed inner bag around the cleaner.">
-          Use the secondary liner
+        <Choice selected={liner} onClick={() => setLiner((current) => !current)} detail="Put the cleaner in a sealed inner bag.">
+          Use an inner bag
         </Choice>
       </div>
 
       <ActionBar>
         {changed ? (
           <>
-            <QuietButton onClick={() => send("unchanged")}>Send as it was</QuietButton>
-            <PrimaryButton onClick={() => setAsking(true)}>Repack</PrimaryButton>
+            <QuietButton onClick={() => send("unchanged")}>Send it as it was</QuietButton>
+            <PrimaryButton onClick={() => setAsking(true)}>Pack it again</PrimaryButton>
           </>
         ) : (
-          <PrimaryButton onClick={() => send("unchanged")}>Hand over unchanged</PrimaryButton>
+          <PrimaryButton onClick={() => send("unchanged")}>Send it as it is</PrimaryButton>
         )}
       </ActionBar>
 
       <OwnerSheet
         open={asking}
         onOpenChange={setAsking}
-        title="Repack the bag"
+        title="Pack the bag again"
         description="Who does it?"
         options={ownerOptions(state, "repack")}
         self={{ note: PERSONAL_COST.repack }}
@@ -126,21 +126,21 @@ export function CustomerBag({ state, act }: SceneProps) {
 /* ── The final call ───────────────────────────────────────────────────── */
 
 const BUCKETS: { id: Bucket; label: string }[] = [
-  { id: "now", label: "Do now" },
-  { id: "delegate", label: "Delegate" },
-  { id: "later", label: "After peak" },
+  { id: "now", label: "Do it myself" },
+  { id: "delegate", label: "Hand over" },
+  { id: "later", label: "After rush" },
 ];
 
 const WHERE: Record<string, string> = {
-  count: "High-value recount",
-  records: "Record pull",
-  search: "Stock search",
-  replenish: "Putting a crate away",
+  count: "Counting the cage",
+  records: "Getting the records",
+  search: "Searching for stock",
+  replenish: "Putting a crate on the shelf",
   aisle: "Clearing Aisle C",
-  repack: "Repack at staging",
-  riders: "Rider handover",
-  followUp: "Inventory follow-up",
-  coaching: "Coaching",
+  repack: "Packing a bag again",
+  riders: "Rider pickup point",
+  followUp: "Missing stock follow-up",
+  coaching: "Training someone",
 };
 
 /**
@@ -197,7 +197,7 @@ export function FinalCall({ state, act }: SceneProps) {
 
   return (
     <>
-      <SceneHeading eyebrow={`${clockLabel(state.arrivals.final ?? state.clock)} · Peak begins`} title="The manager’s final call." />
+      <SceneHeading eyebrow={`${clockLabel(state.arrivals.final ?? state.clock)} · The rush starts now`} title="Your final plan." />
 
       <Card className="p-3.5">
         <Eyebrow className="mb-2">Your team, now</Eyebrow>
@@ -224,14 +224,14 @@ export function FinalCall({ state, act }: SceneProps) {
               <li key={member.id} className="flex items-baseline gap-3 py-2.5">
                 <span className="w-24 shrink-0 text-[13.5px] font-semibold text-hi">{BY_ID[member.id]?.name ?? "Agency picker"}</span>
                 <span className="min-w-0 flex-1 text-[13.5px] text-mid">{WHERE[member.where.replace("plan:", "")] ?? "On a task"}</span>
-                <span className="shrink-0 text-[12.5px] text-lo">off station</span>
+                <span className="shrink-0 text-[12.5px] text-lo">away from their job</span>
               </li>
             ))}
         </ul>
-        <p className="mt-2 text-[12px] text-lo">Load is how hard each kind of work is being asked to run. Over 100% is falling behind.</p>
+        <p className="mt-2 text-[12px] text-lo">Load shows how busy each job is. Over 100% means it is falling behind.</p>
       </Card>
 
-      <Eyebrow className="mt-5 mb-2">Open tasks</Eyebrow>
+      <Eyebrow className="mt-5 mb-2">Tasks still open · choose for each one</Eyebrow>
       <div className="space-y-2.5">
         {tasks.map((task) => {
           const entry = plan[task.id];
@@ -256,7 +256,7 @@ export function FinalCall({ state, act }: SceneProps) {
                   onClick={() => setPicking(task.id)}
                   className="mt-2 flex min-h-[44px] w-full items-center justify-between rounded-[12px] border border-line-strong bg-white/[0.03] px-3.5 text-[14px] text-hi"
                 >
-                  <span>{entry.owner ? `Owner: ${nameOf(entry.owner)}` : "Choose an owner"}</span>
+                  <span>{entry.owner ? `Given to: ${nameOf(entry.owner)}` : "Choose who does it"}</span>
                   <span className="text-[12.5px] text-lo">Change</span>
                 </button>
               ) : null}
@@ -278,9 +278,9 @@ export function FinalCall({ state, act }: SceneProps) {
         })}
       </div>
 
-      <ActionBar note={`Do now ${count("now")} of 3 · Delegate ${count("delegate")} of 3`}>
+      <ActionBar note={`Myself ${count("now")} of 3 · Handed over ${count("delegate")} of 3`}>
         <PrimaryButton disabled={!ready} onClick={() => act({ t: "plan", tasks: plan })}>
-          Lock shift plan
+          Confirm the plan
         </PrimaryButton>
       </ActionBar>
 
@@ -288,7 +288,7 @@ export function FinalCall({ state, act }: SceneProps) {
         open={active !== undefined}
         onOpenChange={dismiss}
         title={active?.title ?? ""}
-        description="Who owns it?"
+        description="Who does it?"
         options={options}
         onPick={(owner) => picking && setPlan((current) => ({ ...current, [picking]: { ...current[picking], bucket: "delegate", owner } }))}
       />
@@ -330,7 +330,7 @@ export function Outcome({ state, act }: SceneProps) {
   return (
     <>
       <header className="mb-5 text-center">
-        <Eyebrow className="text-ember-500">Store 114 · the peak</Eyebrow>
+        <Eyebrow className="text-ember-500">Store 114 · the rush</Eyebrow>
         <p className="tabular mt-2 font-mono text-[44px] leading-none font-semibold tracking-[-0.03em] text-hi" aria-live="polite">
           {clock}
         </p>
@@ -355,8 +355,8 @@ export function Outcome({ state, act }: SceneProps) {
         <motion.div initial={reduced ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mt-6 text-center">
           <p className="text-[clamp(1.9rem,8vw,2.9rem)] leading-[1.02] font-bold tracking-[-0.04em] text-hi">{outcome.title}</p>
           <div className="mx-auto mt-4 grid max-w-sm grid-cols-2 gap-2">
-            <Stat label="CTD at 06:50" value={outcome.finalCtd} unit="sec" />
-            <Stat label="Peak coverage" value={`${Math.round(outcome.peakCoverage * 100)}%`} />
+            <Stat label="Dispatch time at 06:50" value={outcome.finalCtd} unit="sec" />
+            <Stat label="Covered in the rush" value={`${Math.round(outcome.peakCoverage * 100)}%`} />
           </div>
         </motion.div>
       ) : null}

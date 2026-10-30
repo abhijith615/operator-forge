@@ -3,7 +3,7 @@
  *
  * It explains the screen: what a word means, what a number measures, how the
  * controls work, how the thirty minutes run. It does not say what to do with
- * any of it. A candidate who does not know what CTD stands for should not be
+ * any of it. A candidate who does not know what dispatch time is should not be
  * scored on that, and a candidate who asks which option is best should get a
  * polite no — from the same assistant, in the same words, for everybody.
  *
@@ -11,6 +11,10 @@
  * call. An assessment has to treat every candidate identically, and a model
  * that can be talked round by one candidate and not another does not. It also
  * means nothing here can leak a scoring rule, because none is in it.
+ *
+ * The answers are in very simple English: short sentences, everyday words.
+ * Each one still knows the older store words (CTD, nil pick, exception tote,
+ * auditing…), so a candidate who uses them is understood too.
  *
  * Only the topic of a question is logged, never its text, and nothing asked
  * here is scored.
@@ -31,14 +35,14 @@ interface Entry {
 }
 
 const DECLINE =
-  "That one is yours to decide — it is what the shift is finding out. I can explain anything on the screen: what a number means, what a record shows, what a button does.";
+  "You must decide that yourself. That is what the test checks. I can explain anything on the screen: what a number means, what a record shows, or what a button does.";
 
 const ENTRIES: Entry[] = [
   /* The Floor Lead's question. Ahead of the decline below, because "what do I tell him" is the label being asked about. */
   {
     topic: "floor_lead_reply",
-    match: /\b(tell him|answer to (him|the floor lead)|floor lead (says?|said|thinks?|means?|is (wrong|right))|his read|store (is |actually )?stuck|nothing is stuck|it.?s holding|not sure yet)\b/i,
-    text: "The Floor Lead is giving you his read of why orders are backing up. It is what he can see from where he stands, and it may or may not be the reason. The panels under “Look at the floor” show what each part of the store is doing right now. Your answer tells him where you think the store is stuck: picking (not enough hands on orders), putaway (bins running empty), the riders (packed bags waiting to leave), Aisle C (blocked), nothing (the floor is keeping up), or that you are not sure yet. You can change your answer until you move on.",
+    match: /\b(tell him|answer to (him|the floor lead)|floor lead (says?|said|thinks?|means?|is (wrong|right))|his read|what he thinks|store (is |actually )?stuck|nothing is stuck|it.?s holding|not sure yet)\b/i,
+    text: "The Floor Lead tells you what he thinks is wrong. He says what he can see. He may be right or wrong. The tiles under “Check the store” show what each part of the store is doing now. Your answer tells him where you think the store is stuck: picking (not enough people picking), putaway (shelf bins are empty), riders (packed bags are waiting), Aisle C (it is blocked), nothing (the store is keeping up), or not sure yet. You can change your answer before you move on.",
     suggestions: ["What do the percentages mean?", "What is pick speed?"],
   },
   /* Asked for the answer. Checked first, so "what should I do about the nil pick" is a no, not a definition. */
@@ -46,242 +50,243 @@ const ENTRIES: Entry[] = [
     topic: "asked_for_answer",
     match: /\b(what (should|do|would) (i|you)|which (one|option|is (best|right|correct))|best (option|answer|choice|move)|right (answer|option|choice)|correct (answer|option)|tell me (the answer|what to)|what is the answer|should i\b|is it (ok|okay|right|better) to|recommend|advi[cs]e|hint)\b/i,
     text: DECLINE,
-    suggestions: ["How does the test work?", "What is CTD?", "How do I move someone?"],
+    suggestions: ["How does the test work?", "What is dispatch time?", "How do I move someone?"],
   },
   {
     topic: "scoring",
-    match: /\b(scor\w*|marks?|points?|graded?|judged|evaluat\w*|assess\w*|pass(ed|ing)?|fail\w*|result)\b/i,
-    text: "You are assessed on what you do in the store — the decisions, and what they lead to later in the shift. You are not shown correct or incorrect answers while it runs, and I cannot tell you what scores well. How fast you tap is not measured. You see your profile when the shift ends.",
+    match: /\b(scor\w*|marks?|(?<!pickup )points?|graded?|judged|evaluat\w*|assess\w*|pass(ed|ing)?|fail\w*|result)\b/i,
+    text: "You are scored on what you do in the store: your choices, and what they lead to later. The test does not tell you if a choice is right or wrong. I cannot tell you what scores well. How fast you tap is not measured. You see your profile when the shift ends.",
     suggestions: ["How does the time work?", "What happens if I run out of time?"],
   },
   {
     topic: "store_clock",
     match: /\b(store (time|clock)|05:\d\d|06:\d\d|clock (jump|moves?|skip)\w*|why did (the )?time|stuck|frozen|freez\w*|hang\w*|not moving|nothing (is )?happen\w*|still (counting|searching)|waiting for|back at|wait button)\b/i,
-    text: "The clock next to “Store 114” is the store's own time, starting at 05:55. It moves only when you do something that takes a manager's time — opening a record, counting stock, deciding. It does not run by itself: if someone is counting or searching for you, they report back when you tap Wait, which moves the clock on to that time, or when other things you do take the clock past it. It is separate from your timer, which is real time and does not pause.",
-    suggestions: ["How does the time work?", "What is CTD?"],
+    text: "The clock next to “Store 114” is the store’s own time. It starts at 05:55. It moves only when you do something: open a record, count stock, make a choice. It does not move by itself. If someone is counting or searching for you, tap Wait. The clock moves to the time they come back. Doing other things can also move the clock past that time. This clock is not your timer. Your timer is real time and does not stop.",
+    suggestions: ["How does the time work?", "What is dispatch time?"],
+  },
+  /* Before "time", which would otherwise answer "what is dispatch time". */
+  {
+    topic: "ctd",
+    match: /\b(ctd|click.?to.?dispatch|dispatch( time)?)\b/i,
+    text: "Dispatch time (CTD) is the seconds from when a customer orders to when the packed bag leaves with a rider. The target is 180 seconds. It goes up when orders wait: waiting to be picked, or packed and waiting for a rider.",
+    suggestions: ["What is “Waiting”?", "What is pick speed?", "What do the percentages mean?"],
   },
   {
     topic: "time",
     match: /\b(how long|time (left|limit|remaining)|timer|30 min\w*|thirty|countdown|run out|runs? out|expire\w*|pace|pacing|too slow|hurry|behind|time)\b/i,
-    text: "Your time is real time, shown top right; it does not pause. The shift has six parts, shown in the bar at the top: yellow is the part you are in, and the white mark is where the time is. If the mark is ahead of the yellow, you are behind the suggested pace. As a rough guide for a thirty-minute sitting: handover 2 minutes, team 8, inventory 6, peak 9, recovery 2, final call 3. If the time ends first, the shift closes on the decisions you have already made, and the parts you did not reach count as zero — so keep moving.",
+    text: "Your timer is real time. It is at the top right, and it does not stop. The bar at the top shows the 6 parts of the shift. Yellow is the part you are in. The white mark shows where your time is. If the mark is ahead of the yellow, you are slower than the suggested pace. A rough guide for 30 minutes: Start 2 minutes, Team 8, Stock 6, Rush 9, After rush 2, Final plan 3. If the time ends first, the shift ends with the choices you made. Parts you did not reach count as zero, so keep moving.",
     suggestions: ["What is the store clock?", "What if I lose connection?"],
   },
   {
     topic: "connection",
     match: /\b(refresh\w*|reload\w*|connection|internet|offline|network|disconnect\w*|close(d)? the (tab|page)|battery|crash\w*|resume)\b/i,
-    text: "Your progress is saved as you go. If the page reloads or the connection drops, open the same link again in the same browser on the same device: you come back to where you were. If you signed in with an email address, signing in with it again does the same from any device. The timer keeps running while you are away.",
+    text: "Your work is saved as you go. If the page reloads or the internet stops, open the same link again. Use the same browser on the same phone or computer. You come back to the same place. If you signed in with email, signing in again does the same on any device. The timer keeps running while you are away.",
     suggestions: ["How does the time work?"],
   },
   {
     topic: "final_call",
-    match: /\b(do now|lock (shift )?plan|final call|open tasks|max(imum)? ?3|three (at most|max))\b/i,
-    text: "At the final call every open task goes into one of three places: Do now (you, personally — three at most), Delegate (a named owner — three at most), or After peak. Every task needs a place before the plan can be locked. Once it is locked, the store runs to 06:50 on that plan and you cannot change it.",
+    match: /\b(do now|lock (shift )?plan|final (call|plan)|open tasks|tasks still open|confirm the plan|max(imum)? ?3|three (at most|max))\b/i,
+    text: "In the final plan, each open task goes in one of three places. Do it myself: you do it (3 at most). Hand over: you name a person (3 at most). After rush: it waits. Every task needs a place before you can confirm the plan. After you confirm, the store runs until 06:50 with that plan. You cannot change it.",
     suggestions: ["How does delegating work?", "What is “load”?"],
   },
   {
     topic: "device_lock",
     match: /\b(unlock\w*|lock\w*|devices?|handhelds?|hht|spikes?)\b/i,
-    text: "Every associate works from a handheld. A manager can lock a device to a role — putaway or auditing — and it then gets only that work. An unlocked device on putaway or auditing is sent customer orders by the app whenever more orders are waiting than the pickers can clear, and its own work stops while it picks. A picker's device is always on orders. On the floor board, tap a person on putaway or auditing and use “Device” to lock or unlock. A device that changes role comes up unlocked.",
-    suggestions: ["What is the flexible reserve?", "What are the three kinds of work?"],
-  },
-  {
-    topic: "ctd",
-    match: /\b(ctd|click.?to.?dispatch|dispatch time)\b/i,
-    text: "CTD is click-to-dispatch: the seconds from a customer placing an order to the packed bag leaving the store with a rider. The target is 180 seconds. It rises when orders queue — waiting to be picked, or packed and waiting for a rider.",
-    suggestions: ["What is “Waiting”?", "What is pick speed?", "What do the percentages mean?"],
+    text: "Every worker uses a handheld device. You can lock a device to one job: putaway or checking. Then it gets only that work. An unlocked device on putaway or checking gets customer orders from the app when too many orders are waiting. Its own work stops while it picks. A picker’s device always gets orders. On the team board, tap a person on putaway or checking. Use “Device” to lock or unlock. When you move someone to a new job, their device becomes unlocked.",
+    suggestions: ["What are backup people?", "What are the three kinds of work?"],
   },
   {
     topic: "promise",
     match: /\b(sla|promise\w*|ten minutes|10 min\w*|delivery (time|radius)|radius)\b/i,
-    text: "The customer is promised delivery in about ten minutes. The app works that out from two things: how long the store takes to pick and pack, and the rider's trip, which depends on how far away the customer is. The store's part of it is CTD.",
-    suggestions: ["What is CTD?", "What are standby riders?"],
+    text: "Customers are promised delivery in about 10 minutes. The app works this out from two things: how long the store takes to pick and pack, and how long the ride takes. The store’s part is the dispatch time.",
+    suggestions: ["What is dispatch time?", "What are extra riders?"],
   },
   {
     topic: "ppi",
     match: /\b(ppi|pick speed|seconds (per|an) item|per item|16.?sec\w*|sixteen)\b/i,
-    text: "Pick speed, or PPI, is the seconds it takes to pick one item — lower is faster. The store standard is 16 seconds an item, so a ten-item order is given about 160 seconds. The figure in the header is across everybody picking right now. It gets worse when pickers have further to walk or reach an empty bin, as well as when somebody is slow.",
-    suggestions: ["What is CTD?", "What are the three kinds of work?"],
+    text: "Pick speed (PPI) is the seconds to pick one item. Lower is faster. The store target is 16 seconds per item, so an order of 10 items gets about 160 seconds. The number at the top is for all pickers right now. It gets worse when pickers walk further or find an empty bin, not only when someone is slow.",
+    suggestions: ["What is dispatch time?", "What are the three kinds of work?"],
   },
   {
     topic: "staged",
-    match: /\b(staged|staging|bags? waiting)\b/i,
-    text: "A staged bag is an order that has been picked and packed and is sitting on the staging shelf, waiting for a rider to take it. A few is normal.",
-    suggestions: ["What is CTD?", "What are standby riders?"],
+    match: /\b(staged|staging|bags? waiting|rider shelf)\b/i,
+    text: "A bag waiting for a rider is an order that is picked and packed. It sits on the rider shelf (staging) until a rider takes it. A few bags waiting is normal.",
+    suggestions: ["What is dispatch time?", "What are extra riders?"],
   },
   {
     topic: "orders_waiting",
-    match: /\b(orders? waiting|waiting\b|backlog|orders? (are )?backing)\b/i,
-    text: "“Waiting” is the number of orders in the store that have not left yet — those being worked on plus any queueing. Some are always in progress, so it is never zero.",
-    suggestions: ["What is CTD?", "What is pick speed?"],
+    match: /\b(orders? waiting|waiting\b|backlog|orders? (are )?(backing|piling))\b/i,
+    text: "“Waiting” is the number of orders in the store that have not left yet. It counts orders being worked on and orders in the queue. Some are always being worked on, so it is never zero.",
+    suggestions: ["What is dispatch time?", "What is pick speed?"],
   },
   {
     topic: "coverage",
-    match: /(\d ?%|\b(percent\w*|coverage|capacity|forecast|bars?|projected)\b)/i,
-    text: "Each percentage is capacity measured against the work being asked for. 100% is exactly enough. Picking counts the pickers, plus the share of their time the app will take from unlocked devices. Putaway is the people filling bins against what is selling, less the time the app takes from any of them whose device is unlocked. Riders is riders logged in against bags going out. So moving a picker to putaway with their device unlocked changes less than it looks as if it should: in the rush the app sends that person orders again. The line under each bar says how the number is made up. On the floor board the figures are for 06:30, the forecast peak, with the floor as it is now. In the panels during the shift they are right now.",
-    suggestions: ["What are the three kinds of work?", "What is the flexible reserve?", "What is “load”?"],
+    match: /(\d ?%|\b(percent\w*|coverage|capacity|forecast|bars?|projected|enough people)\b)/i,
+    text: "Each percentage compares the people on a job to the work needed. 100% means just enough. Below 100% means not enough. Picking counts the pickers, plus the time the app takes from unlocked devices. Putaway counts the people filling bins, minus the time the app takes from unlocked ones. Riders counts riders logged in against bags going out. So if you move a picker to putaway and leave the device unlocked, it changes less than you expect: in the rush, the app sends that person orders again. The line under each bar explains the number. On the team board, the numbers are for 06:30, the busiest time. Later in the shift, they are for right now.",
+    suggestions: ["What are the three kinds of work?", "What are backup people?", "What is “load”?"],
   },
   {
     topic: "load",
     match: /\bload\b/i,
-    text: "Load is the same thing as coverage, seen from the other side: how hard a kind of work is being asked to run against what its people can do. Over 100% means work is arriving faster than it is leaving.",
+    text: "Load shows how busy a job is compared to what its people can do. Over 100% means work comes in faster than it goes out.",
     suggestions: ["What do the percentages mean?"],
   },
   {
     topic: "reserve",
-    match: /\b(flex\w*( reserve)?|reserve|cross.?train\w*|spare)\b/i,
-    text: "The flexible reserve counts unlocked devices on putaway or auditing whose own work can spare them. They are who the app sends orders to if the rush turns out bigger than the forecast.",
+    match: /\b(flex\w*( reserve)?|reserve|backup( people)?|cross.?train\w*|spare)\b/i,
+    text: "Backup people are workers on putaway or checking whose device is unlocked and whose own work can wait. If the rush is bigger than expected, the app sends them orders.",
     suggestions: ["What does “unlocked” mean?", "What do “Strong” and “Trained” mean?"],
   },
   {
     topic: "skill_words",
-    match: /\b(strong|trained|can cover|not trained|skill\w*|authori[sz]ed|capab\w*)\b/i,
-    text: "Under each name is how well that person does the work they are on: Strong, Trained, Can cover, or Not trained. Tap a person to see all three kinds of work, what they are authorised for, and a note about them.",
+    match: /\b(strong|trained|can cover|not trained|skill\w*|authori[sz]ed|allowed|capab\w*|good fit|poor fit)\b/i,
+    text: "Under each name you see how good that person is at their job: Strong, Trained, Can cover, or Not trained. Tap a person to see all three jobs, what they are allowed to do, and a short note about them.",
     suggestions: ["How do I move someone?", "What are the three kinds of work?"],
   },
   {
     topic: "move_people",
     match: /\b(how (do|can) i (move|assign|change|reassign)|move (some(one|body)|a (person|worker)|people|staff)|reassign|drag)\b/i,
-    text: "Tap a person on the floor board. Their card opens with what they are trained for; under “Move to” you tap the work to send them to, and under “Device” you lock or unlock their handheld. The percentages update straight away. Later in the shift, “Move a worker…” and “Lock or unlock a device…” do the same from a list.",
+    text: "Tap a person on the team board. Their card opens. Under “Move to”, tap the job to send them to. Under “Device”, lock or unlock their device. The percentages change straight away. Later in the shift, “Move a worker…” and “Lock or unlock a device…” do the same from a list.",
     suggestions: ["What do the percentages mean?", "Why can’t I move Riya?"],
   },
   {
     topic: "riya_fixed",
-    match: /\b(riya|induction|new joiners?)\b/i,
-    text: "Riya joined yesterday through the staffing agency. A new joiner spends the first day or two on putaway only — learning the racks, the bin codes and the scanner — with no picking target, and moves on to picking and auditing after that. The floor board does not move her. What happens with her comes up during the shift.",
+    match: /\b(riya|induction|new joiners?|training plan)\b/i,
+    text: "Riya joined yesterday through the agency. New workers do only putaway for the first day or two. They learn the racks, the bins and the scanner. They have no picking target. After that, they move to picking and checking. You cannot move her on the team board. You will meet her later in the shift.",
     suggestions: ["What is pick speed?", "What does “unlocked” mean?"],
   },
   {
     topic: "nil_pick",
-    match: /\b(nil.?pick|item not found|inf\b|empty (bin|shelf|face)|bin (is )?(0|empty))\b/i,
-    text: "A nil pick is an item the picker went to collect and did not find in its bin, even though the system shows stock. Authorising it sends the order without that item and refunds the line. De-listing takes the item off sale in the app altogether.",
-    suggestions: ["What is overstock?", "What is the inward dock?"],
+    match: /\b(nil.?pick|item not found|not found|inf\b|empty (bin|shelf|face)|bin (is )?(0|empty)|not available)\b/i,
+    text: "“Item not found” (a nil pick) means a picker went to the shelf bin and the item was not there, but the system says there is stock. “Mark it as not available” sends the order without that item and refunds it. “Stop selling the item” takes it off sale in the app.",
+    suggestions: ["What is the extra stock area?", "What is the receiving area?"],
   },
   {
     topic: "stock_locations",
-    match: /\b(overstock|inward dock|dock|adjacent bin|inbound|inward\w*|crates?|goods receipt|grn|recent transactions|bins?|mother warehouse|back ?room)\b/i,
-    text: "Stock can be in more than one place. The bin is the rack slot pickers take from. The overstock bay is the reserve for the same item. The inward dock is where crates from the mother warehouse wait to be put away. An adjacent bin is the neighbouring slot, where something may have been put by mistake. Recent transactions lists what was received, moved and sold.",
-    suggestions: ["What is a nil pick?", "What is putaway?"],
+    match: /\b(overstock|extra stock|receiving( area)?|inward dock|dock|adjacent bin|bin next|inbound|inward\w*|crates?|goods receipt|grn|recent (transactions|stock records)|bins?|mother warehouse|main warehouse|back ?room)\b/i,
+    text: "Stock can be in more than one place. The shelf bin is where pickers take items from. The extra stock area holds more of the same item. The receiving area is where crates from the main warehouse wait to go on the shelves. The bin next to it is where an item may be put by mistake. Recent stock records show what was received, moved and sold.",
+    suggestions: ["What does item not found mean?", "What is putaway?"],
   },
   {
     topic: "putaway",
-    match: /\b(put.?away|replenish\w*|threshold)\b/i,
-    text: "Putaway is taking stock that has arrived from the mother warehouse and shelving it into its bin. The system raises a putaway task by itself when a bin drops below its threshold. If putaway falls behind, bins run empty and pickers arrive to find nothing there.",
-    suggestions: ["What is the inward dock?", "What does “unlocked” mean?"],
+    match: /\b(put.?away|replenish\w*|threshold|refill)\b/i,
+    text: "Putaway means taking new stock from the main warehouse and putting it in its shelf bin. When a bin gets low, the system makes a putaway task by itself. If putaway is too slow, bins become empty and pickers find nothing.",
+    suggestions: ["What is the receiving area?", "What does “unlocked” mean?"],
   },
   {
     topic: "auditing",
-    match: /\b(audit\w*|cycle count|wall.?to.?wall|w2w|perishable\w*|expiry|short.?dated|fresh lines?)\b/i,
-    text: "Auditing is checking the physical stock against the system with the handheld scanner: the quantity, that it is in the right bin, damage, and dates. The perishables check is done every morning before the rush — milk, bread, eggs, fruit and vegetables, for date and quality. A cycle count covers some bins each day. A wall-to-wall count covers the whole store.",
-    suggestions: ["What is variance?", "What does “unlocked” mean?"],
+    match: /\b(audit\w*|checking|stock checks?|stock count|cycle count|full store count|wall.?to.?wall|w2w|perishable\w*|fresh food|expiry|short.?dated|fresh lines?)\b/i,
+    text: "Checking means comparing the stock on the shelves with the system, using the handheld scanner. It checks the quantity, the right bin, damage and dates. The fresh food check is done every morning before the rush: the dates and quality of milk, bread, eggs, fruit and vegetables. A stock count covers some bins each day. A full store count covers the whole store.",
+    suggestions: ["What does “Missing” mean?", "What does “unlocked” mean?"],
   },
   {
     topic: "riders",
-    match: /\b(riders?|standby|batch\w*|handover point|by lane)\b/i,
-    text: "Riders collect staged bags and deliver them. Nine are rostered this morning, and the handover screen shows how many have logged in. Two standby riders can be called from the rider partner for ₹300. Batching by lane gives one rider two nearby orders. Putting somebody on the rider handover means they sequence riders and bags at the handover point, and leave their own work to do it.",
-    suggestions: ["What is CTD?", "What do the percentages mean?"],
+    match: /\b(riders?|standby|batch\w*|handover point|pickup point|by lane|group nearby)\b/i,
+    text: "Riders take packed bags and deliver them. 9 riders are planned this morning. The start screen shows how many logged in. You can call 2 extra riders from the rider company for ₹300. “Group nearby orders” gives one rider two orders that are close together. Putting someone at the rider pickup point means they organise riders and bags there. They leave their own work to do it.",
+    suggestions: ["What is dispatch time?", "What do the percentages mean?"],
   },
   {
     topic: "stations",
-    match: /\b(stations?|workflows?|picking|pickers?|pack(ing|er|ers)?|three kinds of work)\b/i,
-    text: "Three kinds of work. Picking is the whole order: collect the items from the bins, pack the bag and stage it for a rider — one person does all of it. Putaway gets the crates from the mother warehouse into bins. Auditing checks stock against the system, starting with the morning perishables check. Putaway and auditing do not touch orders, unless a device is unlocked and the app sends it some.",
+    match: /\b(stations?|workflows?|jobs?|picking|pickers?|pack(ing|er|ers)?|three kinds of work)\b/i,
+    text: "There are three jobs. Picking is the whole order: take the items from the bins, pack the bag, and put it out for a rider. One person does all of it. Putaway moves new stock from crates into the shelf bins. Checking compares stock with the system, starting with the fresh food check. Putaway and checking do not do orders, unless their device is unlocked and the app sends them orders.",
     suggestions: ["What does “unlocked” mean?", "What do the percentages mean?"],
   },
   {
     topic: "exception",
-    match: /\b(totes?|exception (area|tote)|restow\w*|cancel\w*)\b/i,
-    text: "The exception tote is a separate crate for items that were picked but could not be sent — a cancelled order, a damaged pack. Restowing means putting such an item back in its bin so it is sellable stock again.",
-    suggestions: ["What do the records show?", "What is a nil pick?"],
+    match: /\b(totes?|problem box|box e.?2|e.?2|exception (area|tote)|restow\w*|put back|cancel\w*)\b/i,
+    text: "Problem box E-2 (the exception tote) is a separate box for items that were picked but could not be sent, like a cancelled order or a damaged pack. These items should be put back on the shelf so they can be sold again.",
+    suggestions: ["What do the records show?", "What does item not found mean?"],
   },
   {
     topic: "delist",
-    match: /\b(de.?list\w*|off sale|unlist\w*)\b/i,
-    text: "De-listing takes an item off sale in the app, so customers can no longer order it from this store until it is listed again.",
-    suggestions: ["What is a nil pick?"],
+    match: /\b(de.?list\w*|off sale|unlist\w*|stop selling)\b/i,
+    text: "“Stop selling the item” (de-list) takes it off sale in the app. Customers cannot order it from this store until it is put back on sale.",
+    suggestions: ["What does item not found mean?"],
   },
   {
     topic: "high_value",
-    match: /\b(high.?value|cage|alert)\b/i,
-    text: "High-value items are kept in a locked cage and only authorised associates can go in. An alert means the system's count of an item needs checking. “System” is what the records say is there; “Physical” is what is actually in the cage, which nobody knows until it is counted.",
-    suggestions: ["What is variance?", "What do the records show?"],
+    match: /\b(high.?value|expensive|cage|alert)\b/i,
+    text: "Expensive items are kept in a locked cage. Only allowed workers can go in. “In the system” is what the records say is there. “In the cage” is what is really there. Nobody knows that number until someone counts.",
+    suggestions: ["What does “Missing” mean?", "What do the records show?"],
   },
   {
     topic: "variance",
-    match: /\b(varianc\w*|exposure|system (count|number|says)|physical|mismatch|discrepan\w*|short(age)?)\b/i,
-    text: "Variance is physical count minus system count: −3 means three fewer in the cage than the records say. Exposure is that number times the unit value — the money the difference represents.",
-    suggestions: ["What do the records show?", "What does “Explained by records” mean?"],
+    match: /\b(varianc\w*|exposure|value missing|missing\b|system (count|number|says)|in the system|physical|mismatch|discrepan\w*|short(age)?)\b/i,
+    text: "“Missing” is the cage count minus the system count. −3 means 3 fewer items in the cage than the records say. “Value missing” is that number times the price of one item: the money it is worth.",
+    suggestions: ["What do the records show?", "What do the five groups mean?"],
   },
   {
     topic: "unit_piles",
-    match: /\b(explained( by records)?|recovered|unresolved|write.?off|place each unit|account for)\b/i,
-    text: "When you close the case you place each missing unit in one of five piles. Explained by records: the paperwork shows where it went. Recovered: it has been physically found. Unresolved: not yet accounted for. Write off: removed from the books as a loss. Theft: recorded as stolen. Use + and − to place them; all of them must be placed.",
-    suggestions: ["What is variance?", "What do the records show?"],
+    match: /\b(explained( by records)?|records explain|recovered|found it|unresolved|still missing|stolen|write.?off|write it off|place each unit|five groups|which group|account for)\b/i,
+    text: "When you close the case, you put each missing item in one of five groups. The records explain it: the records show where it went. Found it: someone has found it. Still missing: nobody knows yet. Write it off: remove it from stock as a loss. Stolen: record it as theft. Use + and − to place them. Every missing item must go in a group.",
+    suggestions: ["What does “Missing” mean?", "What do the records show?"],
   },
   {
     topic: "records",
-    match: /\b(records?|movement log|scan log|access log|orders (tab|list|record)|logs?)\b/i,
-    text: "Five records. The movement log lists every stock movement for the item since it was last counted. Orders lists customer orders containing it. The scan log shows each scan at issue and at pack. The access log shows who entered the cage and when. The exception area shows what is physically in the exception tote. Opening one takes a little store time; you can open them yourself or have somebody pull all five.",
-    suggestions: ["What is the exception tote?", "What is variance?"],
+    match: /\b(records?|movement log|scan log|access log|cage entry log|orders (tab|list|record)|logs?)\b/i,
+    text: "There are five records. The stock movement log lists every stock change for the item since the last count. Orders lists customer orders with the item. The scan log shows each scan when the item was picked and packed. The cage entry log shows who opened the cage and when. Problem box E-2 shows what is inside that box now. Opening a record takes a little store time. You can open them yourself, or ask someone to get all five.",
+    suggestions: ["What is the problem box?", "What does “Missing” mean?"],
   },
   {
     topic: "delegation",
-    match: /\b(handle myself|assign to|delegat\w*|owner|strong fit|weak fit|possible, slower|fit\b|while away)\b/i,
-    text: "Most work can be done by you or given to somebody. “Handle myself” takes your own time, shown as minutes off the floor. Under “Assign to”, each person shows how well suited they are to that job and what their own work drops to while they are away from it. “Part of the job where they stand” means it does not take them away at all.",
-    suggestions: ["What is the attention slot?", "What do the percentages mean?"],
+    match: /\b(handle myself|do it myself|assign to|give it to|hand over|delegat\w*|owner|given to|strong fit|weak fit|good fit|poor fit|possible, slower|can do it, slower|fit\b|while away)\b/i,
+    text: "You can do most work yourself, or give it to someone. “Do it myself” uses your own time; it shows how many minutes you are away from the floor. Under “Or give it to”, each person shows how good they are at this job, and what happens to their own work while they are away. “Part of their current job” means it does not take them away.",
+    suggestions: ["Why can I do only one myself?", "What do the percentages mean?"],
   },
   {
     topic: "attention_slot",
-    match: /\b(attention( slot)?|personal slot|handle\b|after peak|three problems)\b/i,
-    text: "At one point three things need dealing with at once. For each you choose Handle (do it yourself), Delegate (name an owner) or After peak (leave it until later). You can only be in one place: the first thing you choose to handle personally gets done, and any others you mark Handle wait until you are free.",
+    match: /\b(attention( slot)?|personal slot|handle\b|after (the )?(peak|rush)|three problems|only one( of them)?( myself| yourself)?)\b/i,
+    text: "At one point, three problems come at the same time. For each one, choose: Do it myself, Hand over (name a person), or After rush (it waits). You can only be in one place. The first one you do yourself gets done. Any other one you mark “Do it myself” waits until you are free.",
     suggestions: ["How does delegating work?"],
   },
   {
     topic: "absence",
-    match: /\b(agency|on.?demand|temp(orary)?|booking|₹ ?640|₹ ?160|by the hour|hourly|call in|extra staff|additional staff|extend|overtime|operate short|reallocat\w*|absen\w*)\b/i,
-    text: "Agency staff are extra pickers from the staffing agency, paid by the hour: ₹160 an hour each with a four-hour minimum, so ₹640 each. Up to two can be called in, from the floor board or when the absence comes up. They arrive at 06:20 and can only pick, because they do not know the racks. The absence has three other answers, and they can be combined: internal reallocation opens the floor board so you can move the people you have and set their devices; asking an associate to extend means asking Arjun, whose overnight shift ends at 06:30, to stay to 08:30; operating short means running with the twelve present.",
+    match: /\b(agency|on.?demand|temp(orary)?|booking|₹ ?640|₹ ?160|by the hour|hourly|call in|extra staff|additional staff|extend|stay longer|overtime|operate short|fewer people|reallocat\w*|absen\w*|missing staff)\b/i,
+    text: "Agency workers are extra pickers from the agency. Each one costs ₹160 an hour, for at least 4 hours, so ₹640. You can call up to 2, from the team board or when two staff are missing. They come at 06:20. They can only pick, because they do not know the racks. When staff are missing, there are three other choices, and you can pick more than one. Move your own people: opens the team board. Ask someone to stay longer: ask Arjun, whose night shift ends at 06:30, to stay until 08:30. Work with fewer people: run with the 12 you have.",
     suggestions: ["What do the percentages mean?", "How do I move someone?"],
   },
   {
     topic: "bottleneck_controls",
-    match: /\b(fast lines?|slow (order )?release|order release|pause the (cycle )?count|run 3 minutes|run the system|check the floor|aisle)\b/i,
-    text: "On the floor screen you can change things and then run the store for three minutes to see what happens. You can move a worker, or lock or unlock a device. Fast lines first puts away only what is selling. Batch by lane gives one rider two nearby orders. Pause the cycle count stops the routine counts for now. You can put somebody on the rider handover, or call the standby riders. Clear Aisle C moves the crates blocking it. Slow order release holds new orders back for ten minutes, which customers see as a longer delivery promise. After running, “Check the floor” shows the numbers before and after.",
-    suggestions: ["What is CTD?", "What does “unlocked” mean?"],
+    match: /\b(fast lines?|fast.?selling|slow (order )?release|slow down|order release|pause the (cycle )?count|stop the stock count|run 3 minutes|let 3 minutes pass|run the system|check the (floor|store)|aisle)\b/i,
+    text: "On this screen you can make changes, then let 3 minutes pass to see what happens. You can move a worker, or lock or unlock a device. “Fast-selling items first” puts only fast-selling items on the shelves. “Group nearby orders” gives one rider two close orders. “Stop the stock count” stops the usual counts for now. You can put someone at the rider pickup point, or call the extra riders. “Clear Aisle C” moves the crates that block it. “Slow down new orders” holds new orders for 10 minutes, so customers see a longer delivery time. After 3 minutes, “Check the store” shows the numbers before and after.",
+    suggestions: ["What is dispatch time?", "What does “unlocked” mean?"],
   },
   {
     topic: "liner",
-    match: /\b(liner|secondary|extra bag|bag 1|move (it|an item)|repack\w*)\b/i,
-    text: "On the bag screen, tap an item to move it between Bag 1 and the extra bag. The secondary liner is a sealed inner bag that goes around one item. “If repacked” shows what this order's dispatch time becomes if the bag is changed.",
-    suggestions: ["What is CTD?"],
+    match: /\b(liner|inner bag|secondary|extra bag|other bag|bag 1|move (it|an item)|repack\w*|pack(ed)? (it )?again)\b/i,
+    text: "On the bag screen, tap an item to move it between Bag 1 and the extra bag. An inner bag is a sealed bag that goes around one item. “If packed again” shows what this order’s dispatch time becomes if you change the bag.",
+    suggestions: ["What is dispatch time?"],
   },
   {
     topic: "people",
     match: /\b(floor lead|assistant store manager|asm|who is|who are|arjun|manu|rahul|sneha|farhan|deepa|kiran|lakshmi|vishnu|anjali|joseph|team)\b/i,
-    text: "You are the Assistant Store Manager taking the morning shift, 06:00 to 15:00. The night-shift ASM is handing over to you. The Floor Lead supervises the floor and reports to you. Twelve associates are on the floor — the same twelve all morning; most come through a staffing agency. Tap any of them on the floor board to see what they are trained for.",
+    text: "You are the Assistant Store Manager for the morning shift. The night-shift manager hands the store to you. The Floor Lead runs the floor and reports to you. 12 workers are here, the same 12 all morning. Most come through an agency. Tap anyone on the team board to see what they are good at.",
     suggestions: ["What do “Strong” and “Trained” mean?", "How do I move someone?"],
   },
   {
     topic: "dark_store",
     match: /\b(dark store|store 114|quick commerce|what is this (store|place))\b/i,
-    text: "A dark store is a small warehouse that only fulfils app orders — no walk-in customers. An order is picked from the bins, packed, and handed to a rider within a few minutes. Stock arrives in crates from a mother warehouse. Store 114 is the one you are running this morning.",
-    suggestions: ["What are the three kinds of work?", "What is CTD?"],
+    text: "A dark store is a small warehouse that only handles app orders. No customers walk in. Each order is picked from the bins, packed, and given to a rider within a few minutes. Stock comes in crates from a main warehouse. Store 114 is the store you run this morning.",
+    suggestions: ["What are the three kinds of work?", "What is dispatch time?"],
   },
   {
     topic: "how_it_works",
     match: /\b(how (does|do) (this|the test|it) work|what is this|what do i do here|instructions?|help|explain|get started|confused|don.?t understand|stuck)\b/i,
-    text: "You are running one dark store through a morning. Each screen is something that needs a decision: read what is there, open anything you want to look at, then act with the yellow button. What you decide stays decided and shapes what comes next. The bar at the top shows which of the six parts you are in, and I can explain any word or number on the screen.",
-    suggestions: ["How does the time work?", "What is CTD?", "How am I assessed?"],
+    text: "You run one dark store for one morning. Each screen needs a choice. Read the screen. Open anything you want to check. Then use the yellow button. Your choices stay, and they change what happens next. The bar at the top shows which of the 6 parts you are in. I can explain any word or number on the screen.",
+    suggestions: ["How does the time work?", "What is dispatch time?", "How am I assessed?"],
   },
 ];
 
 const FALLBACK: GuideReply = {
   topic: "no_match",
-  text: "I do not have an answer for that. I can explain what is on the screen — CTD, pick speed, the percentages, device locks, a nil pick, the records, how to move or assign people, how the time works. I cannot say what you should decide.",
-  suggestions: ["What is CTD?", "What does “unlocked” mean?", "How does the time work?"],
+  text: "I do not have an answer for that. I can explain what is on the screen: dispatch time, pick speed, the percentages, device locks, item not found, the records, how to move or give work to people, and how the time works. I cannot tell you what to choose.",
+  suggestions: ["What is dispatch time?", "What does “unlocked” mean?", "How does the time work?"],
 };
 
 const OPENING: GuideReply = {
   topic: "opening",
-  text: "Ask me what anything on the screen means: a word, a number, a button, how the time works. I will not tell you what to decide. The timer keeps running while you read.",
-  suggestions: ["How does the test work?", "What is CTD?", "How does the time work?"],
+  text: "Ask me what anything on the screen means: a word, a number, a button, or how the time works. I will not tell you what to choose. Your timer keeps running while you read.",
+  suggestions: ["How does the test work?", "What is dispatch time?", "How does the time work?"],
 };
 
 export function openingMessage(): GuideReply {

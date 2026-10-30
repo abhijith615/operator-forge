@@ -82,12 +82,12 @@ export const FORMS: Record<FormId, FormContent> = {
     constraint: "picking",
     surgeFactor: 1.15,
     surgeHeadline: "Orders waiting to be picked",
-    surgeDetail: "Breakfast baskets are bigger. Every order has more items in it, and at sixteen seconds an item that is more time on each one.",
-    surgeAlert: "Orders are backing up",
+    surgeDetail: "Breakfast orders are bigger. Each order has more items, and each item takes 16 seconds to pick. So every order takes longer.",
+    surgeAlert: "Orders are piling up",
     surgeOutcome: {
-      good: "The pick queue is back under control.",
-      warn: "The pick queue is holding, just.",
-      bad: "The pick queue is still growing.",
+      good: "The orders waiting to be picked are under control again.",
+      warn: "The orders waiting to be picked are only just under control.",
+      bad: "The orders waiting to be picked are still growing.",
     },
   },
   B: {
@@ -108,12 +108,12 @@ export const FORMS: Record<FormId, FormContent> = {
     constraint: "riders",
     surgeFactor: 1.15,
     surgeHeadline: "Bags waiting for a rider",
-    surgeDetail: "Orders are coming from the far end of the delivery radius. Each trip is longer, and packed bags are stacking on the staging shelf.",
-    surgeAlert: "Bags are stacking at staging",
+    surgeDetail: "Orders are coming from far away. Each delivery trip takes longer. Packed bags are piling up on the shelf where riders collect them (staging).",
+    surgeAlert: "Bags are piling up for riders",
     surgeOutcome: {
-      good: "Bags are leaving staging as fast as they are packed.",
-      warn: "Staging is holding, just.",
-      bad: "Bags are still stacking at staging.",
+      good: "Bags are leaving as fast as they are packed.",
+      warn: "Bags waiting for riders are only just under control.",
+      bad: "Bags are still piling up for riders.",
     },
   },
   C: {
@@ -134,12 +134,12 @@ export const FORMS: Record<FormId, FormContent> = {
     constraint: "putaway",
     surgeFactor: 1.5,
     surgeHeadline: "Empty bins",
-    surgeDetail: "Fast lines are selling through. The stock is in crates on the inward dock and has not reached the bins.",
-    surgeAlert: "Bins are running empty",
+    surgeDetail: "Fast-selling items are selling out. The new stock is still in crates in the receiving area. It has not reached the shelf bins.",
+    surgeAlert: "Shelf bins are running empty",
     surgeOutcome: {
-      good: "The fast-line bins are being kept full.",
-      warn: "The bins are holding, just.",
-      bad: "Fast-line bins are still running empty.",
+      good: "The bins for fast-selling items are staying full.",
+      warn: "The bins are only just staying full.",
+      bad: "The bins for fast-selling items are still running empty.",
     },
   },
 };
@@ -174,15 +174,15 @@ export const handoverLocks = (id: FormId): Record<string, boolean> =>
  * actually handed, and has to check.
  */
 export function floorLeadSays(blamed: Station | null, constraint: Stage | null): string {
-  if (blamed === "putaway") return "There are still crates all over the dock. I think putaway is too slow this morning.";
-  if (constraint === "riders") return "Orders aren’t getting out. I think we need faster pickers.";
-  return "Look at the pick speed. I think we need faster pickers.";
+  if (blamed === "putaway") return "There are still crates all over the receiving area. I think putaway is too slow this morning.";
+  if (constraint === "riders") return "Orders are not going out. I think we need faster pickers.";
+  return "Look at the picking speed. I think we need faster pickers.";
 }
 
 /** The process change available at each stage. Only one of them is where the problem is. */
 export const PROCESS_FIX: Record<Stage, { label: string; detail: string }> = {
-  picking: { label: "Clear Aisle C", detail: "Move the inward crates blocking the aisle so pick routes run straight again." },
-  putaway: { label: "Fast lines first", detail: "Put away only the lines that are selling. Everything else waits in its crate." },
-  auditing: { label: "Pause the cycle count", detail: "Stop the routine counts until the rush has passed. The perishables check still runs." },
-  riders: { label: "Batch by lane", detail: "Two nearby orders to one rider. Fewer trips, and the bags leave in order." },
+  picking: { label: "Clear Aisle C", detail: "Move the new crates that block the aisle, so pickers can walk straight through again." },
+  putaway: { label: "Fast-selling items first", detail: "Put only fast-selling items on the shelves. Everything else stays in its crate for now." },
+  auditing: { label: "Stop the stock count", detail: "Stop the usual stock counts until the rush is over. The fresh food check still goes on." },
+  riders: { label: "Group nearby orders", detail: "Give two nearby orders to one rider. Fewer trips, and the bags go out in order." },
 };

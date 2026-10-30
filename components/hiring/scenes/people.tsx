@@ -41,7 +41,7 @@ export function Riya({ state, act }: SceneProps) {
 
   return (
     <>
-      <SceneHeading eyebrow="06:02 · Inward dock" title="Riya" sub="New joiner, second day. Sent by the agency." />
+      <SceneHeading eyebrow="06:02 · Receiving area" title="Riya" sub="New joiner. This is her second day. The agency sent her." />
       <Card>
         <Speech who="Floor Lead" lines={RIYA.floorLead} />
       </Card>
@@ -50,8 +50,8 @@ export function Riya({ state, act }: SceneProps) {
         <Card className="mt-3">
           <Facts rows={RIYA.facts} />
 
-          <Eyebrow className="mt-5 mb-2">Seconds an item · her fourteen orders, in order</Eyebrow>
-          <ol className="flex items-end gap-2" aria-label="Seconds an item across her fourteen orders this morning">
+          <Eyebrow className="mt-5 mb-2">Seconds per item · her 14 orders, first to last</Eyebrow>
+          <ol className="flex items-end gap-2" aria-label="Seconds per item across her 14 orders this morning">
             {RIYA.ppiTrend.map((ppi, index) => (
               <li key={index} className="flex flex-1 flex-col items-center gap-1">
                 <span className="tabular text-[13px] font-semibold text-hi">{ppi.toFixed(1)}</span>
@@ -60,7 +60,7 @@ export function Riya({ state, act }: SceneProps) {
             ))}
           </ol>
 
-          <Eyebrow className="mt-5 mb-2">Where the seconds went · an average item</Eyebrow>
+          <Eyebrow className="mt-5 mb-2">Where her time went · for one item</Eyebrow>
           <ul className="space-y-1.5">
             {RIYA.breakdown.map((row) => (
               <li key={row.part} className="flex items-center gap-3">
@@ -84,11 +84,11 @@ export function Riya({ state, act }: SceneProps) {
         </Card>
       ) : (
         <div className="mt-3">
-          <Tile label="Open Riya’s record" icon={<BarChart3 />} onClick={() => act({ t: "inspect", item: "riyaNumbers" })} />
+          <Tile label="See Riya’s work record" icon={<BarChart3 />} onClick={() => act({ t: "inspect", item: "riyaNumbers" })} />
         </div>
       )}
 
-      <Eyebrow className="mt-5 mb-2">Your call · choose up to two</Eyebrow>
+      <Eyebrow className="mt-5 mb-2">Your choice · pick up to two</Eyebrow>
       <div className="grid gap-2 sm:grid-cols-2">
         {order(RIYA_OPTIONS).map((option) => (
           <Choice
@@ -158,36 +158,36 @@ export function Arjun({ state, act }: SceneProps) {
 
   return (
     <>
-      <SceneHeading eyebrow="06:04 · Picking floor" title="Arjun" sub="Expert picker. Overnight shift, off at 06:30." />
+      <SceneHeading eyebrow="06:04 · Picking area" title="Arjun" sub="Expert picker. His night shift ends at 06:30." />
       <Card>
         <Speech who="Arjun" lines={ARJUN.lines} />
       </Card>
 
       {!place ? (
         <>
-          <Eyebrow className="mt-5 mb-2">Where do you have this conversation?</Eyebrow>
+          <Eyebrow className="mt-5 mb-2">Where do you talk to him?</Eyebrow>
           <div className="grid gap-2 sm:grid-cols-2">
             <Choice go onClick={() => act({ t: "arjunPlace", place: "here" })} detail="On the floor, in front of the other pickers.">
-              Speak here
+              Talk here
             </Choice>
-            <Choice go onClick={() => act({ t: "arjunPlace", place: "aside" })} detail="Step away from the floor for a minute.">
-              Move aside
+            <Choice go onClick={() => act({ t: "arjunPlace", place: "aside" })} detail="Go away from the floor for a minute.">
+              Talk on the side
             </Choice>
           </div>
         </>
       ) : (
         <>
-          <p className="mt-3 text-[13px] text-lo">{place === "aside" ? "You have stepped away from the floor." : "You are on the floor. The other pickers can hear."}</p>
+          <p className="mt-3 text-[13px] text-lo">{place === "aside" ? "You have moved away from the floor." : "You are on the floor. The other pickers can hear you."}</p>
 
           {checked.includes("incentiveStatus") ? (
             <Card className="mt-3">
-              <Eyebrow className="mb-3">Incentive status · last week</Eyebrow>
+              <Eyebrow className="mb-3">Incentive payment · last week</Eyebrow>
               <Facts rows={ARJUN.incentiveStatus} />
             </Card>
           ) : null}
           {checked.includes("eligibility") ? (
             <Card className="mt-3">
-              <Eyebrow className="mb-3">Extension eligibility</Eyebrow>
+              <Eyebrow className="mb-3">Can he stay longer?</Eyebrow>
               <Facts rows={ARJUN.eligibility} />
             </Card>
           ) : null}
@@ -195,17 +195,17 @@ export function Arjun({ state, act }: SceneProps) {
           {!responding ? (
             <div className="mt-3 grid gap-2">
               {!checked.includes("incentiveStatus") ? (
-                <Tile label="Check incentive status" icon={<ReceiptText />} onClick={() => act({ t: "inspect", item: "incentiveStatus" })} />
+                <Tile label="Check his incentive payment" icon={<ReceiptText />} onClick={() => act({ t: "inspect", item: "incentiveStatus" })} />
               ) : null}
               {!checked.includes("eligibility") ? (
-                <Tile label="Check eligibility" icon={<FileCheck2 />} onClick={() => act({ t: "inspect", item: "eligibility" })} />
+                <Tile label="Check if he can stay longer" icon={<FileCheck2 />} onClick={() => act({ t: "inspect", item: "eligibility" })} />
               ) : null}
             </div>
           ) : (
             <div className="mt-5 space-y-5">
-              <Group label="Acknowledge" options={ARJUN_ACK} value={ack} onChange={setAck} />
-              <Group label="Clarify" options={clarifyOptions} value={clarify} onChange={setClarify} />
-              <Group label="Request" options={ARJUN_REQUEST} value={request} onChange={setRequest} />
+              <Group label="1 · First, you say" options={ARJUN_ACK} value={ack} onChange={setAck} />
+              <Group label="2 · About the payment" options={clarifyOptions} value={clarify} onChange={setClarify} />
+              <Group label="3 · Your request" options={ARJUN_REQUEST} value={request} onChange={setRequest} />
             </div>
           )}
 
@@ -229,7 +229,7 @@ export function Arjun({ state, act }: SceneProps) {
                 </PrimaryButton>
               </>
             ) : (
-              <PrimaryButton onClick={() => setResponding(true)}>Respond now</PrimaryButton>
+              <PrimaryButton onClick={() => setResponding(true)}>Answer him now</PrimaryButton>
             )}
           </ActionBar>
         </>

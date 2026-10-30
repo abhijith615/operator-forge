@@ -156,7 +156,7 @@ function Positioning({
   return (
     <Frame>
       <p className="mt-10 font-mono text-[12px] tracking-[0.22em] text-ember-500 uppercase">Hiring Test</p>
-      <h1 className="mt-2 text-[28px] leading-[1.06] font-bold tracking-[-0.035em] text-hi uppercase">30-minute dark store manager simulation</h1>
+      <h1 className="mt-2 text-[28px] leading-[1.06] font-bold tracking-[-0.035em] text-hi uppercase">Dark store manager test · 30 minutes</h1>
 
       <section aria-labelledby="hiring-explainer" className="mt-6">
         <h2 id="hiring-explainer" className="font-mono text-[11.5px] tracking-[0.18em] text-lo uppercase">
@@ -177,19 +177,19 @@ function Positioning({
 
       <p className="mt-6 rounded-[14px] border border-line-strong bg-white/[0.03] px-3.5 py-3 text-[13px] leading-snug text-mid">
         You have <span className="font-semibold text-hi">{spoken(limit)}</span>
-        {extra > 0 ? " — that includes the extra time arranged for you" : ""}. The time starts when you press Start
-        Shift and does not pause. You have one attempt. If the page reloads or your connection drops, you come back
-        to where you were. The bar at the top shows the six parts of the shift: yellow is where you are, and the
-        white mark is where the time is. Parts you do not reach before the time ends count as zero, so keep moving.
+        {extra > 0 ? " (this includes your extra time)" : ""}. The time starts when you press Start Shift. It does
+        not stop. You get one try. If the page reloads or the internet stops, you come back to the same place. The
+        bar at the top shows the 6 parts of the shift. Yellow is where you are. The white mark shows where your time
+        is. Parts you do not reach before the time ends count as zero, so keep moving.
       </p>
 
       <p className="mt-3 text-[13px] leading-snug text-lo">
-        Need extra time or another adjustment because of a disability or a health condition? Write to{" "}
+        Do you need extra time or other help because of a disability or a health condition? Write to{" "}
         <a href={`mailto:${HIRING_CONTACT}?subject=Hiring%20Test%20%E2%80%94%20adjustment`} className="text-mid underline underline-offset-4 hover:text-hi">
           {HIRING_CONTACT}
         </a>{" "}
-        before you start. It is arranged in advance against your email address, you then start by signing in with
-        that email, and it is not shown on your result.
+        before you start. We set it up for your email address. Then you start the test by signing in with that
+        email. It is not shown on your result.
       </p>
 
       <section aria-labelledby="hiring-notice" className="mt-6 rounded-[16px] border border-line-strong bg-surface p-4">
@@ -209,7 +209,7 @@ function Positioning({
           <a href={`mailto:${HIRING_CONTACT}`} className="text-hi underline underline-offset-4">
             {HIRING_CONTACT}
           </a>
-          . More in the{" "}
+          . Read more in the{" "}
           <a href="/privacy" target="_blank" rel="noreferrer" className="text-hi underline underline-offset-4">
             privacy policy
           </a>
@@ -224,7 +224,7 @@ function Positioning({
             className="mt-0.5 size-5 shrink-0 accent-[#f5c400]"
           />
           <span className="text-[13.5px] leading-snug text-hi">
-            I have read this, and I agree to take the assessment and to my data being used as described.
+            I have read this. I agree to take the test, and I agree that my data is used as written above.
           </span>
         </label>
       </section>
@@ -253,8 +253,8 @@ function Positioning({
             />
           </div>
           <p id="hiring-name-note" className="mt-2 text-[12.5px] leading-snug text-lo">
-            Your result is recorded under this name. Stay on this device and browser until you finish: it is how the
-            test knows it is you.
+            Your result is saved under this name. Use the same phone or computer and the same browser until you
+            finish. That is how the test knows it is you.
           </p>
 
           <label htmlFor="hiring-phone" className="mt-5 block text-[13px] font-medium text-mid">
@@ -280,7 +280,7 @@ function Positioning({
           <p id="hiring-phone-note" className={phoneWrong ? "mt-2 text-[12.5px] leading-snug text-alert-500" : "mt-2 text-[12.5px] leading-snug text-lo"}>
             {phoneWrong
               ? "Enter a 10-digit Indian mobile number, for example 98765 43210."
-              : "An Indian mobile number on WhatsApp. We use it only to contact you about this assessment."}
+              : "An Indian mobile number that has WhatsApp. We use it only to contact you about this test."}
           </p>
         </div>
       ) : null}
@@ -292,8 +292,8 @@ function Positioning({
             : failed === "phone"
               ? "Enter a 10-digit Indian WhatsApp number to start."
               : failed === "busy"
-              ? "A lot of people are starting right now. Wait a minute and try again."
-                : "The shift could not be started. Check your connection and try again."}
+              ? "Many people are starting right now. Wait a minute and try again."
+                : "The shift could not start. Check your internet and try again."}
         </p>
       ) : null}
 
@@ -306,7 +306,7 @@ function Positioning({
 
       {guest ? (
         <p className="mt-5 text-center text-[13px] text-lo">
-          Asked to sit it under your email address?{" "}
+          Were you asked to take the test with your email?{" "}
           <a href="/hiring-test/assessment?signin=1" className="text-mid underline underline-offset-4 hover:text-hi">
             Sign in by email instead
           </a>
@@ -471,16 +471,16 @@ export function HiringAssessment({
       <div className="mt-10" role="status">
         {phase === "stuck" ? (
           <>
-            <h1 className="text-[24px] leading-tight font-bold tracking-[-0.03em] text-hi">Your shift is finished, and not yet saved.</h1>
+            <h1 className="text-[24px] leading-tight font-bold tracking-[-0.03em] text-hi">Your shift is finished, but not saved yet.</h1>
             <p className="mt-2 text-[14.5px] leading-relaxed text-mid">
-              Your decisions are held on this device. Check your connection and try again — nothing will be lost.
+              Your choices are kept on this device. Check your internet and try again. Nothing will be lost.
             </p>
             <QuietButton className="mt-5 sm:w-full" onClick={finish}>
               Try again
             </QuietButton>
           </>
         ) : (
-          <p className="text-[15px] text-mid">{phase === "saving" ? "Closing the shift…" : "Opening the store…"}</p>
+          <p className="text-[15px] text-mid">{phase === "saving" ? "Ending the shift…" : "Opening the store…"}</p>
         )}
       </div>
     </Frame>

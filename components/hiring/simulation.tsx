@@ -4,7 +4,7 @@ import * as React from "react";
 import { Timer } from "lucide-react";
 
 import { logAssessment, syncAssessment } from "@/lib/hiring/actions";
-import { PHASES, PHASE_OF, RIYA_OPTIONS, paceOf } from "@/lib/hiring/content";
+import { PHASES, PHASE_LABEL, PHASE_OF, RIYA_OPTIONS, paceOf } from "@/lib/hiring/content";
 import { formFor } from "@/lib/hiring/forms";
 import { CTD_TARGET, EXTEND_AT, clockLabel, metricsOf } from "@/lib/hiring/model";
 import { PPI_TARGET, nameOf } from "@/lib/hiring/roster";
@@ -31,20 +31,20 @@ interface Beat {
 }
 
 const RIYA_REPLY: Record<string, string> = {
-  lockPutaway: "Okay. I’ll lock her handheld to putaway.",
-  pair: "I’ll put her alongside one of the putaway hands.",
-  phaseLater: "First picking shift after the rush, then. I’ll tell her.",
-  keep: "Leaving it as it is, then.",
-  target: "On orders, sixteen seconds. I’ll tell her.",
-  returnAgency: "I’ll call the agency and send her home.",
-  warn: "I’ll tell her it’s a formal warning.",
+  lockPutaway: "Okay. I will lock her device to putaway.",
+  pair: "I will put her with one of the putaway workers.",
+  phaseLater: "Okay, her first picking shift is after the rush. I will tell her.",
+  keep: "Okay, we leave it as it is.",
+  target: "On orders, 16 seconds per item. I will tell her.",
+  returnAgency: "I will call the agency and send her home.",
+  warn: "I will tell her it is a formal warning.",
 };
 
 const ARJUN_REPLY: Record<string, string[]> = {
-  willing: ["Okay.", "I’ll stay till half eight."],
-  reluctant: ["Fine. I’ll stay."],
+  willing: ["Okay.", "I will stay until 08:30."],
+  reluctant: ["Fine. I will stay."],
   resentful: ["Understood."],
-  leaving: ["Then I’m off at half six."],
+  leaving: ["Then I am leaving at 06:30."],
 };
 
 /**
@@ -64,19 +64,19 @@ function beatFor(from: SceneId, state: HiringState): Beat | null {
   if (from === "nilpick" && state.nil.outcome) {
     const { item, order } = form.nilPick;
     const line = {
-      replenished: `Order ${order} went out complete.`,
+      replenished: `Order ${order} went out with everything.`,
       authorised: `Order ${order} went out without the ${item}.`,
-      delisted: `${item} is off sale in the app. Order ${order} went out short.`,
-      ignored: `Order ${order} is still waiting on the ${item}.`,
+      delisted: `${item} is off sale in the app. Order ${order} went out with one item missing.`,
+      ignored: `Order ${order} is still waiting for the ${item}.`,
     }[state.nil.outcome];
     return { who: "Floor Lead", lines: [line] };
   }
   if (from === "customer" && state.bag) {
     const { by, ctdAfter } = state.bag;
     return {
-      who: by === "unchanged" || by === "me" ? "Staging" : nameOf(by),
-      role: by === "unchanged" || by === "me" ? undefined : "Staging",
-      lines: [by === "unchanged" ? `Sent as it was. With the rider at ${ctdAfter} sec.` : `Repacked. With the rider at ${ctdAfter} sec.`],
+      who: by === "unchanged" || by === "me" ? "Rider shelf" : nameOf(by),
+      role: by === "unchanged" || by === "me" ? undefined : "Rider shelf",
+      lines: [by === "unchanged" ? `Sent as it was. Given to the rider at ${ctdAfter} sec.` : `Packed again. Given to the rider at ${ctdAfter} sec.`],
     };
   }
   return null;
@@ -265,7 +265,7 @@ export function Simulation({ attempt, onFinished }: { attempt: Attempt; onFinish
           {!attempt.local && !playback ? (
             <span
               aria-hidden
-              title="Where the time is"
+              title="Where your time is now"
               className="absolute -top-[3px] z-10 h-[10px] w-[3px] -translate-x-1/2 rounded-full bg-white shadow-[0_0_0_2px_rgba(10,10,10,0.9)] transition-[left] duration-1000 ease-linear"
               style={{ left: `${pace.marker * 100}%` }}
             />
@@ -280,7 +280,7 @@ export function Simulation({ attempt, onFinished }: { attempt: Attempt; onFinish
                     index === phaseIndex ? "text-ember-500" : index < phaseIndex ? "text-mid" : "text-faint",
                   )}
                 >
-                  {label}
+                  {PHASE_LABEL[label]}
                 </span>
               </li>
             ))}
@@ -288,14 +288,14 @@ export function Simulation({ attempt, onFinished }: { attempt: Attempt; onFinish
           </div>
 
           <div className="mt-1.5 flex items-center justify-between gap-3">
-            <p className="font-mono text-[11px] tracking-[0.16em] text-ember-500 uppercase sm:hidden">{phase}</p>
+            <p className="font-mono text-[11px] tracking-[0.16em] text-ember-500 uppercase sm:hidden">{PHASE_LABEL[phase]}</p>
             <dl className={cn("tabular flex flex-1 justify-end gap-3.5 text-[12.5px] sm:justify-start sm:gap-5", playback && "invisible")}>
               <div className="flex items-baseline gap-1.5">
                 <dt className="text-lo">Waiting</dt>
                 <dd className="font-semibold text-hi">{now.ordersWaiting}</dd>
               </div>
               <div className="flex items-baseline gap-1.5">
-                <dt className="text-lo">CTD</dt>
+                <dt className="text-lo">Dispatch</dt>
                 <dd className={cn("font-semibold", now.ctd > EXTEND_AT ? "text-alert-500" : now.ctd > CTD_TARGET ? "text-warn-500" : "text-hi")}>{now.ctd}s</dd>
               </div>
               <div className="flex items-baseline gap-1.5">
@@ -310,8 +310,8 @@ export function Simulation({ attempt, onFinished }: { attempt: Attempt; onFinish
           <p role="status" className="flex items-center justify-center gap-2 border-t border-line px-4 py-1.5 text-center text-[12.5px] text-mid">
             <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-warn-500" />
             <span>
-              About {behindMinutes} min behind the suggested pace.
-              <span className="hidden sm:inline"> The white mark on the bar is where the time is.</span>
+              About {behindMinutes} min slower than the suggested pace.
+              <span className="hidden sm:inline"> The white mark on the bar shows where your time is.</span>
             </span>
           </p>
         ) : null}
@@ -325,8 +325,8 @@ export function Simulation({ attempt, onFinished }: { attempt: Attempt; onFinish
             )}
           >
             {remaining <= 60
-              ? "One minute left. The shift will close on the decisions you have made."
-              : "Five minutes left."}
+              ? "1 minute left. The shift will end with the choices you have made."
+              : "5 minutes left."}
           </p>
         ) : null}
       </header>

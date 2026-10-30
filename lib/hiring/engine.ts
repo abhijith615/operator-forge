@@ -387,7 +387,7 @@ function buildFinalTasks(state: HiringState): FinalTask[] {
     tasks.push({
       id: "constraint",
       title: form.surgeHeadline,
-      detail: `${STATION_LABEL[constraint]} ${constraint === "riders" ? "are" : "is"} at ${Math.round(now.coverage[constraint] * 100)}% of what the peak needs.`,
+      detail: `${STATION_LABEL[constraint]} ${constraint === "riders" ? "are" : "is"} at ${Math.round(now.coverage[constraint] * 100)}% of what the rush needs.`,
       urgent: true,
       managerLevel: false,
       kind: null,
@@ -399,13 +399,13 @@ function buildFinalTasks(state: HiringState): FinalTask[] {
   if (state.followUp !== "done" || !escalated) {
     tasks.push({
       id: "variance",
-      title: `${form.highValue.item} variance`,
+      title: `${form.highValue.item}: missing items`,
       detail:
         state.kase.stage === "deferred"
-          ? "Still uncounted. System and cage have not been reconciled."
+          ? "Still not counted. The system and the cage do not match."
           : controlled
-            ? "One unit unresolved. Cage access is controlled; the evidence pack is not finished."
-            : "One unit unresolved, and the cage is still open to normal access.",
+            ? "One item is still missing. The cage is opened only with a supervisor. The evidence is not put together yet."
+            : "One item is still missing, and anyone can still open the cage.",
       urgent: !controlled,
       managerLevel: true,
       kind: "followUp",
@@ -416,12 +416,12 @@ function buildFinalTasks(state: HiringState): FinalTask[] {
   const onOrders = state.assign.riya === "picking";
   tasks.push({
     id: "riyaCoaching",
-    title: gone ? "Agency — a replacement for Riya" : onOrders ? "Riya — conversation about the pick target" : "Riya — bin-code walk-through",
+    title: gone ? "Agency: a new worker instead of Riya" : onOrders ? "Riya: talk about the picking target" : "Riya: show her where the bins are",
     detail: gone
       ? "She was sent back on her second day. The agency wants the reason in writing."
       : onOrders
-        ? "She was put on orders with a target on day two, and has asked whether to come back tomorrow."
-        : "Twenty minutes on the racks with somebody who knows them, before her first picking shift.",
+        ? "She was put on orders with a target on her second day. She has asked if she should come back tomorrow."
+        : "20 minutes at the racks with someone who knows them, before her first picking shift.",
     urgent: false,
     managerLevel: false,
     kind: "coaching",
@@ -429,8 +429,8 @@ function buildFinalTasks(state: HiringState): FinalTask[] {
 
   tasks.push({
     id: "audit",
-    title: "Wall-to-wall count",
-    detail: "Cluster office wants a full wall-to-wall count this week.",
+    title: "Full store count",
+    detail: "The area office wants every item in the store counted this week.",
     urgent: false,
     managerLevel: false,
     kind: "audit",
@@ -439,8 +439,8 @@ function buildFinalTasks(state: HiringState): FinalTask[] {
   if (!perishablesDone(state)) {
     tasks.push({
       id: "perishables",
-      title: "Perishables check not finished",
-      detail: "Milk, bread, eggs and produce have not all been checked for date and quality, and they are selling now.",
+      title: "Fresh food check not finished",
+      detail: "Not all the milk, bread, eggs, fruit and vegetables are checked for date and quality. They are selling now.",
       urgent: true,
       managerLevel: false,
       kind: "perishables",
@@ -450,11 +450,11 @@ function buildFinalTasks(state: HiringState): FinalTask[] {
   const shelf = now.coverage.putaway;
   tasks.push({
     id: "inbound",
-    title: "Inward crates",
+    title: "New crates in receiving",
     detail:
       shelf < 0.85
-        ? "Crates from the mother warehouse are still on the dock, and fast lines are running low in the bins."
-        : "Crates from the mother warehouse are still on the dock. Bins are holding for now.",
+        ? "Crates from the main warehouse are still in the receiving area. Fast-selling items are running low in the bins."
+        : "Crates from the main warehouse are still in the receiving area. The bins are full enough for now.",
     urgent: shelf < 0.85,
     managerLevel: false,
     kind: "inbound",
@@ -462,8 +462,8 @@ function buildFinalTasks(state: HiringState): FinalTask[] {
 
   tasks.push({
     id: "riders",
-    title: "Rider gap",
-    detail: "Two riders are late back from the last wave. Handover order needs resequencing.",
+    title: "Riders are late",
+    detail: "Two riders are late coming back from their last trip. The order in which bags go out must be changed.",
     urgent: true,
     managerLevel: false,
     kind: "riders",
@@ -472,8 +472,8 @@ function buildFinalTasks(state: HiringState): FinalTask[] {
   if (state.nil.outcome && state.nil.outcome !== "replenished") {
     tasks.push({
       id: "nilRecon",
-      title: "Nil-pick reconciliation",
-      detail: `${form.nilPick.item}: system and bin still disagree.`,
+      title: "Item not found: fix the stock",
+      detail: `${form.nilPick.item}: the system and the shelf bin still do not match.`,
       urgent: false,
       managerLevel: false,
       kind: "search",
@@ -483,8 +483,8 @@ function buildFinalTasks(state: HiringState): FinalTask[] {
   const late = Math.max(2, Math.round((state.maxCtd - 150) / 12));
   tasks.push({
     id: "lateOrder",
-    title: "Order #5521 will miss its promise",
-    detail: `About ${late} minutes late. The customer has not been told.`,
+    title: "Order #5521 will be late",
+    detail: `About ${late} minutes late. Nobody has told the customer.`,
     urgent: true,
     managerLevel: false,
     kind: "lateOrder",
@@ -493,8 +493,8 @@ function buildFinalTasks(state: HiringState): FinalTask[] {
   if (aisleBlocked(state)) {
     tasks.push({
       id: "aisle",
-      title: "Aisle C still blocked",
-      detail: "Pickers are walking round the crates. Every route through C is a third longer.",
+      title: "Aisle C is still blocked",
+      detail: "Pickers are walking around the crates. Every walk through Aisle C takes a third longer.",
       urgent: true,
       managerLevel: false,
       kind: "aisle",
@@ -1095,8 +1095,8 @@ function runOutcome(state: HiringState): void {
     if (mark === marks[0]) {
       events.push(
         state.audit.doneAt !== null && state.audit.doneAt <= PEAK_AT
-          ? { clock: mark, text: "The perishables check was finished before the rush. Two short-dated milk crates never reached an order.", tone: "good" }
-          : { clock: mark, text: "The perishables check was not finished before the rush. Short-dated milk has gone out in orders.", tone: "bad" },
+          ? { clock: mark, text: "The fresh food check was finished before the rush. Two crates of old milk were taken out before any order.", tone: "good" }
+          : { clock: mark, text: "The fresh food check was not finished before the rush. Old milk has gone out in orders.", tone: "bad" },
       );
     }
 
@@ -1104,47 +1104,47 @@ function runOutcome(state: HiringState): void {
       const onPutaway = state.assign.riya === "putaway" && isPresent(state, "riya");
       riyaOutput = onPutaway && isLocked(state, "riya") && isFree(state, "riya") ? outputOf(state, "riya", "putaway") : 0;
       if (state.assign.riya === undefined) {
-        events.push({ clock: mark, text: "Riya was sent back to the agency. Putaway is a hand short.", tone: "warn" });
+        events.push({ clock: mark, text: "Riya was sent back to the agency. Putaway is one person short.", tone: "warn" });
       } else if (!isPresent(state, "riya")) {
         events.push({ clock: mark, text: "Riya did not come back from her break. The agency says she is not returning.", tone: "bad" });
       } else if (state.assign.riya === "picking") {
-        events.push({ clock: mark, text: "Riya is picking at 32 seconds an item against a 16-second target.", tone: "warn" });
+        events.push({ clock: mark, text: "Riya is picking at 32 seconds per item. The target is 16 seconds.", tone: "warn" });
       } else if (!isLocked(state, "riya")) {
-        events.push({ clock: mark, text: "Riya's device is still unlocked. The app is sending her orders for bins she cannot find.", tone: "warn" });
+        events.push({ clock: mark, text: "Riya's device is still unlocked. The app sends her orders for bins she cannot find.", tone: "warn" });
       } else if (riyaOutput >= 0.8) {
-        events.push({ clock: mark, text: "Riya is putting away at close to a trained pace.", tone: "good" });
+        events.push({ clock: mark, text: "Riya is doing putaway almost as fast as a trained worker.", tone: "good" });
       } else {
         events.push({ clock: mark, text: "Riya is on putaway, learning the bins at her own speed.", tone: "neutral" });
       }
       if (state.arjun.outcome === "leaving") {
-        events.push({ clock: mark, text: "Arjun clocked out at 06:30. Picking feels it.", tone: "warn" });
+        events.push({ clock: mark, text: "Arjun went home at 06:30. Picking is slower without him.", tone: "warn" });
       } else if (state.arjun.outcome === "resentful") {
-        events.push({ clock: mark, text: "Arjun is on the floor and doing exactly what was asked, no more.", tone: "warn" });
+        events.push({ clock: mark, text: "Arjun stayed, but he does only what he is told, nothing more.", tone: "warn" });
       }
     }
 
     if (mark === marks[2]) {
       const steps = state.kase.disposition?.steps ?? [];
       if (state.kase.stage === "deferred") {
-        events.push({ clock: mark, text: `${form.highValue.item} variance is still uncounted.`, tone: "bad" });
+        events.push({ clock: mark, text: `${form.highValue.item}: the missing items are still not counted.`, tone: "bad" });
       } else if (steps.includes("writeOff") || steps.includes("accuse")) {
-        events.push({ clock: mark, text: `${form.highValue.item} discrepancy was closed without being explained.`, tone: "bad" });
+        events.push({ clock: mark, text: `${form.highValue.item}: the case was closed without finding out what happened.`, tone: "bad" });
       } else if (steps.includes("controlAccess") && state.followUp !== "open") {
-        events.push({ clock: mark, text: `${form.highValue.item} discrepancy remains controlled and escalated.`, tone: "good" });
+        events.push({ clock: mark, text: `${form.highValue.item}: the cage is secure and the case is reported.`, tone: "good" });
       } else {
-        events.push({ clock: mark, text: `${form.highValue.item} discrepancy is open, and so is the cage.`, tone: "warn" });
+        events.push({ clock: mark, text: `${form.highValue.item}: the case is still open, and so is the cage.`, tone: "warn" });
       }
     }
 
     if (mark === END_AT) {
       events.push(
         now.ctd <= 180
-          ? { clock: mark, text: "CTD returns below target.", tone: "good" }
+          ? { clock: mark, text: "Dispatch time is back under the target.", tone: "good" }
           : now.ctd <= 200
-            ? { clock: mark, text: `CTD is at ${now.ctd} seconds and falling.`, tone: "warn" }
+            ? { clock: mark, text: `Dispatch time is ${now.ctd} seconds and going down.`, tone: "warn" }
             : state.shocks.extended > 0
-              ? { clock: mark, text: `CTD is at ${now.ctd} seconds. The app lengthened the delivery promise while the store was behind.`, tone: "bad" }
-              : { clock: mark, text: `CTD is at ${now.ctd} seconds, above the ${CTD_TARGET}-second target.`, tone: "bad" },
+              ? { clock: mark, text: `Dispatch time is ${now.ctd} seconds. The app gave customers a longer delivery time while the store was behind.`, tone: "bad" }
+              : { clock: mark, text: `Dispatch time is ${now.ctd} seconds. The target is ${CTD_TARGET} seconds.`, tone: "bad" },
       );
     }
   }
@@ -1155,7 +1155,7 @@ function runOutcome(state: HiringState): void {
     finalCtd <= 180 && peakMax <= 205
       ? "PEAK UNDER CONTROL"
       : finalCtd <= 205
-        ? "STORE STABILISED"
+        ? "STORE BACK ON TRACK"
         : "STORE UNDER PRESSURE";
 
   state.outcome = {
