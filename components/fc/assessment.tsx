@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { Phone, RotateCcw, Sparkles, Target, UserRound } from "lucide-react";
 
 import { LogoMark } from "@/components/brand/logo";
+import { HiringExplainerVideo } from "@/components/hiring/explainer-video";
 import { PrimaryButton, QuietButton } from "@/components/hiring/ui";
 import { Input } from "@/components/ui/input";
 import { completeFc, fcStartOver, startFc, type FcStartFailure, type FcStarted } from "@/lib/fc/actions";
-import { DATA_NOTICE, FC_CONSENT_VERSION, FC_TITLE, HIRING_CONTACT, POSITIONING } from "@/lib/fc/content";
+import { DATA_NOTICE, FC_CONSENT_VERSION, FC_EXPLAINER_VIDEO, FC_TITLE, HIRING_CONTACT, POSITIONING } from "@/lib/fc/content";
 import type { FcCandidateProfile } from "@/lib/fc/server";
 import { FC_COMPETENCY_PLAIN, type FcCompetencyId } from "@/lib/fc/weights";
 import { whatsappNumber } from "@/lib/hiring/phone";
@@ -56,6 +57,14 @@ function Start({ starting, failed, onStart }: { starting: boolean; failed: FcSta
     <Frame>
       <p className="mt-10 font-mono text-[12px] tracking-[0.22em] text-ember-500 uppercase">Hiring Test · {FC_TITLE}</p>
       <h1 className="mt-2 text-[28px] leading-[1.06] font-bold tracking-[-0.035em] text-hi uppercase">30-minute fulfilment centre inbound shift</h1>
+
+      <section aria-labelledby="fc-explainer" className="mt-6">
+        <h2 id="fc-explainer" className="font-mono text-[11.5px] tracking-[0.18em] text-lo uppercase">
+          Watch this first
+        </h2>
+        <HiringExplainerVideo id={FC_EXPLAINER_VIDEO.id} title={FC_EXPLAINER_VIDEO.title} className="mt-2" />
+        <p className="mt-2 text-[13px] leading-snug text-mid">{FC_EXPLAINER_VIDEO.note}</p>
+      </section>
 
       <ul className="mt-6 space-y-3">
         {POSITIONING.map((line) => (

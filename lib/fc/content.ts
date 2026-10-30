@@ -11,6 +11,16 @@ export const FC_TITLE = "FC Executive";
 export const FC_SITE = "FC Hoskote";
 export const HIRING_CONTACT = "hello@operatorforge.in";
 
+/**
+ * The explainer shown before Start Shift, on how a warehouse works end to end. The id is
+ * the YouTube video's. Offered, never required: the clock is not running while it plays.
+ */
+export const FC_EXPLAINER_VIDEO = {
+  id: "dqvYapjapP4",
+  title: "Warehouse operations",
+  note: "An introduction to how a warehouse works, from the dock to the dark store. Watching is optional, and your time does not start until you press Start Shift.",
+};
+
 /* ── Time ─────────────────────────────────────────────────────────────── */
 
 /** The shift clock is minutes after 07:00. */
