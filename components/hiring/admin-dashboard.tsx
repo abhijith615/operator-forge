@@ -96,7 +96,7 @@ export function HiringAdminDashboardView({ data }: { data: HiringDashboardData }
       <div className="flex flex-wrap items-end justify-between gap-3 border-t border-line pt-8">
         <div className="min-w-0">
           <h2 id="hiring-test-title" className="text-[20px] leading-tight font-semibold tracking-[-0.02em] text-hi">
-            Hiring Test
+            Hiring Test · Dark Store Manager
           </h2>
           <p className="mt-1 max-w-2xl text-[12.5px] leading-relaxed text-lo">
             The 30-minute simulation for Assistant Store Manager and Store Manager candidates, version {data.version}. One
