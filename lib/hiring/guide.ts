@@ -56,8 +56,8 @@ const ENTRIES: Entry[] = [
   },
   {
     topic: "store_clock",
-    match: /\b(store (time|clock)|05:\d\d|06:\d\d|clock (jump|moves?|skip)\w*|why did (the )?time)\b/i,
-    text: "The clock next to “Store 114” is the store's own time, starting at 05:55. It moves when you do something that takes a manager's time — opening a record, counting stock, waiting for someone to report back. It is separate from your timer, which is real time.",
+    match: /\b(store (time|clock)|05:\d\d|06:\d\d|clock (jump|moves?|skip)\w*|why did (the )?time|stuck|frozen|freez\w*|hang\w*|not moving|nothing (is )?happen\w*|still (counting|searching)|waiting for|back at|wait button)\b/i,
+    text: "The clock next to “Store 114” is the store's own time, starting at 05:55. It moves only when you do something that takes a manager's time — opening a record, counting stock, deciding. It does not run by itself: if someone is counting or searching for you, they report back when you tap Wait, which moves the clock on to that time, or when other things you do take the clock past it. It is separate from your timer, which is real time and does not pause.",
     suggestions: ["How does the time work?", "What is CTD?"],
   },
   {

@@ -415,6 +415,8 @@ const TERMS: [string, string][] = [
   ["what is PPI", "ppi"],
   ["what does de-list mean", "delist"],
   ["how much time do i have", "time"],
+  ["the screen is stuck, farhan is still counting", "store_clock"],
+  ["nothing is happening, when is he back", "store_clock"],
   ["what if my internet drops", "connection"],
   ["how am i scored", "scoring"],
   ["what is a dark store", "dark_store"],

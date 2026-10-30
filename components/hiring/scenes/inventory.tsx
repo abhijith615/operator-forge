@@ -50,6 +50,21 @@ import type { SceneProps } from "./handover";
 
 const inr = (value: number) => `₹${value.toLocaleString("en-IN")}`;
 
+/**
+ * The store clock moves only when the candidate acts. Somebody "back at 06:10"
+ * never comes back while the candidate waits for it, and two candidates stopped
+ * here believing the screen had frozen. Say how time moves, without saying
+ * what to do with it.
+ */
+function ClockNote({ until }: { until: number }) {
+  return (
+    <p className="mt-2 text-[13.5px] leading-snug text-mid">
+      The store clock moves only when you act; it will not reach {clockLabel(until)} by itself. Tap{" "}
+      <span className="font-semibold text-hi">Wait</span> to move it on to {clockLabel(until)}, or do something else first.
+    </p>
+  );
+}
+
 /* ── The high-value variance ──────────────────────────────────────────── */
 
 /**
@@ -112,9 +127,12 @@ export function HighValueCase({ state, act }: SceneProps) {
             Counted by {k.countOwner === "me" ? "you" : nameOf(k.countOwner)} at {clockLabel(k.countDoneAt!)}: <span className="font-semibold">{hv.physical}</span> in the cage.
           </p>
         ) : (
-          <p className="text-[14.5px] text-mid">
-            {nameOf(k.countOwner)} is counting the cage. Back at {clockLabel(k.countDoneAt!)}.
-          </p>
+          <>
+            <p className="text-[14.5px] text-mid">
+              {nameOf(k.countOwner)} is counting the cage. Back at {clockLabel(k.countDoneAt!)}.
+            </p>
+            <ClockNote until={k.countDoneAt!} />
+          </>
         )}
       </Card>
 
@@ -122,6 +140,7 @@ export function HighValueCase({ state, act }: SceneProps) {
       {k.recordsOwner && !seen.includes("exception") ? (
         <Notice className="mb-2">
           {nameOf(k.recordsOwner)} is pulling the records. Back at {clockLabel(k.recordsDoneAt!)}.
+          {countKnown(state) || k.countOwner === null ? <ClockNote until={k.recordsDoneAt!} /> : null}
         </Notice>
       ) : null}
       <div className="grid gap-2 sm:grid-cols-2">
@@ -139,7 +158,7 @@ export function HighValueCase({ state, act }: SceneProps) {
         {k.countOwner === null ? (
           <QuietButton onClick={() => act({ t: "deferCase" })}>Defer to audit</QuietButton>
         ) : waitingOn !== null ? (
-          <QuietButton onClick={() => act({ t: "wait" })}>Wait · {clockLabel(waitingOn)}</QuietButton>
+          <QuietButton onClick={() => act({ t: "wait" })}>Wait until {clockLabel(waitingOn)}</QuietButton>
         ) : null}
         <PrimaryButton disabled={k.countOwner === null} onClick={() => setClosing(true)}>
           Close the case
@@ -185,7 +204,8 @@ export function HighValueCase({ state, act }: SceneProps) {
           <Stat label="Orders waiting" value={now.ordersWaiting} tone="caution" />
           <Stat label="CTD" value={now.ctd} unit="sec" tone={now.ctd > 180 ? "caution" : "neutral"} />
         </div>
-        <div className="mt-4 grid gap-2">
+        <p className="mt-3 text-[13px] text-lo">Choose one to carry on.</p>
+        <div className="mt-2 grid gap-2">
           <Choice go onClick={() => act({ t: "caseInterrupt", choice: "stay" })}>Continue the investigation personally</Choice>
           {!k.recordsOwner ? (
             <Choice go onClick={() => setSheet("handOver")} detail="Somebody else finishes the records. You stay available.">
@@ -367,6 +387,7 @@ export function NilPick({ state, act }: SceneProps) {
       ) : searching ? (
         <Notice className="mt-2">
           {nameOf(n.searchOwner)} is searching. Back at {clockLabel(n.searchDoneAt!)}.
+          <ClockNote until={n.searchDoneAt!} />
         </Notice>
       ) : null}
 
@@ -392,7 +413,7 @@ export function NilPick({ state, act }: SceneProps) {
 
       {searching ? (
         <ActionBar>
-          <QuietButton onClick={() => act({ t: "wait" })}>Wait · {clockLabel(n.searchDoneAt!)}</QuietButton>
+          <QuietButton onClick={() => act({ t: "wait" })}>Wait until {clockLabel(n.searchDoneAt!)}</QuietButton>
         </ActionBar>
       ) : null}
 
