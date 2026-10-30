@@ -1,4 +1,4 @@
-import { TriangleAlert } from "lucide-react";
+import { Download, TriangleAlert } from "lucide-react";
 
 import type { FcResult } from "@/lib/fc/scoring";
 import { FC_COMPETENCIES, FC_COMPETENCY_LABEL } from "@/lib/fc/weights";
@@ -26,7 +26,7 @@ export function FcEmployerProfile({
   meta,
 }: {
   result: FcResult;
-  meta: { candidate: string; phone?: string | null; completedAt?: string | null; device?: string | null; session?: Record<string, number> };
+  meta: { candidate: string; phone?: string | null; completedAt?: string | null; device?: string | null; session?: Record<string, number>; pdfHref?: string };
 }) {
   const session = meta.session ?? {};
   return (
@@ -53,6 +53,19 @@ export function FcEmployerProfile({
                 </div>
               ))}
             </dl>
+            {meta.pdfHref ? (
+              <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                <a
+                  href={meta.pdfHref}
+                  download
+                  className="inline-flex min-h-10 items-center gap-2 rounded-full bg-ember-500 px-4 py-2 text-[13.5px] font-semibold text-void transition-colors hover:bg-ember-400 focus-visible:ring-2 focus-visible:ring-ember-400 focus-visible:ring-offset-2 focus-visible:ring-offset-void focus-visible:outline-none"
+                >
+                  <Download className="size-4" aria-hidden />
+                  Download 2-page PDF
+                </a>
+                <span className="text-[12.5px] text-lo">A plain-English summary for hiring managers, with interview questions.</span>
+              </div>
+            ) : null}
           </div>
           <p className="tabular text-[76px] leading-[0.85] font-bold tracking-[-0.05em] text-hi sm:self-end">
             {result.overall}

@@ -42,7 +42,14 @@ export default async function FcResultPage({ params }: { params: Promise<{ asses
       </p>
       <FcEmployerProfile
         result={result}
-        meta={{ candidate: attempt.candidate_name?.trim() || "Unnamed candidate", phone: attempt.candidate_phone, completedAt: attempt.completed_at, device: attempt.device_type, session: attempt.session }}
+        meta={{
+          candidate: attempt.candidate_name?.trim() || "Unnamed candidate",
+          phone: attempt.candidate_phone,
+          completedAt: attempt.completed_at,
+          device: attempt.device_type,
+          session: attempt.session,
+          pdfHref: `/hiring-test/fc-executive/results/${encodeURIComponent(assessmentId)}/pdf`,
+        }}
       />
     </>
   );

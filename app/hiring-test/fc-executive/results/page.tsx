@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Download } from "lucide-react";
 
 import { isAdmin } from "@/lib/admin/queries";
+import { timedOut } from "@/lib/fc/dashboard";
 import { fcResultFrom, isCurrentFc, readFcAttempts } from "@/lib/fc/server";
 import { formatWhatsapp } from "@/lib/hiring/phone";
 
@@ -19,7 +21,8 @@ export default async function FcResultsPage() {
   const rows = (await readFcAttempts()).map((attempt) => ({
     attempt,
     current: isCurrentFc(attempt),
-    result: attempt.status === "in_progress" || !isCurrentFc(attempt) ? null : fcResultFrom(attempt.actions).result,
+    // Left open past its time: the clock closed it, so it is scored on what was reached.
+    result: (attempt.status === "in_progress" && !timedOut(attempt)) || !isCurrentFc(attempt) ? null : fcResultFrom(attempt.actions).result,
   }));
 
   return (
@@ -32,8 +35,26 @@ export default async function FcResultsPage() {
           <Link href="/hiring-test/fc-executive" className="underline underline-offset-4 hover:text-hi">
             /hiring-test/fc-executive
           </Link>{" "}
-          · not listed anywhere yet.
+          · not listed anywhere yet.{" "}
+          <Link href="/admin#fc-executive" className="underline underline-offset-4 hover:text-hi">
+            Dashboard
+          </Link>
         </p>
+
+        <div className="mt-5 rounded-[18px] border border-line bg-surface p-4">
+          <a
+            href="/hiring-test/fc-executive/results/export"
+            download
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-line-strong bg-white/[0.04] px-5 text-[13.5px] font-semibold text-hi transition-colors hover:border-line-bright hover:bg-white/[0.08]"
+          >
+            <Download className="size-4" aria-hidden />
+            Download item-level data (Excel)
+          </a>
+          <p className="mt-2 text-[12.5px] leading-snug text-lo">
+            One row per finished attempt, with every behaviour as a column, what each candidate did in words, and time per scene.
+            Contains names and WhatsApp numbers.
+          </p>
+        </div>
 
         {rows.length === 0 ? (
           <p className="mt-6 rounded-[18px] border border-line bg-surface p-6 text-[14.5px] text-mid">Nobody has sat the FC Executive test yet.</p>

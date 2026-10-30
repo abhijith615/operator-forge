@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { ArrowDown, Download } from "lucide-react";
 
 import { AdminView } from "@/components/admin/admin-view";
+import { FcAdminDashboard } from "@/components/fc/admin-dashboard";
 import { HiringAdminDashboard } from "@/components/hiring/admin-dashboard";
 import { PageHeader, PageShell } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
@@ -43,13 +44,22 @@ export default async function AdminPage() {
         <p className="text-[12.5px] text-lo">
           Everyone registered, with day-by-day scores, skills, drop-off and start times.
         </p>
-        <a
-          href="#hiring-test"
-          className="ml-auto inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-mid underline-offset-4 hover:text-hi hover:underline"
-        >
-          Hiring Test dashboard
-          <ArrowDown className="size-3.5" aria-hidden />
-        </a>
+        <span className="ml-auto inline-flex flex-wrap items-center gap-x-4 gap-y-1">
+          <a
+            href="#hiring-test"
+            className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-mid underline-offset-4 hover:text-hi hover:underline"
+          >
+            Hiring Test dashboard
+            <ArrowDown className="size-3.5" aria-hidden />
+          </a>
+          <a
+            href="#fc-executive"
+            className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-mid underline-offset-4 hover:text-hi hover:underline"
+          >
+            FC Executive dashboard
+            <ArrowDown className="size-3.5" aria-hidden />
+          </a>
+        </span>
       </div>
 
       {snapshot ? (
@@ -69,6 +79,13 @@ export default async function AdminPage() {
       <div className="mt-12">
         <Suspense fallback={<p className="border-t border-line pt-8 text-[12.5px] text-lo">Reading the Hiring Test…</p>}>
           <HiringAdminDashboard ownEmail={operator?.email ?? null} />
+        </Suspense>
+      </div>
+
+      {/* The FC Executive test: a second, separate Hiring Test with its own scoring. */}
+      <div className="mt-12">
+        <Suspense fallback={<p className="border-t border-line pt-8 text-[12.5px] text-lo">Reading the FC Executive test…</p>}>
+          <FcAdminDashboard />
         </Suspense>
       </div>
 

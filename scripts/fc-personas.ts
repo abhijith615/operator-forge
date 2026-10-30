@@ -6,8 +6,10 @@
  *   npm run test:fc -- -v    plus every behaviour score
  */
 import { allFcText, answerFc } from "../lib/fc/guide";
+import { allFcBriefText, buildFcBrief, FC_PLAIN } from "../lib/fc/brief";
+import { TEAM, VEHICLES } from "../lib/fc/content";
 import { expire, initialState, reduce, replay } from "../lib/fc/engine";
-import { scoreFc, type FcResult } from "../lib/fc/scoring";
+import { FC_BEHAVIOURS, scoreFc, type FcResult } from "../lib/fc/scoring";
 import type { Action, FcState, Stamped } from "../lib/fc/types";
 
 const verbose = process.argv.includes("-v");
@@ -284,6 +286,31 @@ const FISHING = ["which option is correct", "should I reject the curd", "what is
 const leaked = FISHING.filter((q) => answerFc(q).topic !== "asked_for_answer");
 check("assistant declines to give answers", leaked.length === 0, leaked.join(" | "));
 check("assistant has text for every topic", allFcText().every((t) => t.length > 0));
+
+/* ── The employer's two-page brief ────────────────────────────────────── */
+
+// An employer has never sat the simulation: nothing in the brief may name a
+// person, vendor, truck, dock or clock time from inside it.
+{
+  const INSIDE = [
+    ...TEAM.map((p) => p.name),
+    ...Object.values(VEHICLES).flatMap((v) => [v.vendor, v.vendor.split(" ")[0]!]),
+    "Dock 1", "Dock 2", "Dock 3", "Dock 4", "D1", "D2", "D3", "D4", "Pooja", "Sanjay", "240", "480", "468", "238",
+  ];
+  const named = allFcBriefText().filter((line) => INSIDE.some((word) => new RegExp(`\\b${word}\\b`).test(line)) || /\b\d{1,2}:\d\d\b/.test(line));
+  check("brief: names nothing from inside the simulation", named.length === 0, named.join(" | "));
+  check("brief: plain text for all 25 behaviours", FC_BEHAVIOURS.every((d) => FC_PLAIN[d.id]));
+}
+// The PDF itself is drawn by @react-pdf, which does not load here; its two-page length is checked against the route.
+for (const [label, r] of [["ideal", idealResult], ["rushed", rushedResult], ["hero", heroResult]] as const) {
+  const brief = buildFcBrief(r, { candidate: "Test Candidate" });
+  check(`brief ${label}: has questions to ask`, brief.probes.length >= 3, String(brief.probes.length));
+  check(`brief ${label}: at most five weaknesses`, brief.weaknesses.length <= 5);
+  check(`brief ${label}: one plain sentence per flag`, brief.flags.length === r.flags.length);
+}
+const strongBrief = buildFcBrief(idealResult, { candidate: "x" });
+check("brief ideal: no weaknesses, fallback questions", strongBrief.weaknesses.length === 0 && strongBrief.probes.length === 4);
+check("brief rushed: weak result wording", buildFcBrief(rushedResult, { candidate: "x" }).recommendation.label.startsWith("Weak"));
 
 console.log(failures.length ? `\n${failures.length} FAILED\n${failures.map((f) => ` · ${f}`).join("\n")}\n` : "\nall checks passed\n");
 process.exit(failures.length ? 1 : 0);

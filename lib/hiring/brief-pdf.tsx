@@ -156,7 +156,7 @@ function Band({ brief, title, sub, compact = false }: { brief: EmployerBrief; ti
 function BriefDocument({ brief }: { brief: EmployerBrief }) {
   const date = formatDate(brief.date);
   // No role: the same test is used for Assistant Store Manager and Store Manager hires.
-  const sub = [date ? `Test taken ${date}` : null, "Dark store manager work sample"].filter(Boolean).join("  ·  ");
+  const sub = [date ? `Test taken ${date}` : null, brief.workSample ?? "Dark store manager work sample"].filter(Boolean).join("  ·  ");
   // Page one has to hold the serious concerns too; the lists give way to them.
   // The concerns are weaknesses themselves, and page two still covers the top four.
   const weakShown = brief.flags.length > 3 ? 3 : brief.flags.length ? 4 : 5;
@@ -186,8 +186,8 @@ function BriefDocument({ brief }: { brief: EmployerBrief }) {
           </View>
 
           <Text style={s.about}>
-            The candidate ran a dark store through one busy morning in a 30-minute simulation, making the decisions a store
-            manager makes every day — staff, stock, delays and customers. This report says what they did, in everyday store terms.
+            {brief.about ??
+              "The candidate ran a dark store through one busy morning in a 30-minute simulation, making the decisions a store manager makes every day — staff, stock, delays and customers. This report says what they did, in everyday store terms."}
           </Text>
 
           <View style={s.section}>

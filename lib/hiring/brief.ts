@@ -388,6 +388,9 @@ export interface EmployerBrief {
   weaknesses: BriefItem[];
   probes: BriefProbe[];
   flags: string[];
+  /** Another test's own wording for the PDF header and intro. Left out, the dark-store wording is used. */
+  workSample?: string;
+  about?: string;
 }
 
 const word = (score: number) => (score >= 80 ? "Strong" : score >= 60 ? "Good" : score >= 40 ? "Needs work" : "Weak");
