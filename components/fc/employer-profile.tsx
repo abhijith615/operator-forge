@@ -82,7 +82,11 @@ export function FcEmployerProfile({
         {result.incomplete ? (
           <section className="mt-3 rounded-[20px] border border-warn-500/40 bg-warn-500/[0.07] p-5 sm:p-6">
             <p className="font-mono text-[12px] font-semibold tracking-[0.18em] text-warn-500 uppercase">Shift not completed</p>
-            <p className="mt-2 text-[14px] leading-snug text-mid">Scores cover only the decision points reached. Nothing unreached counts against the candidate, and an unfinished shift cannot be indicated as Strong.</p>
+            <p className="mt-2 text-[14px] leading-snug text-mid">
+              The overall score is out of the whole shift: decision points not reached count as zero, so everybody is measured against the same thirty
+              minutes. On the {result.observed} they reached, they scored {result.reachedOverall}. Each competency is scored on what was reached, and an
+              unfinished shift cannot be indicated as Strong.
+            </p>
           </section>
         ) : null}
 

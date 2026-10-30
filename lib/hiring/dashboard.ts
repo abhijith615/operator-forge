@@ -35,6 +35,8 @@ export interface HiringAttemptSummary {
   /** Still inside its time, finished properly, or closed by the clock. */
   state: "in_progress" | "completed" | "not_completed";
   score: number | null;
+  /** Score on the moments reached, unreached left out. Differs from `score` only when unfinished. */
+  reached: number | null;
   indication: IndicationKey | null;
   flags: number;
   observed: number;
@@ -95,13 +97,14 @@ function summarise(attempt: AdminAttemptRow): HiringAttemptSummary {
     extraTime: (attempt.time_limit_seconds ?? 1800) > 1800,
   };
   if (attempt.status === "in_progress") {
-    return { ...base, state: "in_progress", score: null, indication: null, flags: 0, observed: 0, opportunities: 0, competencies: null };
+    return { ...base, state: "in_progress", score: null, reached: null, indication: null, flags: 0, observed: 0, opportunities: 0, competencies: null };
   }
   const { result, incomplete } = resultFrom(attempt.scenario_variant, attempt.actions);
   return {
     ...base,
     state: incomplete ? "not_completed" : "completed",
     score: result.overall,
+    reached: result.reachedOverall,
     indication: (INDICATIONS.find((entry) => result.indication.startsWith(entry.key))?.key ?? "ADDITIONAL") as IndicationKey,
     flags: result.flags.length,
     observed: result.observed,

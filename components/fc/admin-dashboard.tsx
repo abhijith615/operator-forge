@@ -77,7 +77,7 @@ function Result({ attempt }: { attempt: FcAttemptSummary }) {
       </span>
       {attempt.state === "not_completed" ? (
         <span className="text-[11.5px] text-lo">
-          not finished · {attempt.observed} of {attempt.opportunities} moments
+          not finished · {attempt.observed} of {attempt.opportunities} moments · {attempt.reached} on those
         </span>
       ) : null}
     </span>
@@ -115,7 +115,7 @@ export function FcAdminDashboardView({ data }: { data: FcDashboardData }) {
       <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
         <Stat label="Candidates" value={t.candidates} hint="attempts started" />
         <Stat label="Finished" value={t.finished} tone="text-ion-400" hint={`${t.completed} completed the shift`} />
-        <Stat label="Did not finish" value={t.notCompleted} tone={t.notCompleted ? "text-warn-500" : undefined} hint="scored on what they reached" />
+        <Stat label="Did not finish" value={t.notCompleted} tone={t.notCompleted ? "text-warn-500" : undefined} hint="unreached moments count as zero" />
         <Stat label="In progress" value={t.inProgress} hint="inside their time now" />
         <Stat label="Average score" value={t.average ?? "—"} tone="text-ember-400" hint="completed shifts, out of 100" />
         <Stat label="With flags" value={t.flagged} tone={t.flagged ? "text-alert-500" : undefined} hint="for a person to review" />
@@ -225,7 +225,7 @@ export function FcAdminDashboardView({ data }: { data: FcDashboardData }) {
         )}
         <p className="mt-2 text-[11.5px] leading-relaxed text-lo">
           Candidates start with a name and a WhatsApp number and no sign-in: neither is verified, and two rows with the same name may be one
-          person. An attempt left open past its 30 minutes is scored on what was reached.
+          person. An attempt left open past its 30 minutes is scored, with what was not reached counting as zero.
           {data.earlier > 0
             ? ` ${data.earlier} attempt${data.earlier === 1 ? " was" : "s were"} sat on an earlier version of the simulation and ${data.earlier === 1 ? "is" : "are"} not counted here.`
             : ""}

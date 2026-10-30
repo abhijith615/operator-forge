@@ -79,6 +79,7 @@ export function buildFcWorkbook(attempts: FcAdminRow[]): ExcelJS.Workbook {
     { header: "ended_in_scene", key: "endedIn", width: 14 },
     { header: "behaviours_observed", key: "observed", width: 12 },
     { header: "overall", key: "overall", width: 9 },
+    { header: "overall_reached", key: "overallReached", width: 10 },
     ...FC_COMPETENCIES.map((id) => ({ header: `score_${id}`, key: `score_${id}`, width: 10 })),
     { header: "indication", key: "indication", width: 40 },
     { header: "flags", key: "flags", width: 8 },
@@ -107,6 +108,7 @@ export function buildFcWorkbook(attempts: FcAdminRow[]): ExcelJS.Workbook {
       endedIn: state.expiredIn ?? "",
       observed: result.observed,
       overall: result.overall,
+      overallReached: result.reachedOverall,
       ...Object.fromEntries(result.competencies.map((c) => [`score_${c.id}`, c.observed ? c.score : null])),
       indication: result.indicationLabel,
       flags: result.flags.length,
@@ -169,7 +171,7 @@ export function buildFcWorkbook(attempts: FcAdminRow[]): ExcelJS.Workbook {
   }
   const notes: [string, string][] = [
     ["Blank cells", "The candidate never reached that moment. Missing, not zero: exclude or model as missing, never recode to 0."],
-    ["score_*", "Each competency's points earned out of points available, over the behaviours reached, as 0–100. Overall weights the five equally, by the share of each reached."],
+    ["score_*", "Each competency's points earned out of points available, over the behaviours reached, as 0–100. overall_reached weights the five equally by the share of each reached: quality on what was reached. overall is out of the whole shift, so behaviours not reached count as zero. The two are equal on a finished shift."],
     ["incomplete", "1 = the shift was not finished: time ran out or the candidate left. ended_in_scene says where, when time ran out."],
     ["candidate_name, candidate_whatsapp", "Typed at the start. Not verified."],
     ["version", "Every row is the current simulation version. Earlier versions are left out: they cannot be replayed on this one."],

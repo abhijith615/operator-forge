@@ -76,7 +76,7 @@ function Start({ starting, failed, onStart }: { starting: boolean; failed: FcSta
       </ul>
 
       <p className="mt-6 rounded-[14px] border border-line-strong bg-white/[0.03] px-3.5 py-3 text-[13px] leading-snug text-mid">
-        You have <span className="font-semibold text-hi">30 minutes</span>. The time starts when you press Start Shift and does not pause. You have one attempt. If the page reloads or your connection drops, you come back to where you were. Use the same phone or computer until you finish.
+        You have <span className="font-semibold text-hi">30 minutes</span>. The time starts when you press Start Shift and does not pause. You have one attempt. If the page reloads or your connection drops, you come back to where you were. Use the same phone or computer until you finish. Parts you do not reach before the time ends count as zero, so keep moving.
       </p>
 
       <section aria-labelledby="fc-notice" className="mt-6 rounded-[16px] border border-line-strong bg-surface p-4">
@@ -192,7 +192,7 @@ export function FcProfile({ profile, name, canRetake }: { profile: FcCandidatePr
 
       {profile.timedOut ? (
         <p className="mt-4 rounded-[14px] border border-warn-500/40 bg-warn-500/[0.07] px-3.5 py-3 text-[13.5px] text-hi">
-          Time ran out before the end. You reached {profile.observed} of {profile.opportunities} decision points; only those are scored.
+          Time ran out before the end. You reached {profile.observed} of {profile.opportunities} decision points. Those you did not reach count as zero in your overall score; each area below is scored on what you reached.
         </p>
       ) : null}
 

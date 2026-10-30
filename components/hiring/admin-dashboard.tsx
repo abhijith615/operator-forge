@@ -80,7 +80,7 @@ function Result({ attempt }: { attempt: HiringAttemptSummary }) {
       </span>
       {attempt.state === "not_completed" ? (
         <span className="text-[11.5px] text-lo">
-          ran out of time · {attempt.observed} of {attempt.opportunities} moments
+          ran out of time · {attempt.observed} of {attempt.opportunities} moments · {attempt.reached} on those
         </span>
       ) : null}
     </span>
@@ -125,7 +125,7 @@ export function HiringAdminDashboardView({ data }: { data: HiringDashboardData }
       <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
         <Stat label="Candidates" value={t.candidates} hint="people who have started" />
         <Stat label="Finished" value={t.finished} tone="text-ion-400" hint={`${t.completed} completed the shift`} />
-        <Stat label="Ran out of time" value={t.notCompleted} tone={t.notCompleted ? "text-warn-500" : undefined} hint="scored on what they reached" />
+        <Stat label="Ran out of time" value={t.notCompleted} tone={t.notCompleted ? "text-warn-500" : undefined} hint="unreached moments count as zero" />
         <Stat label="In progress" value={t.inProgress} hint="inside their time now" />
         <Stat label="Average score" value={t.average ?? "—"} tone="text-ember-400" hint="completed shifts, out of 100" />
         <Stat label="With flags" value={t.flagged} tone={t.flagged ? "text-alert-500" : undefined} hint="for a person to review" />

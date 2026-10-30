@@ -1251,7 +1251,13 @@ export interface CompetencyResult {
 export interface AssessmentResult {
   version: string;
   form: string;
+  /**
+   * Out of the whole shift: a moment the time ran out before counts as zero, so
+   * finishing counts. On a finished shift it equals `reachedOverall`.
+   */
   overall: number;
+  /** How well they did on the moments they reached, leaving unreached ones out. Shown beside `overall` when unfinished. */
+  reachedOverall: number;
   /** The plan was never locked: time ran out, or the candidate left. */
   incomplete: boolean;
   /** Moments the candidate actually reached, of the thirty-four. */
@@ -1531,17 +1537,20 @@ export function scoreAssessment(state: HiringState): AssessmentResult {
   const opportunities = evidence.length;
 
   // Each competency counts by its weight times the share of it that was seen.
-  // On a finished shift that is exactly Team × 0.30 + Inventory × 0.25 + …;
-  // on an unfinished one, a competency seen once cannot carry a tenth of the
-  // result on that one moment.
+  // On a finished shift that is exactly Team × 0.30 + Inventory × 0.25 + ….
   const seenWeight = competencies.reduce((sum, c) => sum + c.weight * (c.decisions / c.decisionsTotal), 0);
-  const overall = seenWeight
-    ? Math.round(competencies.reduce((sum, c) => sum + c.score * c.weight * (c.decisions / c.decisionsTotal), 0) / seenWeight)
-    : 0;
+  const allWeight = competencies.reduce((sum, c) => sum + c.weight, 0);
+  const weighted = competencies.reduce((sum, c) => sum + c.score * c.weight * (c.decisions / c.decisionsTotal), 0);
+  // Quality on what was reached: unreached moments left out.
+  const reachedOverall = seenWeight ? Math.round(weighted / seenWeight) : 0;
+  // The score: out of the whole shift, so a moment the time ran out before
+  // counts as zero. Everybody has the same thirty minutes, and getting through
+  // the shift is part of the job. The same number as above on a finished shift.
+  const overall = Math.round(weighted / allWeight);
 
   // Where something downstream needs a number for every competency, an
-  // unobserved one borrows the overall rather than reading as a zero.
-  const scoreMap = Object.fromEntries(competencies.map((c) => [c.id, c.observed ? c.score : overall])) as Record<CompetencyId, number>;
+  // unobserved one borrows the reached score rather than reading as a zero.
+  const scoreMap = Object.fromEntries(competencies.map((c) => [c.id, c.observed ? c.score : reachedOverall])) as Record<CompetencyId, number>;
 
   const flags = controlFlags(state);
   const get = (id: string) => evidence.find((e) => e.behaviourId === id)!;
@@ -1676,8 +1685,8 @@ export function scoreAssessment(state: HiringState): AssessmentResult {
         : overall >= 48
           ? 1
           : 0;
-  // An unfinished shift is scored on what was seen, and what was seen can only
-  // support so much. "Strong" needs the whole shift; under half of it supports
+  // The score already counts unreached moments as zero. What was seen can also
+  // only support so much. "Strong" needs the whole shift; under half of it supports
   // nothing but a second look.
   const share = observed / opportunities;
   const ceiling = !incomplete ? 3 : share >= 0.85 ? 2 : share >= 0.5 ? 1 : 0;
@@ -1709,6 +1718,7 @@ export function scoreAssessment(state: HiringState): AssessmentResult {
     version: ASSESSMENT_VERSION,
     form: state.form,
     overall,
+    reachedOverall,
     incomplete,
     observed,
     opportunities,
@@ -1721,7 +1731,8 @@ export function scoreAssessment(state: HiringState): AssessmentResult {
     teamEffect,
     crossScenario,
     probes,
-    signature: signatureOf(scoreMap, evidence, overall),
+    // The style label describes how they worked, so it reads the moments they reached.
+    signature: signatureOf(scoreMap, evidence, reachedOverall),
     // A store nobody finished running did not end any particular way.
     outcomeTitle: incomplete ? "SHIFT NOT COMPLETED" : (state.outcome?.title ?? "SHIFT NOT COMPLETED"),
     candidate: {

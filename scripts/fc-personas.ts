@@ -246,6 +246,13 @@ check("cut: data and peak behaviours not reached", ["DR2", "DR3", "DR4", "DR5", 
 check("cut: DR1 was reached", !notReached.includes("DR1"));
 check("cut: earlier work keeps its score", cutResult.competencies.find((c) => c.id === "IP")?.score === 100);
 check("cut: incomplete, not strong", cutResult.incomplete && cutResult.indication !== "STRONG");
+check("cut: unreached behaviours count as zero in the score", cutResult.reachedOverall === 100 && cutResult.overall < 80, `${cutResult.overall} / reached ${cutResult.reachedOverall}`);
+check("finished shifts: score and reached score are the same", [idealResult, rushedResult, heroResult].every((r) => r.overall === r.reachedOverall));
+{
+  // Perfect on the first part, then out of time: must score below the finished hero (93).
+  const early = scoreFc(expire(run(IDEAL.slice(0, IDEAL.findIndex((a) => a.t === "lockTeam") + 1)).state));
+  check("cut early: perfect but unfinished scores below a finisher", early.overall < heroResult.overall && early.overall < 40, `${early.overall} / reached ${early.reachedOverall}`);
+}
 
 // Before anything: nothing reached, score 0, no crash.
 const empty = scoreFc(expire(initialState()));

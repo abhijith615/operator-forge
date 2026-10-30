@@ -21,7 +21,7 @@ export default async function FcResultsPage() {
   const rows = (await readFcAttempts()).map((attempt) => ({
     attempt,
     current: isCurrentFc(attempt),
-    // Left open past its time: the clock closed it, so it is scored on what was reached.
+    // Left open past its time: the clock closed it, and what was not reached counts as zero.
     result: (attempt.status === "in_progress" && !timedOut(attempt)) || !isCurrentFc(attempt) ? null : fcResultFrom(attempt.actions).result,
   }));
 
@@ -72,7 +72,7 @@ export default async function FcResultsPage() {
                       {when(attempt.started_at)}
                       {attempt.candidate_phone ? ` · WhatsApp ${formatWhatsapp(attempt.candidate_phone)}` : ""}
                       {attempt.device_type ? ` · ${attempt.device_type}` : ""}
-                      {result?.incomplete ? ` · not completed, ${result.observed} of ${result.opportunities}` : ""}
+                      {result?.incomplete ? ` · not completed, ${result.observed} of ${result.opportunities}, ${result.reachedOverall} on those` : ""}
                     </p>
                   </div>
                   <p className="text-[13px] text-mid sm:text-right">

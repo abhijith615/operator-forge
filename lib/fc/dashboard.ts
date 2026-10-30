@@ -30,6 +30,8 @@ export interface FcAttemptSummary {
   device: string | null;
   state: "in_progress" | "completed" | "not_completed";
   score: number | null;
+  /** Score on the behaviours reached, unreached left out. Differs from `score` only when unfinished. */
+  reached: number | null;
   indication: FcIndicationKey | null;
   flags: number;
   observed: number;
@@ -72,13 +74,14 @@ function summarise(row: FcAdminRow): FcAttemptSummary {
     device: row.device_type,
   };
   if (row.status === "in_progress" && !timedOut(row)) {
-    return { ...base, state: "in_progress", score: null, indication: null, flags: 0, observed: 0, opportunities: 0, competencies: null };
+    return { ...base, state: "in_progress", score: null, reached: null, indication: null, flags: 0, observed: 0, opportunities: 0, competencies: null };
   }
   const { result } = fcResultFrom(row.actions);
   return {
     ...base,
     state: result.incomplete ? "not_completed" : "completed",
     score: result.overall,
+    reached: result.reachedOverall,
     indication: result.indication,
     flags: result.flags.length,
     observed: result.observed,

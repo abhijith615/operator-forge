@@ -174,6 +174,11 @@ export function EmployerProfile({ result, meta }: { result: AssessmentResult; me
               {result.overall}
               <span className="ml-1 text-[20px] font-semibold tracking-normal text-lo">/ 100</span>
             </p>
+            {result.incomplete ? (
+              <p className="text-[12.5px] leading-snug text-lo sm:text-right">
+                {result.reachedOverall} on the {result.observed} moments reached
+              </p>
+            ) : null}
           </div>
         </section>
 
@@ -193,9 +198,10 @@ export function EmployerProfile({ result, meta }: { result: AssessmentResult; me
               {result.observed} of {result.opportunities} assessed moments were reached before the time ended.
             </p>
             <p className="mt-1 text-[13.5px] leading-snug text-mid">
-              Scores cover only the moments reached; nothing unreached counts against the candidate. A competency seen
-              in part carries proportionally less of the overall figure, and an unfinished shift cannot be indicated as
-              “Strong evidence”. Read each score with its “moments observed” count beside it.
+              The overall score is out of the whole shift: moments not reached count as zero, so everybody is measured
+              against the same thirty minutes. On the moments they did reach, they scored {result.reachedOverall}. Each
+              competency below is scored on the moments reached, and an unfinished shift cannot be indicated as “Strong
+              evidence”. Read each score with its “moments observed” count beside it.
             </p>
           </section>
         ) : null}
@@ -390,7 +396,7 @@ export function EmployerProfile({ result, meta }: { result: AssessmentResult; me
             <li>Timing is operational — before or after a queue breached — never how fast somebody tapped. Language, typing speed and device are not scored.</li>
             <li>Evidence strength reflects how many moments were observed and how consistently they pointed the same way. It is not a statistical confidence interval; there is not yet the data to support one.</li>
             <li>Several behaviours can be read from one decision. They are scored together as that decision, once, and a competency is the average of its decisions. A decision can still be evidence for two different competencies where it shows two different things — the nil pick shows inventory discipline and whether the customer got a complete order.</li>
-            <li>A competency is scored on the moments the candidate reached. If the time ends first, unreached moments are left out rather than scored as zero, each competency counts in proportion to how much of it was seen, and the indication is capped: never “Strong” on an unfinished shift, and “Additional assessment” when under half of it was reached.</li>
+            <li>The overall score is out of the whole shift. If the time ends first, moments not reached count as zero in it, so finishing within the same thirty minutes as everybody else counts; the score on the moments reached is shown beside it. Each competency is scored on the moments reached, and the indication is capped as well: never “Strong” on an unfinished shift, and “Additional assessment” when under half of it was reached.</li>
             <li>This is a work sample from one thirty-minute shift. Use it alongside an interview, not instead of one.</li>
           </ul>
           {!meta.sample ? (

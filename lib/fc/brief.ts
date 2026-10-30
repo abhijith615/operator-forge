@@ -322,6 +322,7 @@ export function buildFcBrief(result: FcResult, meta: { candidate: string; comple
     date: meta.completedAt ?? null,
     sample: false,
     overall: result.overall,
+    reachedOverall: result.reachedOverall,
     recommendation: RECOMMENDATION[key]!,
     completed: !result.incomplete,
     reached: { observed: result.observed, total: result.opportunities },

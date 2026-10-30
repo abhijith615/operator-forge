@@ -61,7 +61,10 @@ export interface FcCompetencyResult {
 
 export interface FcResult {
   version: string;
+  /** Out of the whole shift: a behaviour the time ran out before counts as zero. On a finished shift it equals `reachedOverall`. */
   overall: number;
+  /** How well they did on the behaviours they reached, leaving unreached ones out. Shown beside `overall` when unfinished. */
+  reachedOverall: number;
   incomplete: boolean;
   observed: number;
   opportunities: number;
@@ -532,7 +535,13 @@ export function scoreFc(state: FcState): FcResult {
 
   // Equal weights; a competency only partly seen counts for the share of it that was seen.
   const weightSeen = competencies.reduce((sum, c) => sum + FC_WEIGHTS[c.id] * (c.observed / c.opportunities), 0);
-  const overall = weightSeen ? Math.round(competencies.reduce((sum, c) => sum + c.score * FC_WEIGHTS[c.id] * (c.observed / c.opportunities), 0) / weightSeen) : 0;
+  const weightAll = competencies.reduce((sum, c) => sum + FC_WEIGHTS[c.id], 0);
+  const weighted = competencies.reduce((sum, c) => sum + c.score * FC_WEIGHTS[c.id] * (c.observed / c.opportunities), 0);
+  // Quality on what was reached: unreached behaviours left out.
+  const reachedOverall = weightSeen ? Math.round(weighted / weightSeen) : 0;
+  // The score: out of the whole shift, so a behaviour the time ran out before counts as zero.
+  // Everybody has the same thirty minutes. The same number as above on a finished shift.
+  const overall = Math.round(weighted / weightAll);
 
   const observed = evidence.filter((e) => e.reached).length;
   const opportunities = evidence.length;
@@ -568,6 +577,7 @@ export function scoreFc(state: FcState): FcResult {
   return {
     version: FC_VERSION,
     overall,
+    reachedOverall,
     incomplete,
     observed,
     opportunities,

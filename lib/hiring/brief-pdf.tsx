@@ -163,7 +163,7 @@ function BriefDocument({ brief }: { brief: EmployerBrief }) {
   const strongShown = brief.flags.length > 3 ? 3 : 4;
   const coverage = brief.completed
     ? `Finished the whole test (${brief.reached.observed} of ${brief.reached.total} decision points).`
-    : `Ran out of time: reached ${brief.reached.observed} of ${brief.reached.total} decision points. Areas not reached are not scored.`;
+    : `Ran out of time: reached ${brief.reached.observed} of ${brief.reached.total} decision points. Those not reached count as zero in the score${brief.reachedOverall !== undefined ? `; on those reached, they scored ${brief.reachedOverall}` : ""}.`;
 
   return (
     <Document title={`Candidate profile — ${brief.candidate}`} author="Operator Forge" subject="Hiring Test candidate profile">

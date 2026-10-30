@@ -95,7 +95,7 @@ export default async function HiringResultsPage() {
                       {attempt.candidate_email ? "" : " · name only, not verified"}
                       {attempt.candidate_phone ? ` · WhatsApp ${formatWhatsapp(attempt.candidate_phone)}` : ""}
                       {(attempt.time_limit_seconds ?? ASSESSMENT_SECONDS) > ASSESSMENT_SECONDS ? " · extra time" : ""}
-                      {result?.incomplete ? ` · not completed, ${result.observed} of ${result.opportunities} moments` : ""}
+                      {result?.incomplete ? ` · not completed, ${result.observed} of ${result.opportunities} moments, ${result.reachedOverall} on those` : ""}
                     </p>
                   </div>
                   <p className="text-[13px] text-mid sm:text-right">

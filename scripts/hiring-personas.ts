@@ -355,10 +355,16 @@ for (const form of FORMS) {
     half.incomplete && half.observed < half.opportunities && half.evidence.filter((e) => e.score === 3).length >= 5 &&
       half.outcomeTitle === "SHIFT NOT COMPLETED", `${half.observed}/${half.opportunities}`);
 
-  check(tag("unreached moments are left out, not scored as zero"),
+  // Competencies and decisions are read on what was reached; the score itself is out of the whole shift.
+  check(tag("unreached moments are left out of each competency, and kept as a reached score"),
     half.competencies.every((c) => (c.decisions === 0 ? c.score === 0 && c.available === 0 : c.score > 0)) &&
       half.decisions.filter((d) => !d.observed).every((d) => d.score === 0 && d.available === 0) &&
-      half.overall > 60, `overall ${half.overall}; ${half.competencies.map((c) => `${c.score}(${c.decisions}/${c.decisionsTotal})`).join(" ")}`);
+      half.reachedOverall > 60, `reached ${half.reachedOverall}; ${half.competencies.map((c) => `${c.score}(${c.decisions}/${c.decisionsTotal})`).join(" ")}`);
+  check(tag("the score counts unreached moments as zero, so not finishing costs"),
+    half.overall < half.reachedOverall && brief.overall < half.overall && full.overall === full.reachedOverall,
+    `full ${full.overall}/${full.reachedOverall} · half ${half.overall}/${half.reachedOverall} · brief ${brief.overall}/${brief.reachedOverall}`);
+  check(tag("a careful candidate who does not finish scores below one who finishes"),
+    half.overall < full.overall && brief.overall < 40, `full ${full.overall} · half ${half.overall} · brief ${brief.overall}`);
 
   check(tag("an unfinished shift is never indicated as Strong"),
     !half.indication.startsWith("STRONG") && !cutAt(0.9).indication.startsWith("STRONG"), half.indication);

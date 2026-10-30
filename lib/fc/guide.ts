@@ -57,7 +57,7 @@ const ENTRIES: Entry[] = [
   { topic: "inventory", match: /inventory team|sanjay|stock team/i, text: "The Inventory team keeps the stock records right. They need to know about shortages, returns and anything held in quarantine." },
   { topic: "tracker", match: /tracker|spreadsheet|sheet|column|total|duplicate|repeated/i, text: "The inbound tracker lists each vendor's planned quantity, what was accepted, damaged or rejected, and short, the GRN status and the time at the dock. Use the two check buttons above it to check the sheet." },
   { topic: "buckets", match: /bucket|do now|delegate|reschedule|escalat/i, text: "Do now: you deal with it yourself, now (2 at most). Delegate: give it to the person named. Reschedule: move it later. Escalate: pass it to your Operations Manager." },
-  { topic: "timer", match: /time left|how (much|long)|timer|minutes|clock|hurry/i, text: "You have 30 minutes. The timer at the top counts down and does not pause. The time beside the FC name is the shift clock (07:00 to 12:00); it moves on as the shift does." },
+  { topic: "timer", match: /time left|how (much|long)|timer|minutes|clock|hurry/i, text: "You have 30 minutes. The timer at the top counts down and does not pause. Parts you do not reach before it ends count as zero, so keep moving. The time beside the FC name is the shift clock (07:00 to 12:00); it moves on as the shift does." },
   { topic: "scoring", match: /scor|marks|pass|fail|graded|results?/i, text: "Your choices are scored by fixed rules after the shift. Nobody tells you during the test if a choice was right. Nothing you ask me is scored." },
 ];
 

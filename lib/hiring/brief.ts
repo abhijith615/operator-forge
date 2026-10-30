@@ -380,6 +380,8 @@ export interface EmployerBrief {
   date: string | null;
   sample: boolean;
   overall: number;
+  /** Score on the moments reached, for an unfinished test. */
+  reachedOverall?: number;
   recommendation: { label: string; text: string };
   completed: boolean;
   reached: { observed: number; total: number };
@@ -469,6 +471,7 @@ export function buildEmployerBrief(
     date: meta.completedAt ?? null,
     sample: meta.sample ?? false,
     overall: result.overall,
+    reachedOverall: result.reachedOverall,
     recommendation: RECOMMENDATION[key]!,
     completed: !result.incomplete,
     reached: { observed: result.observed, total: result.opportunities },

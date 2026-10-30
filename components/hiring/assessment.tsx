@@ -180,7 +180,7 @@ function Positioning({
         {extra > 0 ? " — that includes the extra time arranged for you" : ""}. The time starts when you press Start
         Shift and does not pause. You have one attempt. If the page reloads or your connection drops, you come back
         to where you were. The bar at the top shows the six parts of the shift: yellow is where you are, and the
-        white mark is where the time is.
+        white mark is where the time is. Parts you do not reach before the time ends count as zero, so keep moving.
       </p>
 
       <p className="mt-3 text-[13px] leading-snug text-lo">
