@@ -13,7 +13,7 @@ import { OFFER, mailtoUrl, whatsappUrl } from "./offer";
  * hero shows it; leave it null and the hero keeps the space with a placeholder.
  */
 export const HOME_VIDEO: { id: string | null; title: string } = {
-  id: null,
+  id: "XcuyJDdxgpg",
   title: "See an Operator Forge simulation in action",
 };
 
