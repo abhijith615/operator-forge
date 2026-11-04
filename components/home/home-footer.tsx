@@ -114,13 +114,8 @@ export function HomeFooter() {
           ))}
         </div>
 
-        <div className="mt-12 flex flex-col gap-3 border-t border-white/10 pt-6 text-[11.5px] leading-relaxed text-white/45 md:flex-row md:items-start md:justify-between">
-          <p className="max-w-3xl">
-            Scorecards and operator profiles are a practice assessment from simulated shifts, not an employment
-            certification. Operator Forge is independent and not affiliated with, or endorsed by, Zepto, Swiggy
-            Instamart or Blinkit.
-          </p>
-          <p className="shrink-0">© {new Date().getFullYear()} Operator Forge</p>
+        <div className="mt-12 border-t border-white/10 pt-6 text-[11.5px] leading-relaxed text-white/45">
+          <p>© {new Date().getFullYear()} Operator Forge</p>
         </div>
       </div>
     </footer>
