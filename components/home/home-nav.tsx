@@ -8,19 +8,22 @@ import { ArrowUpRight, Menu, X } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { buttonVariants } from "@/components/ui/button";
 import { useScrolled } from "@/hooks/use-scrolled";
-import { OFFER, OFFER_ROUTE } from "@/lib/constants/offer";
+import { DEMO_URL } from "@/lib/constants/home";
 import { cn } from "@/lib/utils";
 
 export const HOME_FOCUS =
   "focus-visible:ring-2 focus-visible:ring-[#0B0B0B] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF7F0] focus-visible:outline-none";
 
-/** The start date as the badge says it: "12 Oct". */
-const STARTS = OFFER.liveLabel.replace(/\s\d{4}$/, "");
+/** The homepage sections the nav points at. Absolute, so they work from the certificate and legal pages too. */
+const LINKS = [
+  { label: "How it works", href: "/#solution" },
+  { label: "Assessments", href: "/#assessments" },
+  { label: "Who we help", href: "/#who" },
+] as const;
 
 /**
- * The homepage header, in the cream-black-yellow of the challenge campaign.
- * The 7-Day Challenge goes to its landing page and carries the start date, so
- * the one thing on sale is never more than a glance away.
+ * The homepage header, in cream, black and yellow. Employers first: the one
+ * button is "Book a Demo", which opens WhatsApp with the request written.
  */
 export function HomeNav() {
   const scrolled = useScrolled(12);
@@ -58,29 +61,19 @@ export function HomeNav() {
           </Link>
 
           <ul className="mx-auto hidden items-center gap-1 md:flex">
-            <li>
-              <Link
-                href="/#platform"
-                className={cn(
-                  "rounded-full px-3.5 py-2 text-[14px] font-medium text-[#3D3D3D] transition-colors hover:bg-black/[0.05] hover:text-[#0B0B0B]",
-                  HOME_FOCUS,
-                )}
-              >
-                Platform
-              </Link>
-            </li>
-            <li>
-              <Link
-                href={OFFER_ROUTE}
-                className={cn(
-                  "inline-flex items-center gap-2 rounded-full py-1.5 pr-1.5 pl-3.5 text-[14px] font-semibold text-[#0B0B0B] transition-colors hover:bg-black/[0.05]",
-                  HOME_FOCUS,
-                )}
-              >
-                7-Day Challenge
-                <span className="rounded-full bg-ember-500 px-2 py-0.5 text-[11px] font-bold">{STARTS}</span>
-              </Link>
-            </li>
+            {LINKS.map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  className={cn(
+                    "rounded-full px-3.5 py-2 text-[14px] font-medium text-[#3D3D3D] transition-colors hover:bg-black/[0.05] hover:text-[#0B0B0B]",
+                    HOME_FOCUS,
+                  )}
+                >
+                  {link.label}
+                </Link>
+              </li>
+            ))}
           </ul>
 
           <div className="ml-auto flex items-center gap-1.5 md:ml-0">
@@ -93,17 +86,19 @@ export function HomeNav() {
             >
               Sign in
             </Link>
-            <Link
-              href="/brief"
+            <a
+              href={DEMO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               className={cn(
                 buttonVariants({ size: "sm" }),
                 "rounded-full border-0 bg-[#0B0B0B] px-3 text-white shadow-none hover:bg-[#262626] sm:pr-3.5",
                 HOME_FOCUS,
               )}
             >
-              Start Trial Mission
+              Book a Demo
               <ArrowUpRight className="hidden sm:block" />
-            </Link>
+            </a>
             <button
               type="button"
               onClick={() => setOpen(true)}
@@ -148,56 +143,33 @@ export function HomeNav() {
             </div>
 
             <ul className="mt-4 px-5">
-              <li>
-                <Link
-                  href={OFFER_ROUTE}
-                  onClick={() => setOpen(false)}
-                  className="flex items-center justify-between gap-3 border-b border-black/10 py-5 text-[26px] font-bold tracking-[-0.03em] text-[#0B0B0B]"
-                >
-                  <span>
-                    7-Day Challenge
-                    <span className="mt-1 block text-[13px] font-medium tracking-normal text-[#6B6B6B]">
-                      {OFFER.dateLabel}
-                    </span>
-                  </span>
-                  <span className="rounded-full bg-ember-500 px-2.5 py-1 text-[12px] font-bold tracking-normal">
-                    {STARTS}
-                  </span>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/#platform"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center justify-between border-b border-black/10 py-5 text-[26px] font-bold tracking-[-0.03em] text-[#0B0B0B]"
-                >
-                  Platform
-                  <ArrowUpRight className="size-5 text-[#6B6B6B]" />
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/login"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center justify-between border-b border-black/10 py-5 text-[26px] font-bold tracking-[-0.03em] text-[#0B0B0B]"
-                >
-                  Sign in
-                  <ArrowUpRight className="size-5 text-[#6B6B6B]" />
-                </Link>
-              </li>
+              {[...LINKS, { label: "Sign in", href: "/login" }].map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    onClick={() => setOpen(false)}
+                    className="flex items-center justify-between border-b border-black/10 py-5 text-[26px] font-bold tracking-[-0.03em] text-[#0B0B0B]"
+                  >
+                    {link.label}
+                    <ArrowUpRight className="size-5 text-[#6B6B6B]" />
+                  </Link>
+                </li>
+              ))}
             </ul>
 
             <div className="mt-8 px-5">
-              <Link
-                href="/brief"
+              <a
+                href={DEMO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 onClick={() => setOpen(false)}
                 className={cn(
                   buttonVariants({ size: "lg" }),
                   "w-full rounded-full border-0 bg-[#0B0B0B] text-white shadow-none hover:bg-[#262626]",
                 )}
               >
-                Start Trial Mission
-              </Link>
+                Book a Demo
+              </a>
             </div>
           </motion.div>
         ) : null}

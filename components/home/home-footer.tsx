@@ -2,7 +2,8 @@ import Link from "next/link";
 
 import { LogoMark } from "@/components/brand/logo";
 import { LEGAL_LINKS } from "@/lib/constants/legal";
-import { OFFER, OFFER_ROUTE, mailtoUrl, whatsappUrl } from "@/lib/constants/offer";
+import { CONTACT_URL, DEMO_URL, PARTNER_URL, PILOT_URL } from "@/lib/constants/home";
+import { OFFER, OFFER_ROUTE, mailtoUrl } from "@/lib/constants/offer";
 import { cn } from "@/lib/utils";
 
 const FOCUS =
@@ -10,20 +11,27 @@ const FOCUS =
 
 const COLUMNS: { title: string; links: { label: string; href: string; external?: boolean }[] }[] = [
   {
-    title: "Programmes",
+    title: "Employers",
     links: [
-      { label: "7-Day Challenge", href: OFFER_ROUTE },
-      { label: "Challenge overview", href: "/challenge" },
-      { label: "Platform", href: "/#platform" },
+      { label: "Book a Demo", href: DEMO_URL, external: true },
+      { label: "Start a Hiring Pilot", href: PILOT_URL, external: true },
+      { label: "How it works", href: "/#solution" },
     ],
   },
   {
-    title: "Operator",
+    title: "Students & Colleges",
     links: [
+      { label: "7-Day Challenge", href: OFFER_ROUTE },
       { label: "Start Trial Mission", href: "/brief" },
+      { label: "Partner With Us", href: PARTNER_URL, external: true },
       { label: "Sign in", href: "/login" },
-      { label: `WhatsApp ${OFFER.whatsapp.display}`, href: whatsappUrl(), external: true },
-      { label: OFFER.email, href: mailtoUrl(), external: true },
+    ],
+  },
+  {
+    title: "Contact",
+    links: [
+      { label: `WhatsApp ${OFFER.whatsapp.display}`, href: CONTACT_URL, external: true },
+      { label: OFFER.email, href: mailtoUrl("Operator Forge — enquiry"), external: true },
     ],
   },
   { title: "Legal", links: [...LEGAL_LINKS] },
@@ -62,17 +70,17 @@ export function HomeFooter() {
       </svg>
 
       <div className="relative mx-auto max-w-6xl px-5 pt-28 pb-12 sm:px-6">
-        <div className="grid gap-10 md:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))]">
+        <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,1fr))]">
           <div>
             <Link href="/" aria-label="Operator Forge home" className={cn("inline-flex items-center gap-2.5", FOCUS)}>
               <LogoMark className="size-8" />
               <span className="text-[17px] font-semibold tracking-[-0.02em]">Operator Forge</span>
             </Link>
             <p className="mt-5 font-mono text-[11px] tracking-[0.24em] text-white/55 uppercase">
-              Operations builds careers
+              Simulation-based hiring &amp; skills assessment
             </p>
             <p className="mt-1.5 text-[22px] font-bold tracking-[-0.03em]">
-              Better operators. <span className="text-ember-500">A brighter India.</span>
+              Real Work. Real Decisions. <span className="text-ember-500">Real Capability.</span>
             </p>
           </div>
 
