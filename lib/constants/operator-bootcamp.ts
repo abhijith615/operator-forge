@@ -7,18 +7,25 @@
  * development, so nothing unfinished ships unnoticed.
  */
 
+import { whatsappUrl } from "./offer";
+
 /* ── Variables ─────────────────────────────────────────────────────────── */
 
-/** TODO: the Google Form / Typeform link. Every "Apply" button points here. */
-export const APPLY_URL = "#";
-export const APPLICATION_DEADLINE = "[Date]";
+export const COHORT = "January 2027";
+
+/**
+ * Every "Apply" button opens a WhatsApp chat with +91 80895 08891, with a
+ * short message already typed so the enquiry is easy to recognise.
+ */
+export const APPLY_URL = whatsappUrl(
+  `Hi, I'd like to apply for the Startup Operator Bootcamp (${COHORT} cohort).`,
+);
 /** A typical day: live sessions in the morning, missions in the afternoon. */
 export const SCHEDULE = {
   morningHours: "2–3",
   afternoonHours: "3–4",
   daysPerWeek: 5,
 } as const;
-export const COHORT = "January 2027";
 export const SEATS = 20;
 export const FEE = {
   advance: 10000,
@@ -404,7 +411,6 @@ export const BOOTCAMP = {
         body: `Pay ${inr(FEE.advance)} and start in ${COHORT}.`,
       },
     ],
-    deadline: `Application deadline: ${APPLICATION_DEADLINE}`,
     cta: "Apply now",
   },
 
@@ -464,7 +470,7 @@ export const BOOTCAMP = {
     ] as Emphasised,
     sub: `${SEATS} seats. ${COHORT}. Live online.`,
     cta: "Apply for the selection interview",
-    microcopy: `Applications close ${APPLICATION_DEADLINE} or when seats fill.`,
+    microcopy: `Applications close when all ${SEATS} seats are filled.`,
   },
 
   footer: {
@@ -503,10 +509,6 @@ export function unfilledPlaceholders(): string[] {
         walk(entry, path ? `${path}.${key}` : key);
     }
   };
-  walk(
-    { APPLY_URL, APPLICATION_DEADLINE, MENTORS, faq: BOOTCAMP.faq.items },
-    "",
-  );
-  if (APPLY_URL === "#") found.add('APPLY_URL is still "#"');
+  walk({ MENTORS, faq: BOOTCAMP.faq.items }, "");
   return [...found];
 }

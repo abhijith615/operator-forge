@@ -394,9 +394,8 @@ export default function OperatorBootcampPage() {
             ))}
           </ol>
           <Reveal>
-            <div className="mt-10 flex flex-col items-start gap-5 sm:flex-row sm:items-center">
+            <div className="mt-10">
               <CTAButton label={admissions.cta} location={admissions.id} />
-              <p className={cn("rounded-full border bg-white px-4 py-2 text-[15px] font-semibold", HAIRLINE)}>{admissions.deadline}</p>
             </div>
           </Reveal>
         </Section>
