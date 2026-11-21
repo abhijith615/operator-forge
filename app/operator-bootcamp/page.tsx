@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Image from "next/image";
 
 import { AnchorLink } from "@/components/bootcamp/anchor-link";
 import { BootcampHeader } from "@/components/bootcamp/bootcamp-header";
@@ -151,7 +152,135 @@ export default function OperatorBootcampPage() {
           </div>
         </Section>
 
-        {/* ── 4.4 Who it's for ─────────────────────────────────────────── */}
+        {/* ── Section 3: mentors, simulation-based learning, AMA speakers ── */}
+        <Section id={mentors.id} labelledBy={title(mentors.id)} className={cn("border-t", HAIRLINE)}>
+          <Reveal>
+            <Headline id={title(mentors.id)} parts={mentors.h2} />
+          </Reveal>
+          <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {MENTORS.map((mentor) => (
+              <li key={`${mentor.name}-${mentor.role}`}>
+                <Reveal className="h-full">
+                  <MentorCard mentor={mentor} />
+                </Reveal>
+              </li>
+            ))}
+          </ul>
+
+          {/* Simulation-based learning and assessment, with a real screen from a simulation. */}
+          <Reveal>
+            <div className={cn("mt-6 grid gap-8 overflow-hidden rounded-2xl border bg-white p-6 md:grid-cols-12 md:items-center md:gap-10 md:p-10", HAIRLINE)}>
+              <div className="md:col-span-6">
+                <p className="font-mono text-[12px] tracking-[0.16em] text-[#5C5C57] uppercase">{mentors.simulation.eyebrow}</p>
+                <h3 className="mt-3 text-[clamp(1.6rem,3vw,2.2rem)] leading-[1.1] font-bold tracking-[-0.03em]">{mentors.simulation.title}</h3>
+                <p className={cn("mt-4 text-[16px] leading-relaxed md:text-[17px]", MUTED)}>{mentors.simulation.body}</p>
+                <p className="mt-3 text-[16px] leading-relaxed font-medium text-[#111111] md:text-[17px]">{mentors.simulation.assessment}</p>
+                <ul className="mt-5 grid gap-3">
+                  {mentors.simulation.points.map((point) => (
+                    <li key={point} className="flex gap-3 text-[16px] leading-snug">
+                      <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-ember-500">
+                        <Icon name="yes" className="size-3.5" />
+                      </span>
+                      {point}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <figure className="md:col-span-6">
+                <div className="overflow-hidden rounded-xl border border-[#111111] bg-[#0A0A0A] shadow-[0_24px_48px_-28px_rgba(17,17,17,0.55)]">
+                  <Image
+                    src={mentors.simulation.image.src}
+                    width={mentors.simulation.image.width}
+                    height={mentors.simulation.image.height}
+                    alt={mentors.simulation.image.alt}
+                    sizes="(min-width: 1200px) 540px, (min-width: 768px) 45vw, 100vw"
+                    className="h-auto w-full"
+                  />
+                </div>
+                <figcaption className={cn("mt-3 text-[14px] leading-snug", MUTED)}>{mentors.simulation.caption}</figcaption>
+              </figure>
+            </div>
+          </Reveal>
+
+          <Reveal>
+            <div className={cn("mt-6 rounded-2xl border bg-white p-6 md:p-8", HAIRLINE)}>
+              <div className="grid gap-6 md:grid-cols-12 md:items-center">
+                <div className="md:col-span-5">
+                  <h3 className="text-[22px] font-bold tracking-[-0.02em]">{mentors.amaTitle}</h3>
+                  <p className={cn("mt-2 text-[16px] leading-relaxed", MUTED)}>{mentors.amaBody}</p>
+                </div>
+                <ul className="grid grid-cols-3 gap-3 md:col-span-7 md:grid-cols-6">
+                  {Array.from({ length: mentors.amaSlots }, (_, index) => (
+                    <li key={index} className="flex flex-col items-center gap-2 text-center">
+                      <span aria-hidden className="size-14 rounded-full border border-dashed border-[#C9C6BD] bg-[#F3F1EA]" />
+                      <span className="text-[12px] font-medium text-[#6E6E68]">{mentors.amaSlotLabel}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </Reveal>
+        </Section>
+
+        {/* ── Section 4: less watching, more doing ─────────────────────── */}
+        <Section id={method.id} labelledBy={title(method.id)} className={cn("border-t", HAIRLINE)}>
+          <Reveal>
+            <Headline id={title(method.id)} parts={method.h2} />
+            <p className={cn("mt-5 max-w-[40rem] text-[17px] leading-[1.6] md:text-[18px]", MUTED)}>{method.intro}</p>
+          </Reveal>
+          <ul className="mt-10 grid gap-4 md:grid-cols-3">
+            {method.cards.map((card, index) => (
+              <li key={card.title}>
+                <Reveal delay={index * 70} className="h-full">
+                  <div className={cn("h-full rounded-2xl border bg-white p-6", HAIRLINE)}>
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="grid size-11 place-items-center rounded-xl bg-[#111111] text-ember-500">
+                        <Icon name={card.icon} className="size-5" />
+                      </span>
+                      {"badge" in card ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-ember-500 px-2.5 py-1 text-[12px] font-semibold text-[#111111]">
+                          <span aria-hidden className="size-1.5 rounded-full bg-[#111111]" />
+                          {card.badge}
+                        </span>
+                      ) : null}
+                    </div>
+                    <h3 className="mt-5 text-[19px] font-bold tracking-[-0.02em]">{card.title}</h3>
+                    <p className={cn("mt-2 text-[16px] leading-relaxed", MUTED)}>{card.body}</p>
+                  </div>
+                </Reveal>
+              </li>
+            ))}
+          </ul>
+
+          <Reveal>
+            <h3 className="mt-14 max-w-3xl text-[clamp(1.5rem,3vw,2.2rem)] leading-[1.15] font-bold tracking-[-0.03em]">{method.challenges.title}</h3>
+          </Reveal>
+          <ul className="mt-6 grid gap-4 md:grid-cols-2">
+            {method.challenges.items.map((challenge, index) => (
+              <li key={challenge.number}>
+                <Reveal delay={index * 80} className="h-full">
+                  <article className="flex h-full flex-col rounded-2xl border border-[#111111] bg-white p-6 md:p-8">
+                    <p className="font-mono text-[12px] tracking-[0.16em] text-[#5C5C57] uppercase">
+                      {method.challenges.challengeLabel} {challenge.number}
+                    </p>
+                    <h4 className="mt-3 text-[24px] leading-tight font-bold tracking-[-0.03em]">
+                      {challenge.company} <span className="text-[#5C5C57]">· {challenge.name}</span>
+                    </h4>
+                    <p className="mt-4 text-[17px] leading-snug font-medium italic">{challenge.hook}</p>
+                    <p className={cn("mt-3 text-[16px] leading-relaxed", MUTED)}>{challenge.body}</p>
+                    <p className="mt-auto pt-6">
+                      <span className="inline bg-[linear-gradient(transparent_55%,rgba(245,196,0,0.55)_55%)] text-[17px] font-bold">{challenge.question}</span>
+                    </p>
+                  </article>
+                </Reveal>
+              </li>
+            ))}
+          </ul>
+          <p className={cn("mt-4 text-[13px]", MUTED)}>{method.challenges.note}</p>
+          <p className="mt-8 inline-flex rounded-full border border-[#111111] px-4 py-2 text-[15px] font-semibold">{method.weekLine}</p>
+        </Section>
+
+        {/* ── Who it's for ─────────────────────────────────────────────── */}
         <Section id={fit.id} labelledBy={title(fit.id)} className={cn("border-t", HAIRLINE)}>
           <Reveal>
             <Headline id={title(fit.id)} parts={fit.h2} className="max-w-3xl" />
@@ -214,29 +343,6 @@ export default function OperatorBootcampPage() {
           </ol>
         </Section>
 
-        {/* ── 4.6 How you'll learn ─────────────────────────────────────── */}
-        <Section id={method.id} labelledBy={title(method.id)} className={cn("border-t", HAIRLINE)}>
-          <Reveal>
-            <Headline id={title(method.id)} parts={method.h2} />
-          </Reveal>
-          <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {method.cards.map((card, index) => (
-              <li key={card.title}>
-                <Reveal delay={index * 70} className="h-full">
-                  <div className={cn("h-full rounded-2xl border bg-white p-6", HAIRLINE)}>
-                    <span className="grid size-11 place-items-center rounded-xl bg-[#111111] text-ember-500">
-                      <Icon name={card.icon} className="size-5" />
-                    </span>
-                    <h3 className="mt-5 text-[19px] font-bold tracking-[-0.02em]">{card.title}</h3>
-                    <p className={cn("mt-2 text-[16px] leading-relaxed", MUTED)}>{card.body}</p>
-                  </div>
-                </Reveal>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-8 inline-flex rounded-full border border-[#111111] px-4 py-2 text-[15px] font-semibold">{method.weekLine}</p>
-        </Section>
-
         {/* ── 4.7 Pathway ──────────────────────────────────────────────── */}
         <Section id={pathway.id} labelledBy={title(pathway.id)} className={cn("border-t", HAIRLINE)}>
           <Reveal>
@@ -264,40 +370,6 @@ export default function OperatorBootcampPage() {
           <Reveal>
             <p className="mt-14 max-w-4xl text-[clamp(1.5rem,3.2vw,2.3rem)] leading-[1.2] font-bold tracking-[-0.035em]">{pathway.line}</p>
             <p className={cn("mt-4 text-[14px]", MUTED)}>{pathway.smallPrint}</p>
-          </Reveal>
-        </Section>
-
-        {/* ── 4.8 Mentors and AMA speakers ─────────────────────────────── */}
-        <Section id={mentors.id} labelledBy={title(mentors.id)} className={cn("border-t", HAIRLINE)}>
-          <Reveal>
-            <Headline id={title(mentors.id)} parts={mentors.h2} />
-          </Reveal>
-          <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {MENTORS.map((mentor) => (
-              <li key={`${mentor.name}-${mentor.role}`}>
-                <Reveal className="h-full">
-                  <MentorCard mentor={mentor} />
-                </Reveal>
-              </li>
-            ))}
-          </ul>
-          <Reveal>
-            <div className={cn("mt-6 rounded-2xl border bg-white p-6 md:p-8", HAIRLINE)}>
-              <div className="grid gap-6 md:grid-cols-12 md:items-center">
-                <div className="md:col-span-5">
-                  <h3 className="text-[22px] font-bold tracking-[-0.02em]">{mentors.amaTitle}</h3>
-                  <p className={cn("mt-2 text-[16px] leading-relaxed", MUTED)}>{mentors.amaBody}</p>
-                </div>
-                <ul className="grid grid-cols-3 gap-3 md:col-span-7 md:grid-cols-6">
-                  {Array.from({ length: mentors.amaSlots }, (_, index) => (
-                    <li key={index} className="flex flex-col items-center gap-2 text-center">
-                      <span aria-hidden className="size-14 rounded-full border border-dashed border-[#C9C6BD] bg-[#F3F1EA]" />
-                      <span className="text-[12px] font-medium text-[#6E6E68]">{mentors.amaSlotLabel}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
           </Reveal>
         </Section>
 

@@ -5,7 +5,9 @@ import {
   type LucideIcon,
   MessageSquareQuote,
   Mic,
+  MonitorPlay,
   Presentation,
+  Target,
   Radio,
   UserRoundCheck,
   Users,
@@ -31,6 +33,8 @@ const ICONS: Record<string, LucideIcon> = {
   yes: Check,
   no: X,
   assured: BadgeCheck,
+  challenge: Target,
+  simulation: MonitorPlay,
 };
 
 export function Icon({ name, className }: { name: string; className?: string }) {

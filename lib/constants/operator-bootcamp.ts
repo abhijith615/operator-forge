@@ -157,12 +157,49 @@ export const BOOTCAMP = {
   method: {
     id: "how-you-learn",
     h2: [{ text: "Less watching. " }, { text: "More doing.", em: true }] as Emphasised,
+    intro:
+      "Forget textbook assignments. Step into the shoes of a startup operator and solve challenges inspired by real businesses.",
     cards: [
-      { icon: "sessions", title: "Live expert sessions", body: "Learn the frameworks from people who use them." },
-      { icon: "missions", title: "Team missions", body: "Solve startup-inspired challenges in small groups." },
-      { icon: "feedback", title: "Feedback on every mission", body: "Know what's working and what to fix." },
-      { icon: "ama", title: "Weekly AMA", body: "Ask founders and operators what it really takes." },
+      {
+        icon: "challenge",
+        title: "Real startup challenges",
+        body: "Team missions built on real business problems in growth, operations and customers — with no textbook answer.",
+      },
+      {
+        icon: "simulation",
+        title: "Simulation-based learning",
+        body: "Practise in live simulations, get scored on your decisions and get feedback on every mission.",
+      },
+      {
+        icon: "ama",
+        title: "Live AMA sessions",
+        body: "A weekly LIVE AMA with startup leaders and founders. Ask what it really takes.",
+        badge: "Weekly · Live",
+      },
     ],
+    challenges: {
+      title: "Real startups. Real challenges. Can you crack them?",
+      items: [
+        {
+          number: "01",
+          company: "Wispr Flow",
+          name: "The Growth Challenge",
+          hook: "An incredible AI product. But how do you get people to actually use it?",
+          body: "You're the Growth Intern at Wispr Flow. Find the right audience, create a compelling campaign and convince students to try AI-powered voice typing.",
+          question: "Can you turn a great product into real users?",
+        },
+        {
+          number: "02",
+          company: "Snabbit",
+          name: "The 10-Minute Challenge",
+          hook: "6 customer requests. 5 service professionals. A 10-minute arrival promise.",
+          body: "You're running operations at Snabbit. Assign the right professionals, manage competing requests and handle an unexpected disruption — all while keeping customers happy.",
+          question: "Can you make the right decisions when every minute counts?",
+        },
+      ],
+      challengeLabel: "Challenge",
+      note: "Challenges are inspired by real businesses and designed by Operator Forge for learning.",
+    },
     weekLine: `Typical week: ${WEEKLY_HOURS}`,
   },
 
@@ -191,6 +228,16 @@ export const BOOTCAMP = {
       "Six live sessions with founders, operators and business leaders. Ask about real mistakes, career calls and what makes an intern indispensable.",
     amaSlots: 6,
     amaSlotLabel: "Announcing soon",
+    simulation: {
+      eyebrow: "Simulation-based learning and assessment",
+      title: "Practise the job before you get it.",
+      body: "You learn inside live simulations of real businesses. A clock is running, the data is messy and a team is waiting on your call. You read the records, make decisions and see what happens next.",
+      assessment:
+        "Every simulation is also an assessment. You're scored on how you decide, not on what you remember, and you get clear feedback on your strengths and gaps.",
+      points: ["Real-time scenarios with a clock running", "Logs, orders and a team to work with", "Scored on decisions, with feedback after every run"],
+      image: { src: "/bootcamp/simulation.webp", width: 960, height: 877, alt: "A live store simulation: an expensive smartwatch is missing, with the system count, the cage count and the records to check." },
+      caption: "Inside a simulation: an expensive item is missing. Count it, check the logs, decide.",
+    },
   },
 
   fee: {
