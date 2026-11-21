@@ -322,8 +322,10 @@ export default function OperatorBootcampPage() {
           <span aria-hidden className="absolute top-6 bottom-6 left-6 w-px bg-[#111111] md:top-6 md:right-[calc(33.333%_-_2.8rem)] md:bottom-auto md:left-6 md:h-px md:w-auto" />
           <ol className="relative grid gap-10 md:grid-cols-3 md:gap-8">
             {pathway.steps.map((step, index) => (
-              <li key={step.number} className="relative pl-16 md:pl-0">
-                <Reveal delay={index * 100}>
+              <li key={step.number}>
+                {/* The reveal animation leaves a transform on its wrapper, which makes it the
+                    positioning box for the number. So the wrapper itself carries the padding. */}
+                <Reveal delay={index * 100} className="relative pl-16 md:pl-0">
                   <div className="absolute top-0 left-0 md:static">
                     <span className="inline-grid size-12 place-items-center rounded-full bg-ember-500 font-mono text-[15px] font-semibold text-[#111111] ring-8 ring-[#FAFAF7]">
                       {step.number}
