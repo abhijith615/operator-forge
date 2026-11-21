@@ -383,7 +383,7 @@ export const BOOTCAMP = {
     },
     line: "We only earn the larger share when you do.",
     smallPrint:
-      "The definition of placement and full payment terms are shared before enrolment.",
+      "Placement means a full-time role after your internship. Full payment terms are shared before enrolment.",
     cta: "Apply for the selection interview",
   },
 
@@ -431,11 +431,11 @@ export const BOOTCAMP = {
       },
       {
         q: "What counts as completing the bootcamp?",
-        a: "[Define completion, e.g. minimum attendance and every mission submitted]",
+        a: "Completing all the live sessions, all the missions and all the live AMAs.",
       },
       {
         q: `What does "placement" mean for the ${inr(FEE.afterPlacement)} payment?`,
-        a: "[Define clearly. Exact terms are shared before enrolment.]",
+        a: "A full-time role after your internship. You pay the remaining amount only once you're placed in a full-time role.",
       },
       {
         q: "What roles does this prepare me for?",
@@ -449,7 +449,10 @@ export const BOOTCAMP = {
         q: "How many hours a week will this take?",
         a: `${SCHEDULE.morningHours} hours of live sessions every morning and ${SCHEDULE.afternoonHours} hours of missions every afternoon, ${SCHEDULE.daysPerWeek} days a week.`,
       },
-      { q: "Can I do this alongside a job or studies?", a: "[Fill in]" },
+      {
+        q: "Can I do this alongside a job or studies?",
+        a: "No. This is a full-time bootcamp.",
+      },
       {
         q: "Are the internships paid?",
         a: `Yes. Internships run for ${INTERNSHIP.months} months with a stipend of ${inr(INTERNSHIP.minStipend)} or more a month.`,
@@ -457,9 +460,7 @@ export const BOOTCAMP = {
       {
         q: "What happens in the selection interview?",
         a: "A conversation about your background, your ambitions and how you approach problems. No case prep needed.",
-      },
-      { q: "What if I'm not selected?", a: "[Fill in]" },
-    ],
+      },    ],
   },
 
   final: {
@@ -477,7 +478,7 @@ export const BOOTCAMP = {
     name: "Operator Forge",
     tagline: "Beyond resumes. Built on capability.",
     disclaimer:
-      "The internship assurance applies to participants who complete the bootcamp, as per the completion criteria shared before enrolment. Full-time roles are not guaranteed and depend on performance, role fit and employer hiring decisions.",
+      "The internship assurance applies to participants who complete the bootcamp: all live sessions, missions and live AMAs. Full-time roles are not guaranteed and depend on performance, role fit and employer hiring decisions.",
     copyright: `© ${new Date().getFullYear()} Operator Forge`,
   },
 
