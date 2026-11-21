@@ -6,7 +6,6 @@ import { BootcampHeader } from "@/components/bootcamp/bootcamp-header";
 import { Icon, MentorCard, StatCard, Step, WeekCard } from "@/components/bootcamp/cards";
 import { CTAButton } from "@/components/bootcamp/cta-button";
 import { Faq } from "@/components/bootcamp/faq";
-import { MissionStack } from "@/components/bootcamp/mission-stack";
 import { PlaceholderWarning } from "@/components/bootcamp/placeholder-warning";
 import { Reveal } from "@/components/bootcamp/reveal";
 import { CONTAINER, HAIRLINE, Headline, MUTED, Section } from "@/components/bootcamp/section";
@@ -41,7 +40,7 @@ function faqJsonLd() {
 const title = (id: string) => `${id}-title`;
 
 export default function OperatorBootcampPage() {
-  const { hero, proof, problem, fit, curriculum, method, pathway, mentors, fee, admissions, faq, final, footer } = BOOTCAMP;
+  const { hero, proof, fit, curriculum, method, simulation, pathway, mentors, fee, admissions, faq, final, footer } = BOOTCAMP;
 
   return (
     <div className="min-h-dvh bg-[#FAFAF7] text-[#111111] antialiased">
@@ -54,8 +53,8 @@ export default function OperatorBootcampPage() {
       <main id="main">
         {/* ── 4.1 Hero ─────────────────────────────────────────────────── */}
         <section id={hero.id} aria-labelledby={title(hero.id)} className="scroll-mt-16 pt-6 pb-16 md:pt-16 md:pb-24">
-          <div className={cn(CONTAINER, "grid items-center gap-10 md:grid-cols-12 md:gap-8")}>
-            <div className="md:col-span-7">
+          <div className={CONTAINER}>
+            <div className="max-w-[52rem]">
               <p className="inline-flex items-center gap-2 rounded-full border border-[#111111] px-3 py-1 text-[13px] font-semibold">
                 <span aria-hidden className="size-2 rounded-full bg-ember-500 shadow-[0_0_0_3px_rgba(245,196,0,0.25)]" />
                 {hero.eyebrow}
@@ -98,10 +97,6 @@ export default function OperatorBootcampPage() {
                 {hero.secondary.label}
               </AnchorLink>
             </div>
-
-            <div className="md:col-span-5">
-              <MissionStack />
-            </div>
           </div>
         </section>
 
@@ -124,111 +119,47 @@ export default function OperatorBootcampPage() {
           </div>
         </section>
 
-        {/* ── 4.3 The problem ──────────────────────────────────────────── */}
-        <Section id={problem.id} labelledBy={title(problem.id)} className={cn("border-t", HAIRLINE)}>
-          <div className="grid gap-10 md:grid-cols-12 md:gap-8">
-            <Reveal className="md:col-span-7">
-              <Headline id={title(problem.id)} parts={problem.h2} />
-              {problem.paragraphs.map((paragraph) => (
-                <p key={paragraph} className={cn("mt-5 max-w-[36rem] text-[17px] leading-[1.6] md:text-[18px]", MUTED)}>
-                  {paragraph}
-                </p>
-              ))}
-            </Reveal>
-            <Reveal className="md:col-span-5" delay={100}>
-              <figure aria-label={problem.timelineLabel} className={cn("rounded-2xl border bg-white p-6", HAIRLINE)}>
-                <figcaption className="font-mono text-[12px] tracking-[0.16em] text-[#5C5C57] uppercase">{problem.timelineLabel}</figcaption>
-                <ol className="mt-5 grid gap-0">
-                  {problem.timeline.map((entry, index) => (
-                    <li key={entry.day} className="relative flex gap-4 pb-6 last:pb-0">
-                      {index < problem.timeline.length - 1 ? <span aria-hidden className="absolute top-11 bottom-0 left-[21px] w-px bg-[#E6E4DD]" /> : null}
-                      <span className="grid size-11 shrink-0 place-items-center rounded-full bg-[#111111] text-[14px] font-bold text-white">{entry.day}</span>
-                      <span className="pt-2.5 text-[18px] font-semibold tracking-[-0.015em]">{entry.task}</span>
-                    </li>
-                  ))}
-                </ol>
-              </figure>
-            </Reveal>
-          </div>
-        </Section>
-
-        {/* ── Section 3: mentors, simulation-based learning, AMA speakers ── */}
+        {/* ── Section 2: mentors ───────────────────────────────────────── */}
         <Section id={mentors.id} labelledBy={title(mentors.id)} className={cn("border-t", HAIRLINE)}>
           <Reveal>
             <Headline id={title(mentors.id)} parts={mentors.h2} />
+            <p className={cn("mt-5 max-w-[40rem] text-[17px] leading-[1.6] md:text-[18px]", MUTED)}>{mentors.sub}</p>
           </Reveal>
-          <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {MENTORS.map((mentor) => (
+          <ul className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+            {MENTORS.map((mentor, index) => (
               <li key={`${mentor.name}-${mentor.role}`}>
-                <Reveal className="h-full">
+                <Reveal delay={(index % 5) * 60} className="h-full">
                   <MentorCard mentor={mentor} />
                 </Reveal>
               </li>
             ))}
           </ul>
-
-          {/* Simulation-based learning and assessment, with a real screen from a simulation. */}
-          <Reveal>
-            <div className={cn("mt-6 grid gap-8 overflow-hidden rounded-2xl border bg-white p-6 md:grid-cols-12 md:items-center md:gap-10 md:p-10", HAIRLINE)}>
-              <div className="md:col-span-6">
-                <p className="font-mono text-[12px] tracking-[0.16em] text-[#5C5C57] uppercase">{mentors.simulation.eyebrow}</p>
-                <h3 className="mt-3 text-[clamp(1.6rem,3vw,2.2rem)] leading-[1.1] font-bold tracking-[-0.03em]">{mentors.simulation.title}</h3>
-                <p className={cn("mt-4 text-[16px] leading-relaxed md:text-[17px]", MUTED)}>{mentors.simulation.body}</p>
-                <p className="mt-3 text-[16px] leading-relaxed font-medium text-[#111111] md:text-[17px]">{mentors.simulation.assessment}</p>
-                <ul className="mt-5 grid gap-3">
-                  {mentors.simulation.points.map((point) => (
-                    <li key={point} className="flex gap-3 text-[16px] leading-snug">
-                      <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-ember-500">
-                        <Icon name="yes" className="size-3.5" />
-                      </span>
-                      {point}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <figure className="md:col-span-6">
-                <div className="overflow-hidden rounded-xl border border-[#111111] bg-[#0A0A0A] shadow-[0_24px_48px_-28px_rgba(17,17,17,0.55)]">
-                  <Image
-                    src={mentors.simulation.image.src}
-                    width={mentors.simulation.image.width}
-                    height={mentors.simulation.image.height}
-                    alt={mentors.simulation.image.alt}
-                    sizes="(min-width: 1200px) 540px, (min-width: 768px) 45vw, 100vw"
-                    className="h-auto w-full"
-                  />
-                </div>
-                <figcaption className={cn("mt-3 text-[14px] leading-snug", MUTED)}>{mentors.simulation.caption}</figcaption>
-              </figure>
-            </div>
-          </Reveal>
-
-          <Reveal>
-            <div className={cn("mt-6 rounded-2xl border bg-white p-6 md:p-8", HAIRLINE)}>
-              <div className="grid gap-6 md:grid-cols-12 md:items-center">
-                <div className="md:col-span-5">
-                  <h3 className="text-[22px] font-bold tracking-[-0.02em]">{mentors.amaTitle}</h3>
-                  <p className={cn("mt-2 text-[16px] leading-relaxed", MUTED)}>{mentors.amaBody}</p>
-                </div>
-                <ul className="grid grid-cols-3 gap-3 md:col-span-7 md:grid-cols-6">
-                  {Array.from({ length: mentors.amaSlots }, (_, index) => (
-                    <li key={index} className="flex flex-col items-center gap-2 text-center">
-                      <span aria-hidden className="size-14 rounded-full border border-dashed border-[#C9C6BD] bg-[#F3F1EA]" />
-                      <span className="text-[12px] font-medium text-[#6E6E68]">{mentors.amaSlotLabel}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </Reveal>
         </Section>
 
-        {/* ── Section 4: less watching, more doing ─────────────────────── */}
+        {/* ── Section 3: less watching, more doing ─────────────────────── */}
         <Section id={method.id} labelledBy={title(method.id)} className={cn("border-t", HAIRLINE)}>
           <Reveal>
             <Headline id={title(method.id)} parts={method.h2} />
             <p className={cn("mt-5 max-w-[40rem] text-[17px] leading-[1.6] md:text-[18px]", MUTED)}>{method.intro}</p>
           </Reveal>
-          <ul className="mt-10 grid gap-4 md:grid-cols-3">
+
+          {/* A typical day: live sessions in the morning, missions in the afternoon. */}
+          <Reveal>
+            <div className="mt-8 flex flex-col gap-3 rounded-2xl border border-[#111111] bg-white p-4 sm:flex-row sm:items-stretch sm:p-2">
+              <p className="px-2 font-mono text-[12px] tracking-[0.16em] text-[#5C5C57] uppercase sm:self-center sm:pl-4">{method.schedule.label}</p>
+              {method.schedule.blocks.map((block, index) => (
+                <div key={block.time} className={cn("flex items-baseline gap-3 rounded-xl px-4 py-3 sm:flex-1", index === 0 ? "bg-ember-500" : "bg-[#F3F1EA]")}>
+                  <span className="text-[24px] leading-none font-bold tracking-[-0.03em] tabular-nums">{block.hours}</span>
+                  <span className="text-[15px] leading-snug">
+                    <span className="font-semibold">{block.time}</span> · {block.what}
+                  </span>
+                </div>
+              ))}
+              <p className="flex items-center justify-center rounded-xl bg-[#111111] px-4 py-3 text-[15px] font-semibold text-white">{method.schedule.days}</p>
+            </div>
+          </Reveal>
+
+          <ul className="mt-6 grid gap-4 md:grid-cols-3">
             {method.cards.map((card, index) => (
               <li key={card.title}>
                 <Reveal delay={index * 70} className="h-full">
@@ -277,7 +208,45 @@ export default function OperatorBootcampPage() {
             ))}
           </ul>
           <p className={cn("mt-4 text-[13px]", MUTED)}>{method.challenges.note}</p>
-          <p className="mt-8 inline-flex rounded-full border border-[#111111] px-4 py-2 text-[15px] font-semibold">{method.weekLine}</p>
+        </Section>
+
+        {/* ── Section 4: simulation-based learning and assessment ──────── */}
+        <Section id={simulation.id} labelledBy={title(simulation.id)} className={cn("border-t", HAIRLINE)}>
+          <Reveal>
+            <div className={cn("grid gap-8 overflow-hidden rounded-2xl border bg-white p-6 md:grid-cols-12 md:items-center md:gap-10 md:p-10", HAIRLINE)}>
+              <div className="md:col-span-6">
+                <p className="font-mono text-[12px] tracking-[0.16em] text-[#5C5C57] uppercase">{simulation.eyebrow}</p>
+                <h2 id={title(simulation.id)} className="mt-3 text-[clamp(1.8rem,3.4vw,2.6rem)] leading-[1.08] font-bold tracking-[-0.035em]">
+                  {simulation.title}
+                </h2>
+                <p className={cn("mt-4 text-[16px] leading-relaxed md:text-[17px]", MUTED)}>{simulation.body}</p>
+                <p className="mt-3 text-[16px] leading-relaxed font-medium text-[#111111] md:text-[17px]">{simulation.assessment}</p>
+                <ul className="mt-5 grid gap-3">
+                  {simulation.points.map((point) => (
+                    <li key={point} className="flex gap-3 text-[16px] leading-snug">
+                      <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-ember-500">
+                        <Icon name="yes" className="size-3.5" />
+                      </span>
+                      {point}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <figure className="md:col-span-6">
+                <div className="overflow-hidden rounded-xl border border-[#111111] bg-[#0A0A0A] shadow-[0_24px_48px_-28px_rgba(17,17,17,0.55)]">
+                  <Image
+                    src={simulation.image.src}
+                    width={simulation.image.width}
+                    height={simulation.image.height}
+                    alt={simulation.image.alt}
+                    sizes="(min-width: 1200px) 540px, (min-width: 768px) 45vw, 100vw"
+                    className="h-auto w-full"
+                  />
+                </div>
+                <figcaption className={cn("mt-3 text-[14px] leading-snug", MUTED)}>{simulation.caption}</figcaption>
+              </figure>
+            </div>
+          </Reveal>
         </Section>
 
         {/* ── Who it's for ─────────────────────────────────────────────── */}

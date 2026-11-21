@@ -99,22 +99,37 @@ function initialsOf(name: string): string {
   return letters.slice(0, 2).join("") || "?";
 }
 
+/** A mentor: photo, name, current role, and past companies and schools as tags. */
 export function MentorCard({ mentor }: { mentor: Mentor }) {
   return (
-    <article className={cn("flex h-full gap-4 rounded-2xl border bg-white p-5", HAIRLINE)}>
+    <article className={cn("flex h-full flex-col rounded-2xl border bg-white p-5", HAIRLINE)}>
       {mentor.photo ? (
-        // eslint-disable-next-line @next/next/no-img-element -- a small avatar; next/image would need sizes for a 56px square.
-        <img src={mentor.photo} alt="" width={56} height={56} loading="lazy" decoding="async" className="size-14 shrink-0 rounded-full object-cover" />
+        // eslint-disable-next-line @next/next/no-img-element -- a small 320px avatar, already sized and compressed.
+        <img
+          src={mentor.photo}
+          alt={mentor.name}
+          width={96}
+          height={96}
+          loading="lazy"
+          decoding="async"
+          className="size-20 shrink-0 rounded-full bg-[#EFEDE6] object-cover ring-4 ring-ember-500/30 md:size-24"
+        />
       ) : (
-        <span aria-hidden className="grid size-14 shrink-0 place-items-center rounded-full bg-[#111111] text-[18px] font-bold text-ember-500">
+        <span aria-hidden className="grid size-20 shrink-0 place-items-center rounded-full bg-[#111111] text-[22px] font-bold text-ember-500 md:size-24">
           {initialsOf(mentor.name)}
         </span>
       )}
-      <div className="min-w-0">
-        <h3 className="text-[18px] leading-tight font-bold tracking-[-0.02em]">{mentor.name}</h3>
-        <p className="mt-0.5 text-[14px] font-medium text-[#111111]/80">{mentor.role}</p>
-        <p className={cn("mt-2 text-[15px] leading-relaxed", MUTED)}>{mentor.bio}</p>
-      </div>
+      <h3 className="mt-4 text-[18px] leading-tight font-bold tracking-[-0.02em]">{mentor.name}</h3>
+      <p className="mt-1 text-[14px] leading-snug font-medium text-[#111111]/80">{mentor.role}</p>
+      {mentor.background.length > 0 ? (
+        <ul className="mt-auto flex flex-wrap gap-1.5 pt-4">
+          {mentor.background.map((item) => (
+            <li key={item} className={cn("rounded-full border px-2 py-0.5 text-[12px] font-medium", HAIRLINE, MUTED)}>
+              {item}
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </article>
   );
 }
