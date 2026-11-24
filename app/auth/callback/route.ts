@@ -45,7 +45,13 @@ export async function GET(request: NextRequest) {
 
   // A Hiring Test candidate is not an operator: they came to sit one
   // assessment, and are not asked for a name and a WhatsApp number first.
-  const candidate = next === "/hiring-test" || next.startsWith("/hiring-test/");
+  // The same goes for somebody signing in for the Startup Operator Challenge,
+  // which asks for its own details on its own page.
+  const candidate =
+    next === "/hiring-test" ||
+    next.startsWith("/hiring-test/") ||
+    next === "/operator-challenge" ||
+    next.startsWith("/operator-challenge/");
 
   if (!operator.onboarded && !candidate) {
     const url = new URL(ONBOARDING_ROUTE, origin);

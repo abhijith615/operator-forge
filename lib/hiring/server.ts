@@ -61,9 +61,18 @@ export interface AdminAttemptRow extends AttemptRow {
   session?: Record<string, number>;
 }
 
-/** An attempt at a different Hiring Test (FC Executive) that shares the table. */
-function isOtherTest(row: { role_id?: string | null; assessment_version?: string | null }): boolean {
-  return row.role_id === "fc_exec" || (row.assessment_version ?? "").startsWith("fc-");
+/**
+ * An attempt that shares the table but is not this Hiring Test: the FC
+ * Executive test, or the Startup Operator Challenge (same simulation, sat as a
+ * challenge under its own campaign, with its own admin list).
+ */
+function isOtherTest(row: { role_id?: string | null; assessment_version?: string | null; campaign_id?: string | null }): boolean {
+  return (
+    row.role_id === "fc_exec" ||
+    (row.assessment_version ?? "").startsWith("fc-") ||
+    row.role_id === "startup_op" ||
+    row.campaign_id === "startup-operator"
+  );
 }
 
 /** Who an attempt is shown as: their email if they signed in, the name they typed if they did not. */

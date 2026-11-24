@@ -2567,3 +2567,232 @@ $$;
 
 revoke all on function public.hiring_fc_begin(text, text, text, text, text, text) from public;
 grant execute on function public.hiring_fc_begin(text, text, text, text, text, text) to anon, authenticated;
+
+-- ============================================================================
+-- Startup Operator Challenge (/operator-challenge)
+--
+-- The store-manager simulation, sat as a challenge by people who sign in with
+-- Google. Additive only: one new table and four new functions. Attempts go in
+-- hiring_assessments with campaign_id 'startup-operator' and role_id
+-- 'startup_op', so the store-manager Hiring Test (campaign null) never sees
+-- them and they never use up its attempt. Saving progress reuses hiring_sync,
+-- hiring_complete and hiring_log, which already work for any signed-in
+-- candidate.
+-- ============================================================================
+
+create table if not exists public.operator_challenge_participants (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  full_name text not null check (char_length(full_name) between 2 and 80),
+  phone text not null check (phone ~ '^\+91[6-9][0-9]{9}$'),
+  city text not null check (char_length(city) between 2 and 60),
+  education text not null check (education in ('student', 'graduate')),
+  currently_working boolean not null,
+  college text not null check (char_length(college) between 2 and 120),
+  grad_year integer not null check (grad_year between 1980 and 2035),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- Read and written only through the functions below.
+alter table public.operator_challenge_participants enable row level security;
+revoke all on public.operator_challenge_participants from anon, authenticated;
+
+-- The participant's details, saved before they start. They can correct them until then.
+create or replace function public.operator_challenge_save_details(
+  p_name text,
+  p_phone text,
+  p_city text,
+  p_education text,
+  p_working boolean,
+  p_college text,
+  p_grad_year integer
+)
+returns boolean
+language plpgsql
+security definer
+set search_path to ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_name text := regexp_replace(trim(coalesce(p_name, '')), '\s+', ' ', 'g');
+  v_city text := regexp_replace(trim(coalesce(p_city, '')), '\s+', ' ', 'g');
+  v_college text := regexp_replace(trim(coalesce(p_college, '')), '\s+', ' ', 'g');
+  v_phone text := trim(coalesce(p_phone, ''));
+begin
+  if v_uid is null then
+    raise exception 'not signed in' using errcode = '42501';
+  end if;
+  if char_length(v_name) < 2 or char_length(v_name) > 80 then
+    raise exception 'a name is required' using errcode = '22023';
+  end if;
+  if v_phone !~ '^\+91[6-9][0-9]{9}$' then
+    raise exception 'a WhatsApp number is required' using errcode = '22023';
+  end if;
+  if char_length(v_city) < 2 or char_length(v_city) > 60 then
+    raise exception 'a city is required' using errcode = '22023';
+  end if;
+  if p_education is null or p_education not in ('student', 'graduate') then
+    raise exception 'education is required' using errcode = '22023';
+  end if;
+  if p_working is null then
+    raise exception 'working status is required' using errcode = '22023';
+  end if;
+  if char_length(v_college) < 2 or char_length(v_college) > 120 then
+    raise exception 'a college is required' using errcode = '22023';
+  end if;
+  if p_grad_year is null or p_grad_year < 1980 or p_grad_year > 2035 then
+    raise exception 'a graduation year is required' using errcode = '22023';
+  end if;
+
+  insert into public.operator_challenge_participants as p
+    (user_id, full_name, phone, city, education, currently_working, college, grad_year)
+  values (v_uid, v_name, v_phone, v_city, p_education, p_working, v_college, p_grad_year)
+  on conflict (user_id) do update
+    set full_name = excluded.full_name,
+        phone = excluded.phone,
+        city = excluded.city,
+        education = excluded.education,
+        currently_working = excluded.currently_working,
+        college = excluded.college,
+        grad_year = excluded.grad_year,
+        updated_at = now();
+  return true;
+end;
+$$;
+
+-- The signed-in participant's own details, if they have saved them.
+create or replace function public.operator_challenge_details()
+returns table (
+  full_name text,
+  phone text,
+  city text,
+  education text,
+  currently_working boolean,
+  college text,
+  grad_year integer
+)
+language sql
+stable
+security definer
+set search_path to ''
+as $$
+  select p.full_name, p.phone, p.city, p.education, p.currently_working, p.college, p.grad_year
+    from public.operator_challenge_participants p
+   where p.user_id = auth.uid();
+$$;
+
+-- Pressing Start. One try per account, at any version: a second call hands
+-- back the first attempt. An admin may start again once the last one is over.
+create or replace function public.operator_challenge_begin(
+  p_version text,
+  p_consent_version text,
+  p_device text default null
+)
+returns table (
+  id uuid,
+  scenario_variant text,
+  status text,
+  started_at timestamptz,
+  completed_at timestamptz,
+  actions jsonb,
+  server_now timestamptz,
+  time_limit_seconds integer
+)
+language plpgsql
+security definer
+set search_path to ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_campaign constant text := 'startup-operator';
+  v_email text;
+  v_existing public.hiring_assessments;
+  v_details public.operator_challenge_participants;
+  v_previous integer;
+  v_variant text;
+  v_limit integer;
+begin
+  if v_uid is null then
+    raise exception 'not signed in' using errcode = '42501';
+  end if;
+
+  select a.* into v_existing
+    from public.hiring_attempt(v_campaign) c
+    join public.hiring_assessments a on a.id = c.id;
+
+  if found and (v_existing.status = 'in_progress' or not public.is_admin()) then
+    return query
+    select v_existing.id, v_existing.scenario_variant, v_existing.status, v_existing.started_at,
+           v_existing.completed_at, v_existing.actions, now(), v_existing.time_limit_seconds;
+    return;
+  end if;
+
+  select p.* into v_details from public.operator_challenge_participants p where p.user_id = v_uid;
+  if not found then
+    raise exception 'details are required to start' using errcode = '22023';
+  end if;
+  if coalesce(trim(p_consent_version), '') = '' then
+    raise exception 'consent is required to start' using errcode = '22023';
+  end if;
+
+  select lower(u.email) into v_email from auth.users u where u.id = v_uid;
+  select count(*) into v_previous
+    from public.hiring_assessments a
+   where a.candidate_id = v_uid and a.campaign_id = v_campaign;
+  v_variant := (array['A', 'B', 'C'])[1 + ((abs(hashtext(v_uid::text)) + v_previous) % 3)];
+  v_limit := public.hiring_time_limit();
+
+  return query
+  insert into public.hiring_assessments as a
+    (candidate_id, candidate_email, candidate_name, candidate_phone, campaign_id, role_id, assessment_version,
+     scenario_variant, device_type, time_limit_seconds, consented_at, consent_version)
+  values (
+    v_uid, coalesce(v_email, ''), v_details.full_name, v_details.phone, v_campaign, 'startup_op',
+    left(p_version, 16), v_variant, nullif(left(p_device, 16), ''),
+    v_limit, now(), left(p_consent_version, 24)
+  )
+  returning a.id, a.scenario_variant, a.status, a.started_at, a.completed_at, a.actions, now(), a.time_limit_seconds;
+end;
+$$;
+
+-- Admins only: everybody who saved details, with their latest attempt if any.
+create or replace function public.admin_operator_challenge_rows()
+returns jsonb
+language plpgsql
+security definer
+set search_path to ''
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'admins only' using errcode = '42501';
+  end if;
+
+  return coalesce((
+    select jsonb_agg(to_jsonb(r) order by r.registered_at desc)
+      from (
+        select p.user_id, coalesce(u.email, '') as email, p.full_name, p.phone, p.city, p.education,
+               p.currently_working, p.college, p.grad_year, p.created_at as registered_at,
+               a.id as attempt_id, a.status, a.started_at, a.completed_at, a.scenario_variant,
+               a.assessment_version, a.device_type, a.actions, a.time_limit_seconds
+          from public.operator_challenge_participants p
+          left join auth.users u on u.id = p.user_id
+          left join lateral (
+            select x.*
+              from public.hiring_assessments x
+             where x.candidate_id = p.user_id and x.campaign_id = 'startup-operator'
+             order by x.started_at desc
+             limit 1
+          ) a on true
+      ) r
+  ), '[]'::jsonb);
+end;
+$$;
+
+revoke all on function public.operator_challenge_save_details(text, text, text, text, boolean, text, integer) from public, anon;
+revoke all on function public.operator_challenge_details() from public, anon;
+revoke all on function public.operator_challenge_begin(text, text, text) from public, anon;
+revoke all on function public.admin_operator_challenge_rows() from public, anon;
+grant execute on function public.operator_challenge_save_details(text, text, text, text, boolean, text, integer) to authenticated;
+grant execute on function public.operator_challenge_details() to authenticated;
+grant execute on function public.operator_challenge_begin(text, text, text) to authenticated;
+grant execute on function public.admin_operator_challenge_rows() to authenticated;

@@ -6,6 +6,7 @@ import { ArrowDown, Download } from "lucide-react";
 import { AdminView } from "@/components/admin/admin-view";
 import { FcAdminDashboard } from "@/components/fc/admin-dashboard";
 import { HiringAdminDashboard } from "@/components/hiring/admin-dashboard";
+import { OperatorChallengeAdmin } from "@/components/operator-challenge/admin-dashboard";
 import { PageHeader, PageShell } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { readAdminSnapshot, requireAdmin } from "@/lib/admin/queries";
@@ -31,13 +32,14 @@ export default async function AdminPage() {
       <PageHeader
         eyebrow="Admin"
         title="Who has been through"
-        description="The two Hiring Tests first, then the 7-day challenge. Straight from the database."
+        description="The two Hiring Tests first, then the Startup Operator Challenge and the 7-day challenge. Straight from the database."
       />
 
       <nav aria-label="Sections" className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-1">
         {[
           ["#hiring-test", "Dark Store Manager test"],
           ["#fc-executive", "FC Executive test"],
+          ["#operator-challenge", "Startup Operator Challenge"],
           ["#challenge", "7-day challenge"],
         ].map(([href, label]) => (
           <a
@@ -65,6 +67,12 @@ export default async function AdminPage() {
       <div className="mt-12">
         <Suspense fallback={<p className="border-t border-line pt-8 text-[12.5px] text-lo">Reading the FC Executive test…</p>}>
           <FcAdminDashboard />
+        </Suspense>
+      </div>
+
+      <div className="mt-12">
+        <Suspense fallback={<p className="border-t border-line pt-8 text-[12.5px] text-lo">Reading the Startup Operator Challenge…</p>}>
+          <OperatorChallengeAdmin />
         </Suspense>
       </div>
 
