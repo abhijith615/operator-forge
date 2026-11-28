@@ -34,6 +34,8 @@ export const FEE = {
 } as const;
 /** Assured for every participant who completes the bootcamp. */
 export const INTERNSHIP = { months: 3, minStipend: 15000 } as const;
+/** The best performers in the selection interview pay nothing for the programme. */
+export const SCHOLARSHIP = { winners: 2 } as const;
 
 export interface Mentor {
   name: string;
@@ -130,7 +132,11 @@ export const BOOTCAMP = {
       "A 6-week live bootcamp where you solve real startup problems, build a portfolio of proof, and step into a paid startup internship.",
     assurance: {
       strong: "100% internship assurance",
-      rest: `when you complete — ${INTERNSHIP.months} months, paid, ${inr(INTERNSHIP.minStipend)}+ a month.`,
+      rest: `on completion: ${INTERNSHIP.months} months, paid, ${inr(INTERNSHIP.minStipend)}+/month.`,
+    },
+    scholarship: {
+      strong: "100% scholarship",
+      rest: `for the top ${SCHOLARSHIP.winners} in the selection interview.`,
     },
     chips: [
       { icon: "calendar", label: "6 weeks" },
@@ -380,6 +386,10 @@ export const BOOTCAMP = {
     included: {
       label: "When you complete",
       value: `100% internship assurance · ${INTERNSHIP.months}-month paid internship · ${inr(INTERNSHIP.minStipend)}+ monthly stipend`,
+    },
+    scholarship: {
+      label: "Scholarship",
+      value: `The top ${SCHOLARSHIP.winners} performers in the selection interview get a 100% scholarship. They pay nothing for the programme.`,
     },
     line: "We only earn the larger share when you do.",
     smallPrint:

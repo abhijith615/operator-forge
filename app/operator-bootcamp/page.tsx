@@ -79,6 +79,12 @@ export default function OperatorBootcampPage() {
                   <strong className="font-bold">{hero.assurance.strong}</strong> {hero.assurance.rest}
                 </span>
               </p>
+              <p className="mt-2 flex max-w-[34rem] items-start gap-2 rounded-xl bg-[#111111] px-3 py-2 text-[14px] leading-snug text-white">
+                <Icon name="scholarship" className="mt-px size-[18px] shrink-0 text-ember-500" />
+                <span>
+                  <strong className="font-bold text-ember-500">{hero.scholarship.strong}</strong> {hero.scholarship.rest}
+                </span>
+              </p>
 
               <div className="mt-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-5">
                 <CTAButton label={hero.cta} location={hero.id} className="w-full sm:w-auto" />
@@ -371,6 +377,13 @@ export default function OperatorBootcampPage() {
                     <div>
                       <dt className="text-[13px] font-semibold tracking-[0.08em] text-ember-500 uppercase">{fee.included.label}</dt>
                       <dd className="mt-1 text-[16px] leading-snug font-semibold text-white">{fee.included.value}</dd>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-start gap-3 rounded-2xl bg-ember-500 p-4 text-[#111111]">
+                    <Icon name="scholarship" className="mt-0.5 size-5 shrink-0" />
+                    <div>
+                      <dt className="text-[13px] font-bold tracking-[0.08em] uppercase">{fee.scholarship.label}</dt>
+                      <dd className="mt-1 text-[16px] leading-snug font-semibold">{fee.scholarship.value}</dd>
                     </div>
                   </div>
                 </dl>

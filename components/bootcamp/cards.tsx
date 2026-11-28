@@ -1,4 +1,5 @@
 import {
+  Award,
   BadgeCheck,
   CalendarDays,
   Check,
@@ -33,6 +34,7 @@ const ICONS: Record<string, LucideIcon> = {
   yes: Check,
   no: X,
   assured: BadgeCheck,
+  scholarship: Award,
   challenge: Target,
   simulation: MonitorPlay,
 };
